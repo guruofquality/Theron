@@ -256,7 +256,7 @@ THERON_FORCEINLINE void AlignPointer(Type *&p, const uint32_t align)
     // The uintptr_t type is an integer wide enough to store the value of a pointer.
     // It isn't defined in traditional C++, but is introduced via BasicTypes.h included above.
     THERON_ASSERT_MSG((align & (align - 1)) == 0, "Alignment values must be powers of two");
-    p = reinterpret_cast<Type *>((reinterpret_cast<uintptr_t>(p) + align - 1) & ~(align - 1));
+    p = reinterpret_cast<Type *>((reinterpret_cast<uintptr_t>(p) + align - 1) & ~uintptr_t(align - 1));
 }
 
 
