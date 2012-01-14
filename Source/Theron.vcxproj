@@ -1,0 +1,235 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{7B89C551-12A3-4CC3-9B11-2C4FDF2EC48E}</ProjectGuid>
+    <RootNamespace>Theron2</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)\Lib\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)\Lib\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(Configuration)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(Configuration)\</IntDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)\Lib\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)\Lib\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(Configuration)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Configuration)\</IntDir>
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectName)d</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectName)d</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\Include;\usr\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)$(ProjectName)d.lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\Include;\usr\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)$(ProjectName)d.lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <AdditionalIncludeDirectories>..\Include;\usr\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <EnableFiberSafeOptimizations>false</EnableFiberSafeOptimizations>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <AdditionalIncludeDirectories>..\Include;\usr\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="ActorCore.cpp" />
+    <ClCompile Include="ActorCreator.cpp" />
+    <ClCompile Include="ActorDestroyer.cpp" />
+    <ClCompile Include="ActorDirectory.cpp" />
+    <ClCompile Include="Address.cpp" />
+    <ClCompile Include="AllocatorManager.cpp" />
+    <ClCompile Include="Directory.cpp" />
+    <ClCompile Include="Framework.cpp" />
+    <ClCompile Include="MessageCache.cpp" />
+    <ClCompile Include="MessageSender.cpp" />
+    <ClCompile Include="Receiver.cpp" />
+    <ClCompile Include="ReceiverDirectory.cpp" />
+    <ClCompile Include="ThreadCollection.cpp" />
+    <ClCompile Include="ThreadPool.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Include\Theron\Actor.h" />
+    <ClInclude Include="..\Include\Theron\ActorRef.h" />
+    <ClInclude Include="..\Include\Theron\Address.h" />
+    <ClInclude Include="..\Include\Theron\Align.h" />
+    <ClInclude Include="..\Include\Theron\AllocatorManager.h" />
+    <ClInclude Include="..\Include\Theron\DefaultAllocator.h" />
+    <ClInclude Include="..\Include\Theron\Defines.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Handlers\BlindDefaultHandler.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Handlers\BlindFallbackHandler.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Handlers\DefaultFallbackHandler.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Handlers\FallbackHandler.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Handlers\IFallbackHandler.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Messages\MessageSender.h" />
+    <ClInclude Include="..\Include\Theron\Framework.h" />
+    <ClInclude Include="..\Include\Theron\IAllocator.h" />
+    <ClInclude Include="..\Include\Theron\Receiver.h" />
+    <ClInclude Include="..\Include\Theron\Register.h" />
+    <ClInclude Include="..\Include\Theron\Detail\BasicTypes.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Threading\Lock.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Threading\Monitor.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Threading\Mutex.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Threading\Thread.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Threading\Boost\Lock.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Threading\Boost\Monitor.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Threading\Boost\Mutex.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Threading\Boost\Thread.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Threading\Win32\Lock.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Threading\Win32\Monitor.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Threading\Win32\Mutex.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Threading\Win32\Thread.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Containers\IntrusiveList.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Containers\IntrusiveQueue.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Containers\List.h" />
+    <ClInclude Include="..\Include\Theron\Detail\ThreadPool\ThreadCollection.h" />
+    <ClInclude Include="..\Include\Theron\Detail\ThreadPool\ThreadPool.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Handlers\DefaultHandler.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Handlers\IDefaultHandler.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Handlers\IMessageHandler.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Handlers\IReceiverHandler.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Handlers\MessageHandler.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Handlers\MessageHandlerCast.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Handlers\ReceiverHandler.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Handlers\ReceiverHandlerCast.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Directory\ActorDirectory.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Directory\Directory.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Directory\ReceiverDirectory.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Messages\IMessage.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Messages\Message.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Messages\MessageAlignment.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Messages\MessageCast.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Messages\MessageCreator.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Messages\MessageTraits.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Debug\Assert.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Core\ActorAlignment.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Core\ActorConstructor.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Core\ActorCore.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Core\ActorCreator.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Core\ActorDestroyer.h" />
+    <ClInclude Include="..\Include\Theron\Detail\PagedPool\FreeList.h" />
+    <ClInclude Include="..\Include\Theron\Detail\PagedPool\Page.h" />
+    <ClInclude Include="..\Include\Theron\Detail\PagedPool\PagedPool.h" />
+    <ClInclude Include="..\Include\Theron\Detail\MessageCache\MessageCache.h" />
+    <ClInclude Include="..\Include\Theron\Detail\MessageCache\Pool.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
