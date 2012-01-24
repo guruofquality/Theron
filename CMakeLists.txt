@@ -64,7 +64,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/UnitTests)
 file(GLOB test_sources "${CMAKE_CURRENT_SOURCE_DIR}/UnitTests/*.cpp")
 add_executable(test_suite ${test_sources})
 target_link_libraries(test_suite theron ${theron_libs})
-add_test(test_suite test_suite)
+add_test(theron_test_suite test_suite)
 
 ########################################################################
 # Build samples
