@@ -292,7 +292,7 @@ public:
             Theron::Address mAddress;
         };
 
-        inline Parameterized(const Parameters &params) : mAddress(params.mAddress)
+        inline Parameterized(const Parameters &params) : mStoredAddress(params.mAddress)
         {
             RegisterHandler(this, &Parameterized::Handler);
         }
@@ -300,12 +300,12 @@ public:
         inline void Handler(const int &message, const Theron::Address /*from*/)
         {
             // Send a message to the address provided on construction.
-            Send(message, mAddress);
+            Send(message, mStoredAddress);
         }
 
     private:
 
-        Theron::Address mAddress;
+        Theron::Address mStoredAddress;
     };
 
     class Recursor : public Theron::Actor
@@ -384,20 +384,20 @@ public:
 
         typedef Theron::Address Parameters;
 
-        inline TailSender(const Parameters &address) : mAddress(address)
+        inline TailSender(const Parameters &address) : mStoredAddress(address)
         {
         }
 
         inline ~TailSender()
         {
             // Send a message in the actor destructor.
-            Send(0, mAddress);
+            Send(0, mStoredAddress);
 
             // Send using TailSend to check that works too.
-            TailSend(1, mAddress);
+            TailSend(1, mStoredAddress);
         }
 
-        Theron::Address mAddress;
+        Theron::Address mStoredAddress;
     };
 
     class AutoDeregistrar : public Theron::Actor
@@ -491,6 +491,11 @@ public:
         inline void Catch(const MessageType &message, const Theron::Address /*from*/)
         {
             mMessages.push(message);
+        }
+
+        int Size()
+        {
+            return mMessages.size();
         }
 
         MessageType Pop()
@@ -672,21 +677,95 @@ public:
 
         typedef Theron::Address Parameters;
 
-        inline explicit LastGasp(const Theron::Address address) : mAddress(address)
+        inline explicit LastGasp(const Theron::Address address) : mStoredAddress(address)
         {
         }
 
         inline ~LastGasp()
         {
-            Send(0, mAddress);
+            Send(0, mStoredAddress);
         }
 
     private:
 
-        Theron::Address mAddress;
+        Theron::Address mStoredAddress;
     };
 
     typedef std::vector<Theron::uint32_t> IntVectorMessage;
+
+    class SomeOtherBaseclass
+    {
+    public:
+
+        inline SomeOtherBaseclass()
+        {
+        }
+
+        // The virtual destructor is required because this is a baseclass with virtual functions.
+        inline virtual ~SomeOtherBaseclass()
+        {
+        }
+
+        inline virtual void DoNothing()
+        {
+        }
+    };
+
+    class ActorFirst : public Theron::Actor, public SomeOtherBaseclass
+    {
+    public:
+
+        inline ActorFirst()
+        {
+            RegisterHandler(this, &ActorFirst::Handler);
+        }
+
+        // The virtual destructor is required because we derived from baseclasses with virtual functions.
+        inline virtual ~ActorFirst()
+        {
+        }
+
+    private:
+
+        inline virtual void DoNothing()
+        {
+        }
+
+        inline void Handler(const int &message, const Theron::Address from)
+        {
+            Send(message, from);
+        }
+    };
+
+    class ActorLast : public SomeOtherBaseclass, public Theron::Actor
+    {
+    public:
+
+        inline ActorLast()
+        {
+            RegisterHandler(this, &ActorLast::Handler);
+        }
+
+        // The virtual destructor is required because we derived from baseclasses with virtual functions.
+        inline virtual ~ActorLast()
+        {
+        }
+
+    private:
+
+        inline virtual void DoNothing()
+        {
+        }
+        
+        inline void Handler(const int &message, const Theron::Address from)
+        {
+            Send(message, from);
+        }
+    };
+
+    struct EmptyMessage
+    {
+    };
 
     inline FeatureTestSuite()
     {
@@ -734,6 +813,9 @@ public:
         TESTFRAMEWORK_REGISTER_TEST(HandleUnhandledMessageSentInFunction);
         TESTFRAMEWORK_REGISTER_TEST(HandleUndeliveredBlindMessageSentInFunction);
         TESTFRAMEWORK_REGISTER_TEST(SendRegisteredMessage);
+        TESTFRAMEWORK_REGISTER_TEST(DeriveFromActorFirst);
+        TESTFRAMEWORK_REGISTER_TEST(DeriveFromActorLast);
+        TESTFRAMEWORK_REGISTER_TEST(SendEmptyMessage);
     }
 
     inline static void NullActorReference()
@@ -1191,7 +1273,7 @@ public:
         Theron::Framework framework;
         Theron::Receiver receiver;
 
-        // Pass the address of the receiver ton the actor constructor.
+        // Pass the address of the receiver to the actor constructor.
         AutoSender::Parameters params(receiver.GetAddress());
         Theron::ActorRef actor(framework.CreateActor<AutoSender>(params));
 
@@ -1569,10 +1651,11 @@ public:
         typedef Catcher<IntVectorMessage> IntVectorCatcher;
 
         Theron::Framework framework;
+
         Theron::Receiver receiver;
         IntVectorCatcher catcher;
-
         receiver.RegisterHandler(&catcher, &IntVectorCatcher::Catch);
+
         Theron::ActorRef replier(framework.CreateActor<IntVectorReplier>());
 
         IntVectorMessage message;
@@ -1587,6 +1670,61 @@ public:
         Check(catcher.mMessage[0] == 0, "Bad reply message");
         Check(catcher.mMessage[1] == 1, "Bad reply message");
         Check(catcher.mMessage[2] == 2, "Bad reply message");
+    }
+
+    inline static void DeriveFromActorFirst()
+    {
+        typedef Catcher<int> IntCatcher;
+
+        Theron::Framework framework;
+
+        Theron::Receiver receiver;
+        IntCatcher catcher;
+        receiver.RegisterHandler(&catcher, &IntCatcher::Catch);
+
+        Theron::ActorRef actor(framework.CreateActor<ActorFirst>());
+
+        framework.Send(5, receiver.GetAddress(), actor.GetAddress());
+        receiver.Wait();
+
+        Check(catcher.mMessage == 5, "Bad reply message");
+    }
+
+    inline static void DeriveFromActorLast()
+    {
+        typedef Catcher<int> IntCatcher;
+
+        Theron::Framework framework;
+
+        Theron::Receiver receiver;
+        IntCatcher catcher;
+        receiver.RegisterHandler(&catcher, &IntCatcher::Catch);
+
+        Theron::ActorRef actor(framework.CreateActor<ActorLast>());
+
+        framework.Send(5, receiver.GetAddress(), actor.GetAddress());
+        receiver.Wait();
+
+        Check(catcher.mMessage == 5, "Bad reply message");
+    }
+
+    inline static void SendEmptyMessage()
+    {
+        typedef Replier<EmptyMessage> EmptyReplier;
+        typedef Catcher<EmptyMessage> EmptyCatcher;
+
+        Theron::Framework framework;
+
+        Theron::Receiver receiver;
+        EmptyCatcher catcher;
+        receiver.RegisterHandler(&catcher, &EmptyCatcher::Catch);
+
+        Theron::ActorRef replier(framework.CreateActor<EmptyReplier>());
+
+        framework.Send(EmptyMessage(), receiver.GetAddress(), replier.GetAddress());
+        receiver.Wait();
+
+        Check(&catcher.mMessage != 0, "No reply message");
     }
 };
 

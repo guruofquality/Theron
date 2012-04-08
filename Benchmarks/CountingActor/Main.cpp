@@ -14,6 +14,7 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
 
 // Enable checking for unregistered message types.
 #define THERON_ENABLE_MESSAGE_REGISTRATION_CHECKS 1

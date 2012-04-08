@@ -7,6 +7,7 @@
 
 
 #include <stdio.h>
+#include <vector>
 
 #include <Theron/Framework.h>
 #include <Theron/Receiver.h>
@@ -60,17 +61,17 @@ public:
     inline void Handler(const Message &message, const Theron::Address /*from*/)
     {
         // Collect the message.
-        mMessage = message;
+        mMessages.push_back(message);
     }
 
-    inline Message GetMessage() const
+    inline const std::vector<Message> &GetMessages() const
     {
-        return mMessage;
+        return mMessages;
     }
 
 private:
 
-    Message mMessage;
+    std::vector<Message> mMessages;
 };
 
 
@@ -124,13 +125,13 @@ int main()
     // Check the value of the message received and stored in the collector.
     // It's safe to do this because the call to Wait() above will only return
     // once the handler has executed completely.
-    printf("Received first message with value '%d'\n", messageCollector.GetMessage().mValue);
+    printf("Received first message with value '%d'\n", messageCollector.GetMessages()[0].mValue);
 
     // Wait for the second message to arrive and be handled.
     receiver.Wait();
 
     // Check the value of the new message.
-    printf("Received second message with value '%d'\n", messageCollector.GetMessage().mValue);
+    printf("Received second message with value '%d'\n", messageCollector.GetMessages()[1].mValue);
     
     return 0;
 }

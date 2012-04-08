@@ -68,9 +68,9 @@ framework is limited by \ref THERON_MAX_THREADS_PER_FRAMEWORK.
 The worker threads are created and synchronized using underlying threading
 objects. Different implementations of these threading objects are possible,
 allowing Theron to be used in environments with different threading primitives.
-Currently, implementations based on Win32 threads and Boost threads are
-provided. Users can use the \ref THERON_USE_BOOST_THREADS define to enable
-or disable the use of Boost threads.
+Currently, implementations based on Win32 threads, Boost threads and std::thread
+are provided. Users can use the \ref THERON_USE_BOOST_THREADS and \ref THERON_USE_STD_THREADS
+defines to enable or disable the use of Boost threads and std::thread, respectively.
 
 It's possible to create more than one Framework in an application. Actors created
 within each Framework are executed only by the worker threads in the threadpool

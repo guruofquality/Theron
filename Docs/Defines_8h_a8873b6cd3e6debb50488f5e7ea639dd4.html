@@ -95,6 +95,7 @@ window.onload = initDynSections;
           <tr><td class="navtab"><a class="qindex" href="Defines_8h_a9856afae5f4e1b586b441d28eef9f3ca.html#a9856afae5f4e1b586b441d28eef9f3ca">THERON_MAX_RECEIVERS</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="Defines_8h_af59728856e68171e62b1fc5bd64358f4.html#af59728856e68171e62b1fc5bd64358f4">THERON_MAX_THREADS_PER_FRAMEWORK</a></td></tr>
           <tr><td class="navtab"><a class="qindexHL" href="Defines_8h_a8873b6cd3e6debb50488f5e7ea639dd4.html#a8873b6cd3e6debb50488f5e7ea639dd4">THERON_USE_BOOST_THREADS</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="Defines_8h_aa4d353d034038797e32df696b4f106ef.html#aa4d353d034038797e32df696b4f106ef">THERON_USE_STD_THREADS</a></td></tr>
         </table>
       </div>
    </td>
@@ -111,8 +112,8 @@ window.onload = initDynSections;
 <div class="memdoc">
 
 <p>Controls whether Boost threads, locks, etc are used. </p>
-<p>If <a class="el" href="Defines_8h_a8873b6cd3e6debb50488f5e7ea639dd4.html#a8873b6cd3e6debb50488f5e7ea639dd4">THERON_USE_BOOST_THREADS</a> is defined as 0 then Windows threads are used, introducing a dependency on the windows.h header. Otherwise Boost threads are used, introducing a dependency on boost::thread.</p>
-<p>Defaults to 0 (Windows threads).</p>
+<p>If <a class="el" href="Defines_8h_a8873b6cd3e6debb50488f5e7ea639dd4.html#a8873b6cd3e6debb50488f5e7ea639dd4">THERON_USE_BOOST_THREADS</a> is defined as 1 then Boost threads are used, introducing a dependency on boost::thread. If both THERON_USE_BOOST_THREADS and <a class="el" href="Defines_8h_aa4d353d034038797e32df696b4f106ef.html#aa4d353d034038797e32df696b4f106ef">THERON_USE_STD_THREADS</a> are defined as 0, Windows threads are used, introducing a dependency on the windows.h header.</p>
+<p>Defaults to 0 (Windows threads or std threads).</p>
 <p>The value of <a class="el" href="Defines_8h_a8873b6cd3e6debb50488f5e7ea639dd4.html#a8873b6cd3e6debb50488f5e7ea639dd4">THERON_USE_BOOST_THREADS</a> can be overridden by defining it globally in the build (in the makefile using -D, or in the project preprocessor settings in Visual Studio).</p>
 <dl class="note"><dt><b>Note:</b></dt><dd>The makefile build defines <a class="el" href="Defines_8h_a8873b6cd3e6debb50488f5e7ea639dd4.html#a8873b6cd3e6debb50488f5e7ea639dd4">THERON_USE_BOOST_THREADS</a> as 1 by default, overriding the default value defined in the code. This is arranged this way on the assumption that users who are using the makefile build are likely to want to avoid a dependency on Windows. The value defined by the makefile can be controlled by specifying <code>threads=boost</code> or <code>threads=windows</code> on the make command line. </dd></dl>
 

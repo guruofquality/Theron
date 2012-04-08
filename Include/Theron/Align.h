@@ -231,7 +231,7 @@ code before any Theron headers.
 \brief Aligns the given pointer to the given alignment, in bytes, increasing its value if necessary.
 \note Alignment values are expected to be powers of two.
 */
-#define THERON_ALIGN(p, align) Theron::Detail::AlignPointer(p, align)
+#define THERON_ALIGN(p, alignment) Theron::Detail::AlignPointer(p, alignment)
 #endif // THERON_ALIGN
 
 
@@ -240,7 +240,7 @@ code before any Theron headers.
 \brief Checks the alignment of a pointer.
 \note Alignment values are expected to be powers of two.
 */
-#define THERON_ALIGNED(pointer, alignment) ((reinterpret_cast<uintptr_t>(pointer) & (alignment - 1)) == 0)
+#define THERON_ALIGNED(pointer, alignment) Theron::Detail::IsAligned(pointer, alignment)
 #endif // THERON_ALIGNED
 
 
@@ -251,12 +251,19 @@ namespace Detail
 
 
 template <class Type>
-THERON_FORCEINLINE void AlignPointer(Type *&p, const uint32_t align)
+THERON_FORCEINLINE void AlignPointer(Type *& pointer, const uint32_t alignment)
 {
     // The uintptr_t type is an integer wide enough to store the value of a pointer.
     // It isn't defined in traditional C++, but is introduced via BasicTypes.h included above.
-    THERON_ASSERT_MSG((align & (align - 1)) == 0, "Alignment values must be powers of two");
-    p = reinterpret_cast<Type *>((reinterpret_cast<uintptr_t>(p) + align - 1) & ~uintptr_t(align - 1));
+    THERON_ASSERT_MSG((alignment & (alignment - 1)) == 0, "Alignment values must be powers of two");
+    pointer = reinterpret_cast<Type *>((reinterpret_cast<uintptr_t>(pointer) + alignment - 1) & ~uintptr_t(alignment - 1));
+}
+
+
+THERON_FORCEINLINE bool IsAligned(void *const pointer, const uint32_t alignment)
+{
+    THERON_ASSERT_MSG((alignment & (alignment - 1)) == 0, "Alignment values must be powers of two");
+    return ((reinterpret_cast<uintptr_t>(pointer) & uintptr_t(alignment - 1)) == 0);
 }
 
 

@@ -9,7 +9,7 @@
 #pragma warning(push,0)
 #endif //_MSC_VER
 
-#include <boost/thread/recursive_mutex.hpp>
+#include <boost/thread/mutex.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -52,7 +52,7 @@ public:
 private:
 
     /// Returns a reference to the owned mutex object.
-    THERON_FORCEINLINE boost::recursive_mutex &GetMutex()
+    THERON_FORCEINLINE boost::mutex &GetMutex()
     {
         return mMutex;
     }
@@ -60,7 +60,7 @@ private:
     Mutex(const Mutex &other);
     Mutex &operator=(const Mutex &other);
 
-    boost::recursive_mutex mMutex;              ///< Owned mutex object.
+    boost::mutex mMutex;                    ///< Owned mutex object.
 };
 
 

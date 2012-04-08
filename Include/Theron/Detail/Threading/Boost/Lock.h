@@ -10,7 +10,7 @@
 #endif //_MSC_VER
 
 #include <boost/thread/locks.hpp>
-#include <boost/thread/recursive_mutex.hpp>
+#include <boost/thread/mutex.hpp>
 
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -41,14 +41,6 @@ public:
     {
     }
 
-    /// Destructor.
-    /// Unlocks the mutex prior to destruction.
-    THERON_FORCEINLINE ~Lock()
-    {
-        THERON_ASSERT(mLock.owns_lock() == true);
-        mLock.unlock();
-    }
-
     /// Relocks the lock
     THERON_FORCEINLINE void Relock()
     {
@@ -69,12 +61,12 @@ private:
     Lock &operator=(const Lock &other);
 
     /// Returns a reference to the wrapped boost::unique_lock.
-    THERON_FORCEINLINE boost::unique_lock<boost::recursive_mutex> &GetLock()
+    THERON_FORCEINLINE boost::unique_lock<boost::mutex> &GetLock()
     {
         return mLock;
     }
 
-    boost::unique_lock<boost::recursive_mutex> mLock;       ///< Wrapped boost::unique_lock.
+    boost::unique_lock<boost::mutex> mLock;                 ///< Wrapped boost::unique_lock.
 };
 
 

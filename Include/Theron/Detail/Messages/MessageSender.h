@@ -69,11 +69,15 @@ THERON_FORCEINLINE bool MessageSender::Send(
     const Address &from,
     const Address &to)
 {
-    // The directory lock is used to protect the global free list.
-    Lock lock(Directory::GetMutex());
+    IMessage *message(0);
 
-    // Allocate a message. It'll be deleted by the target after it's been handled.
-    IMessage *const message = MessageCreator::Create(value, from);
+    {
+        // Allocate a message. It'll be deleted by the target after it's been handled.
+        // The directory lock is used to protect the global free list.
+        Lock lock(Directory::GetMutex());
+        message = MessageCreator::Create(value, from);
+    }
+
     if (message != 0)
     {
         // This call is non-inlined to reduce code bloat.
@@ -83,6 +87,7 @@ THERON_FORCEINLINE bool MessageSender::Send(
         }
 
         // If the message wasn't delivered we need to delete it ourselves.
+        Lock lock(Directory::GetMutex());
         MessageCreator::Destroy(message);
     }
 
@@ -97,11 +102,15 @@ THERON_FORCEINLINE bool MessageSender::TailSend(
     const Address &from,
     const Address &to)
 {
-    // The directory lock is used to protect the global free list.
-    Lock lock(Directory::GetMutex());
+    IMessage *message(0);
 
-    // Allocate a message. It'll be deleted by the target after it's been handled.
-    IMessage *const message = MessageCreator::Create(value, from);
+    {
+        // Allocate a message. It'll be deleted by the target after it's been handled.
+        // The directory lock is used to protect the global free list.
+        Lock lock(Directory::GetMutex());
+        message = MessageCreator::Create(value, from);
+    }
+
     if (message != 0)
     {
         // This call is non-inlined to reduce code bloat.
@@ -112,6 +121,7 @@ THERON_FORCEINLINE bool MessageSender::TailSend(
         }
 
         // If the message wasn't delivered we need to delete it ourselves.
+        Lock lock(Directory::GetMutex());
         MessageCreator::Destroy(message);
     }
 

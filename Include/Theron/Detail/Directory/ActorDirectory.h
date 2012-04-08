@@ -42,11 +42,15 @@ public:
     inline uint32_t Count() const;
 
     /// Registers an actor and returns its unique address.
-    Address RegisterActor(Framework *const framework, Actor *const actor);
+    Address RegisterActor(Framework *const framework, void *const owner, Actor *const actor);
 
-    /// Deregisters the actor at the given address.
+    /// Deregisters the actor at the given address, preventing it from receiving messages.
     /// \note The address can be the address of a currently registered actor.
     bool DeregisterActor(const Address &address);
+
+    /// Destroys the actor at the given address.
+    /// \note The address can be the address of a currently registered actor.
+    bool DestroyActor(const Address &address);
 
     /// Gets a pointer to the actor core at the given address.
     /// \note The address can be the address of a currently registered actor.

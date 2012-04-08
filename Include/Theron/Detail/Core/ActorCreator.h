@@ -11,8 +11,8 @@
 #include <Theron/Detail/Debug/Assert.h>
 #include <Theron/Detail/Directory/ActorDirectory.h>
 #include <Theron/Detail/Directory/Directory.h>
-#include <Theron/Detail/Threading/Lock.h>
 #include <Theron/Detail/Threading/Mutex.h>
+#include <Theron/Detail/Threading/Lock.h>
 
 #include <Theron/Address.h>
 #include <Theron/AllocatorManager.h>
@@ -30,23 +30,30 @@ namespace Detail
 {
 
 
-/// Helper class that creates actors.
-/// When an actor is constructed, the Actor constructor fetches
-/// a pointer to its referenced actor core from this registry, where
-/// it has been set by the framework prior to construction. This hack
-/// allows us to pass actor core pointers to actor constructors without
-/// actually using a constructor parameter.
+/**
+Static helper class that creates actors. This is a detail class and is not for general use.
+*/
 class ActorCreator
 {
 public:
 
-    friend class Theron::Framework;
+    struct Entry
+    {
+        void *mLocation;
+        Address mAddress;
+        ActorCore *mActorCore;
+        Entry *mNext;
+    };
 
-    /// Gets the remembered actor address.
-    inline static Address GetAddress();
+    /// Creates an instance of an actor type via a provided constructor object.
+    /// \note This method is not for public use and should only be called by the Framework.
+    template <class ConstructorType>
+    inline static typename ConstructorType::ActorType *CreateActor(
+        const ConstructorType &constructor,
+        Framework *const framework);
 
-    /// Gets the remembered actor core pointer.
-    inline static ActorCore *GetCoreAddress();
+    /// Get the entry holding member data for the actor being constructed at the given address.
+    static Entry *Get(void *const location);
 
 private:
 
@@ -54,47 +61,15 @@ private:
     ActorCreator(const ActorCreator &other);
     ActorCreator &operator=(const ActorCreator &other);
 
-    /// Creates an instance of an actor type via a provided constructor object.
-    /// \note This method can only be called by the Framework.
-    template <class ConstructorType>
-    inline static typename ConstructorType::ActorType *CreateActor(
-        const ConstructorType &constructor,
-        Framework *const framework);
+    /// Register an entry holding an address and member data for an actor being constructed.
+    static void Register(Entry *const entry);
 
-    /// Sets the remembered actor address.
-    inline static void SetAddress(const Address &address);
+    /// Deregister a previously registered entry.
+    static void Deregister(Entry *const entry);
 
-    /// Sets the remembered actor core pointer.
-    inline static void SetCoreAddress(ActorCore *const address);
-
-    static Mutex smMutex;                   ///< Synchronizes access to the singleton instance.
-    static Address smAddress;               ///< Remembered actor address.
-    static ActorCore *smCoreAddress;        ///< Remembered actor core pointer.
+    static Mutex smMutex;           ///< Protects access to a static list of registered entries.
+    static Entry *smHead;           ///< Head of a static list of registered entries.
 };
-
-
-THERON_FORCEINLINE void ActorCreator::SetAddress(const Address &address)
-{
-    smAddress = address;
-}
-
-
-THERON_FORCEINLINE void ActorCreator::SetCoreAddress(ActorCore *const address)
-{
-    smCoreAddress = address;
-}
-
-
-THERON_FORCEINLINE Address ActorCreator::GetAddress()
-{
-    return smAddress;
-}
-
-
-THERON_FORCEINLINE ActorCore *ActorCreator::GetCoreAddress()
-{
-    return smCoreAddress;
-}
 
 
 template <class ConstructorType>
@@ -115,42 +90,46 @@ THERON_FORCEINLINE typename ConstructorType::ActorType *ActorCreator::CreateActo
     void *const actorMemory = allocator->AllocateAligned(size, alignment);
     if (actorMemory)
     {
-        bool registered(false);
+        // We reinterpret cast so we can access the memory layout before construction.
+        ActorType *actor(reinterpret_cast<ActorType *>(actorMemory));
 
         {
-            Lock lock(Directory::GetMutex());
+            Detail::Lock lock(Directory::GetMutex());
             ActorDirectory &directory(ActorDirectory::Instance());
 
             // Register and construct the actor core, passing it the framework and referencing actor.
+            // Note we have to pass the pointer to the Actor baseclass itself, which may not be
+            // the same if the Actor baseclass isn't first in the list of baseclasses.
             // This basically only fails if we run out of memory.
-            Actor *const tempActor = reinterpret_cast<Actor *>(actorMemory);
-            address = directory.RegisterActor(framework, tempActor);
+            Actor *const baseclass = static_cast<Actor *>(actor);
+            address = directory.RegisterActor(framework, actor, baseclass);
 
             if (address != Address::Null())
             {
                 actorCore = directory.GetActor(address);
-                registered = true;
             }
         }
 
-        if (registered)
+        // Was the registration of the actor successful?
+        if (actorCore)
         {
-            ActorType *actor(0);
+            // We register the data for the Actor baseclass in a static dictionary, and the
+            // Actor baseclass constructor reads it from there. We do it this hacky way because we
+            // don't 'own' the constructor of the derived actor class, so can't pass the data
+            // through it to the constructor of the baseclass, as we would like.
+            Entry entry;
+            entry.mLocation = static_cast<Actor *>(actor);
+            entry.mAddress = address;
+            entry.mActorCore = actorCore;
 
-            {
-                // Lock the mutex and set the static actor core address for the actor core
-                // constructor to read during construction. This is an awkward workaround for the
-                // inability to pass it via the actor constructor parameters, which we don't control.
-                Lock lock(smMutex);
+            Register(&entry);
 
-                SetAddress(address);
-                SetCoreAddress(actorCore);
+            // Use the provided constructor helper to construct the actor within the provided
+            // memory buffer. The derived actor class constructor may itself send messages or
+            // construct other actors.
+            constructor(actorMemory);
 
-                // Use the provided constructor helper to construct the actor within the provided
-                // memory buffer. The derived actor class constructor may itself send messages or
-                // construct other actors.
-                actor = constructor(actorMemory);
-            }
+            Deregister(&entry);
 
             return actor;
         }

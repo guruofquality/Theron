@@ -710,19 +710,22 @@ private:
 
 
 THERON_FORCEINLINE Actor::Actor() :
-  mAddress(Address::Null()),
+  mAddress(),
   mCore(0),
   mReferenceCount(0),
   mDefaultMessageHandler(0),
   mNewHandlerList()
 {
-    // Pick up the pointer to the referenced actor core object registered prior to construction.
-    // This is a hacky workaround for not being able to pass the core pointer as an Actor
-    // constructor parameter, because it's buried below the derived Actor constructor, which
-    // we can't pass the parameter through (and we don't want to pollute that constructor with it).
-    // The constructing code holds the lock while the actor is created.
-    mAddress = Detail::ActorCreator::GetAddress();
-    mCore = Detail::ActorCreator::GetCoreAddress();
+    // Look up the registered member data for this instance in the list.
+    Detail::ActorCreator::Entry *const entry(Detail::ActorCreator::Get(this));
+
+    THERON_ASSERT(entry);
+    THERON_ASSERT(entry->mLocation == this);
+    THERON_ASSERT(entry->mActorCore);
+    THERON_ASSERT(entry->mAddress != Address::Null());
+
+    mAddress = entry->mAddress;
+    mCore = entry->mActorCore;
 }
 
 

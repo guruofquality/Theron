@@ -237,7 +237,7 @@ public:
 
         Theron::Receiver receiver;
 
-        // Push 5 messages to the responder actor, using the
+        // Push 1000 messages to the responder actor, using the
         // address of the receiver as the from address.
         // After each send, wait for a return message.
         Theron::uint32_t value(1);

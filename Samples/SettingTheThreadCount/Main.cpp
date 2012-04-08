@@ -48,10 +48,9 @@ int main()
     // task, which runs asynchronously from other threads as a background task.
     // It spends most of its time asleep, only being woken by calls like this one.
     // For the sake of the example, we call the method many times to make this happen.
-    int numThreads(0);
     for (int count = 0; count < 10; ++count)
     {
-        numThreads = framework.GetNumThreads();
+        framework.GetNumThreads();
     }
 
     printf("Thread count subsequently: %d\n", framework.GetNumThreads());
@@ -80,8 +79,6 @@ int main()
     {
         framework.Send(0, Theron::Address(), dummyActor.GetAddress());
     }
-
-    numThreads = framework.GetNumThreads();
 
     printf("Thread count subsequently: %d\n", framework.GetNumThreads());
 

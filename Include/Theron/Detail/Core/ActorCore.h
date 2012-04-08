@@ -46,7 +46,7 @@ public:
 
     /// Constructor.
     /// \note Actor cores can't be constructed directly in user code.
-    ActorCore(const uint32_t sequence, Framework *const framework, Actor *const actor);
+    ActorCore(const uint32_t sequence, Framework *const framework, void *const owner, Actor *const actor);
 
     /// Destructor.
     ~ActorCore();
@@ -88,7 +88,13 @@ public:
         ++mMessageCount;
     }
 
-    /// Returns a pointer to the actor that contains this core.
+    /// Returns a pointer to the derived actor object that owns this core.
+    THERON_FORCEINLINE void *GetOwner() const
+    {
+        return mOwner;
+    }
+
+    /// Returns a pointer to the Actor baseclass component of the derived actor object that owns this core.
     THERON_FORCEINLINE Actor *GetParent() const
     {
         return mParent;
@@ -234,7 +240,8 @@ private:
     bool ExecuteFallbackHandler(IMessage *const message);
 
     ActorCore *mNext;                           ///< Pointer to the next actor in a queue of actors.
-    Actor *mParent;                             ///< Address of the actor instance containing this core.
+    void *mOwner;                               ///< Pointer to the derived actor object that owns this core.
+    Actor *mParent;                             ///< Pointer to the Actor baseclass component of the owning derived actor object.
     Framework *mFramework;                      ///< The framework instance that owns this actor.
     uint32_t mSequence;                         ///< Sequence number of the actor (half of its unique address).
     uint32_t mMessageCount;						///< Number of messages in the message queue.

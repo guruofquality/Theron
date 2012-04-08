@@ -31,6 +31,8 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <vector>
 
 // Enable checking for unregistered message types.
 #define THERON_ENABLE_MESSAGE_REGISTRATION_CHECKS 1
@@ -44,10 +46,6 @@
 #include <Theron/Register.h>
 
 #include "../Common/Timer.h"
-
-
-static const int NUM_ACTORS = 503;
-static const int NUM_TOKENS = 503;
 
 
 class Member : public Theron::Actor
@@ -96,11 +94,17 @@ int main(int argc, char *argv[])
     int numMessagesProcessed(0), numThreadsPulsed(0), numThreadsWoken(0);
     const int numHops = (argc > 1 && atoi(argv[1]) > 0) ? atoi(argv[1]) : 50000000;
     const int numThreads = (argc > 2 && atoi(argv[2]) > 0) ? atoi(argv[2]) : 16;
-    const int hopsPerToken((numHops + NUM_TOKENS - 1) / NUM_TOKENS);
+    const int numActors = (argc > 3 && atoi(argv[3]) > 0) ? atoi(argv[3]) : 503;
+    const int numTokens = (argc > 4 && atoi(argv[4]) > 0) ? atoi(argv[4]) : numActors;
+    const int stride = (argc > 5 && atoi(argv[5]) > 0) ? atoi(argv[5]) : 1;
+    const int hopsPerToken((numHops + numTokens - 1) / numTokens);
 
     printf("Using numHops = %d (use first command line argument to change)\n", numHops);
     printf("Using numThreads = %d (use second command line argument to change)\n", numThreads);
-    printf("Starting %d tokens in a ring of %d actors...\n", NUM_TOKENS, NUM_ACTORS);
+    printf("Using numActors = %d (use third command line argument to change)\n", numActors);
+    printf("Using numTokens = %d (use fourth command line argument to change)\n", numTokens);
+    printf("Using stride = %d (use fifth command line argument to change)\n", stride);
+    printf("Starting %d tokens in a ring of %d actors...\n", numTokens, numActors);
 
     // The reported time includes the startup and cleanup cost.
     Timer timer;
@@ -108,32 +112,37 @@ int main(int argc, char *argv[])
 
     {
         Theron::Framework framework(numThreads);
-        Theron::ActorRef members[NUM_ACTORS];
+        std::vector<Theron::ActorRef> members(numActors);
         Theron::Receiver receiver;
 
         // Create the member actors.
-        for (int index = 0; index < NUM_ACTORS; ++index)
+        for (int index = 0; index < numActors; ++index)
         {
             members[index] = framework.CreateActor<Member>();
         }
 
         // Initialize the actors by passing each one the address of the next actor in the ring.
-        for (int index(NUM_ACTORS - 1), nextIndex(0); index >= 0; nextIndex = index--)
+        for (int index(numActors - 1), nextIndex(0); index >= 0; nextIndex = index--)
         {
             framework.Send(members[nextIndex].GetAddress(), receiver.GetAddress(), members[index].GetAddress());
         }
 
-        // Start the processing by sending a token each to a number of consecutive actors.
-        // We divide the total number of hops between the tokens so they're equally long-lived.
-        for (int index(0), hopsLeft(numHops); index < NUM_TOKENS; ++index)
+        // Distribute the tokens among the actors.
+        int index(0), hopsLeft(numHops);
+        while (hopsLeft)
         {
             const int hopsForThisToken(hopsLeft < hopsPerToken ? hopsLeft : hopsPerToken);
             framework.Send(hopsForThisToken, receiver.GetAddress(), members[index].GetAddress());
-            hopsLeft -= hopsForThisToken;
-        }
 
+            hopsLeft -= hopsForThisToken;
+            if ((index += stride) >= numActors)
+            {
+                index -= numActors;
+            }
+        }
+        
         // Wait for all signal messages, indicating the tokens have all reached zero.
-        int outstandingCount(NUM_TOKENS);
+        int outstandingCount(numTokens);
         while (outstandingCount)
         {
             outstandingCount -= receiver.Wait(outstandingCount);

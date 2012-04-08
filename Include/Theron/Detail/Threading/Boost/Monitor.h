@@ -84,7 +84,7 @@ private:
     Monitor &operator=(const Monitor &other);
 
     Mutex mMutex;                                   ///< Owned mutex
-    boost::condition_variable_any mCond;            ///< Owned condition variable.
+    boost::condition_variable mCond;                ///< Owned condition variable.
 };
 
 

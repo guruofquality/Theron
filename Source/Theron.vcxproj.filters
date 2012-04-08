@@ -48,12 +48,12 @@
     <Filter Include="Header Files\Detail\MessageCache">
       <UniqueIdentifier>{cdbc63a2-7450-4bb6-bee4-6901c551ef54}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Detail\Threading\Std">
+      <UniqueIdentifier>{29e1490e-6c02-493f-a162-4d61245d21ff}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ActorCore.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ActorCreator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ActorDirectory.cpp">
@@ -90,6 +90,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MessageSender.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ActorCreator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -282,6 +285,18 @@
     </ClInclude>
     <ClInclude Include="..\Include\Theron\Detail\Messages\MessageSender.h">
       <Filter>Header Files\Detail\Messages</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Threading\Std\Lock.h">
+      <Filter>Header Files\Detail\Threading\Std</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Threading\Std\Monitor.h">
+      <Filter>Header Files\Detail\Threading\Std</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Threading\Std\Mutex.h">
+      <Filter>Header Files\Detail\Threading\Std</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Threading\Std\Thread.h">
+      <Filter>Header Files\Detail\Threading\Std</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

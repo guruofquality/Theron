@@ -89,11 +89,11 @@ in Visual Studio).
 /**
 \brief Controls whether Boost threads, locks, etc are used.
 
-If \ref THERON_USE_BOOST_THREADS is defined as 0 then Windows threads are used,
-introducing a dependency on the windows.h header.
-Otherwise Boost threads are used, introducing a dependency on boost::thread.
+If \ref THERON_USE_BOOST_THREADS is defined as 1 then Boost threads are used, introducing
+a dependency on boost::thread. If both THERON_USE_BOOST_THREADS and \ref THERON_USE_STD_THREADS
+are defined as 0, Windows threads are used, introducing a dependency on the windows.h header.
 
-Defaults to 0 (Windows threads).
+Defaults to 0 (Windows threads or std threads).
 
 The value of \ref THERON_USE_BOOST_THREADS can be overridden by defining it globally
 in the build (in the makefile using -D, or in the project preprocessor settings
@@ -107,6 +107,28 @@ or <code>threads=windows</code> on the make command line.
 */
 #define THERON_USE_BOOST_THREADS 0
 #endif // THERON_USE_BOOST_THREADS
+
+
+#ifndef THERON_USE_STD_THREADS
+/**
+\brief Controls whether std threads, locks, etc are used.
+
+If \ref THERON_USE_BOOST_THREADS is defined as 0 and \ref THERON_USE_STD_THREADS is defined
+as 1 then std threads are used, introducing a dependency on std::thread. If both
+\ref THERON_USE_BOOST_THREADS and \ref THERON_USE_STD_THREADS are defined as 0, Windows threads
+are used, introducing a dependency on the windows.h header.
+
+Defaults to 0 (Windows threads or Boost threads).
+
+The value of \ref THERON_USE_STD_THREADS can be overridden by defining it globally
+in the build (in the makefile using -D, or in the project preprocessor settings
+in Visual Studio).
+
+\note Support for std::thread is only available in C++11, so requires a C++11 compiler
+(for example GCC 4.6 or later).
+*/
+#define THERON_USE_STD_THREADS 0
+#endif // THERON_USE_STD_THREADS
 
 
 #if THERON_USE_BOOST_THREADS

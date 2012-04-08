@@ -21,6 +21,7 @@ namespace Detail
 
 ActorCore::ActorCore() :
   mNext(0),
+  mOwner(0),
   mParent(0),
   mFramework(0),
   mSequence(0),
@@ -34,8 +35,9 @@ ActorCore::ActorCore() :
 }
 
 
-ActorCore::ActorCore(const uint32_t sequence, Framework *const framework, Actor *const actor) :
+ActorCore::ActorCore(const uint32_t sequence, Framework *const framework, void *const owner, Actor *const actor) :
   mNext(0),
+  mOwner(owner),
   mParent(actor),
   mFramework(framework),
   mSequence(sequence),
@@ -60,10 +62,9 @@ ActorCore::~ActorCore()
     }
 
     {
-        // The directory lock is used to protect the global free list.
-        Lock directoryLock(Directory::GetMutex());
         Lock frameworkLock(mFramework->GetMutex());
 
+        // The directory lock, which the caller is expected to hold, is used to protect the global free list.
         // Free any left-over messages that haven't been processed.
         // This is undesirable but can happen if the actor is killed while
         // still processing messages.
