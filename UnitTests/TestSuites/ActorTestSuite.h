@@ -5,13 +5,12 @@
 #define THERON_TESTS_TESTSUITES_ACTORTESTSUITE_H
 
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/Actor.h>
+#include <Theron/BasicTypes.h>
+#include <Theron/Framework.h>
+#include <Theron/Receiver.h>
 
 #include <Theron/Detail/Threading/Mutex.h>
-
-#include <Theron/Framework.h>
-#include <Theron/Actor.h>
-#include <Theron/Receiver.h>
 
 #include "TestFramework/TestSuite.h"
 

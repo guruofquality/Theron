@@ -5,9 +5,8 @@
 #define THERON_DETAIL_MESSAGES_IMESSAGE_H
 
 
-#include <Theron/Detail/BasicTypes.h>
-
 #include <Theron/Address.h>
+#include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
 
 

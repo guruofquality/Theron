@@ -13,6 +13,7 @@ Actor reference, references an actor in user code.
 
 #include <Theron/Detail/Debug/Assert.h>
 #include <Theron/Detail/Messages/MessageSender.h>
+#include <Theron/Detail/ThreadPool/WorkerContext.h>
 
 #include <Theron/Actor.h>
 #include <Theron/Address.h>
@@ -23,6 +24,9 @@ Actor reference, references an actor in user code.
 
 namespace Theron
 {
+
+
+class Framework;
 
 
 /**
@@ -271,6 +275,9 @@ private:
     /// Dereferences the actor previously referenced by the actor reference.
     inline void Dereference();
 
+    /// Gets a pointer to the pulse counter of the framework that owns the referenced actor.
+    uint32_t *GetPulseCounterAddress() const;
+
     Actor *mActor;      ///< Pointer to the referenced actor.
 };
 
@@ -348,11 +355,18 @@ THERON_FORCEINLINE void ActorRef::Dereference()
 template <class ValueType>
 THERON_FORCEINLINE bool ActorRef::Push(const ValueType &value, const Address &from)
 {
+    IAllocator *const messageAllocator(AllocatorManager::Instance().GetAllocator());
+    Framework *const framework(&mActor->GetFramework());
+    const Address actorAddress(mActor->GetAddress());
+    uint32_t *const pulseCounterAddress(GetPulseCounterAddress());
+
     return Detail::MessageSender::Send(
-        &mActor->GetFramework(),
+        messageAllocator,
+        pulseCounterAddress,
+        framework,
         value,
         from,
-        mActor->GetAddress());
+        actorAddress);
 }
 
 

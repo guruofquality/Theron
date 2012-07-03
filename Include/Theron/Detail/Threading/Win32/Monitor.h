@@ -15,12 +15,12 @@
 #pragma warning(pop)
 #endif //_MSC_VER
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/BasicTypes.h>
+#include <Theron/Defines.h>
+
 #include <Theron/Detail/Debug/Assert.h>
 #include <Theron/Detail/Threading/Win32/Lock.h>
 #include <Theron/Detail/Threading/Win32/Mutex.h>
-
-#include <Theron/Defines.h>
 
 
 namespace Theron

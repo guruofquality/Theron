@@ -11,7 +11,7 @@ Allocator interface.
 */
 
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/BasicTypes.h>
 
 
 namespace Theron
@@ -76,6 +76,18 @@ public:
     /// \brief Frees a previously allocated piece of contiguous memory.
     /// \param memory A pointer to the memory to be deallocated.
     virtual void Free(void *const memory) = 0;
+
+    /// \brief Frees a previously allocated block of contiguous memory of a known size.
+    /// Knowing the size of the freed block allows some implementations to cache and reuse freed blocks.
+    /// \param memory A pointer to the block of memory to be deallocated.
+    /// \param size The size of the freed block.
+    /// \note The default implementation, which implementors can override,
+    /// simply calls \ref Free with no size, ignoring the size parameter. This provides backwards
+    /// compatibility with legacy implementations that don't implement this overload of Free.
+    inline virtual void Free(void *const memory, const SizeType /*size*/)
+    {
+        Free(memory);
+    }
 
 private:
 

@@ -13,7 +13,12 @@ Actor baseclass.
 
 #include <new>
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/BasicTypes.h>
+#include <Theron/Address.h>
+#include <Theron/AllocatorManager.h>
+#include <Theron/Defines.h>
+#include <Theron/IAllocator.h>
+
 #include <Theron/Detail/Containers/IntrusiveList.h>
 #include <Theron/Detail/Core/ActorCore.h>
 #include <Theron/Detail/Core/ActorCreator.h>
@@ -27,10 +32,7 @@ Actor baseclass.
 #include <Theron/Detail/Messages/MessageSender.h>
 #include <Theron/Detail/Messages/MessageTraits.h>
 #include <Theron/Detail/Threading/Lock.h>
-
-#include <Theron/Address.h>
-#include <Theron/AllocatorManager.h>
-#include <Theron/Defines.h>
+#include <Theron/Detail/ThreadPool/WorkerContext.h>
 
 
 /**
@@ -701,6 +703,9 @@ private:
     /// Returns a reference to the list of handlers added since the actor was last processed.
     inline MessageHandlerList &GetNewHandlerList();
 
+    /// Gets a pointer to the pulse counter of the framework that owns the actor.
+    uint32_t *GetPulseCounterAddress() const;
+
     Address mAddress;                                   ///< Unique address of this actor.
     Detail::ActorCore *mCore;                           ///< Pointer to the core implementation of the actor.
     uint32_t mReferenceCount;                           ///< Counts how many ActorRef instances reference this actor.
@@ -972,8 +977,23 @@ THERON_FORCEINLINE Actor::MessageHandlerList &Actor::GetNewHandlerList()
 template <class ValueType>
 THERON_FORCEINLINE bool Actor::Send(const ValueType &value, const Address &address) const
 {
+    Framework *const framework(mCore->GetFramework());
+    IAllocator *messageAllocator(AllocatorManager::Instance().GetAllocator());
+    uint32_t *pulseCounter(GetPulseCounterAddress());
+
+    // Use the message cache owned by the thread currently executing the actor, if any.
+    // When an actor sends a message in its constructor the executing thread is not a worker thread.
+    Detail::WorkerContext *const workerContext(mCore->GetWorkerContext());
+    if (workerContext != 0)
+    {
+        messageAllocator = &workerContext->mMessageCache;
+        pulseCounter = &workerContext->mPulseCount;
+    }
+
     return Detail::MessageSender::Send(
-        mCore->GetFramework(),
+        messageAllocator,
+        pulseCounter,
+        framework,
         value,
         mAddress,
         address);
@@ -983,8 +1003,20 @@ THERON_FORCEINLINE bool Actor::Send(const ValueType &value, const Address &addre
 template <class ValueType>
 THERON_FORCEINLINE bool Actor::TailSend(const ValueType &value, const Address &address) const
 {
+    Framework *const framework(mCore->GetFramework());
+    IAllocator *messageAllocator(AllocatorManager::Instance().GetAllocator());
+
+    // Use the message cache owned by the thread currently executing the actor, if any.
+    // When an actor sends a message in its constructor the executing thread is not a worker thread.
+    Detail::WorkerContext *const workerContext(mCore->GetWorkerContext());
+    if (workerContext != 0)
+    {
+        messageAllocator = &workerContext->mMessageCache;
+    }
+
     return Detail::MessageSender::TailSend(
-        mCore->GetFramework(),
+        messageAllocator,
+        framework,
         value,
         mAddress,
         address);

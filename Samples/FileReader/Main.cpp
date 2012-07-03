@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
     receiver.Wait();
 
     // Check the returned file size.
-    printf("Read %d bytes\n", messageCollector.mFileMessage.mFileSize);
+    printf("Read %d bytes\n", static_cast<int>(messageCollector.mFileMessage.mFileSize));
 
     return 0;
 }

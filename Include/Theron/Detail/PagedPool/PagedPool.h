@@ -7,14 +7,14 @@
 
 #include <new>
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/AllocatorManager.h>
+#include <Theron/BasicTypes.h>
+#include <Theron/Defines.h>
+#include <Theron/IAllocator.h>
+
 #include <Theron/Detail/Debug/Assert.h>
 #include <Theron/Detail/PagedPool/FreeList.h>
 #include <Theron/Detail/PagedPool/Page.h>
-
-#include <Theron/AllocatorManager.h>
-#include <Theron/IAllocator.h>
-#include <Theron/Defines.h>
 
 
 namespace Theron
@@ -24,7 +24,7 @@ namespace Detail
 
 
 /// A growable pool in which objects can be allocated.
-template <class Entry, uint32_t MAX_ENTRIES>
+template <class Entry, uint32_t MAX_ENTRIES, uint32_t ENTRY_ALIGNMENT>
 class PagedPool
 {
 public:
@@ -178,7 +178,7 @@ private:
     static const uint32_t PAGE_INDEX_MASK = ~ENTRY_INDEX_MASK;
     static const uint32_t PAGE_INDEX_SHIFT = 6;
 
-    typedef Page<Entry, ENTRIES_PER_PAGE> PageType;
+    typedef Page<Entry, ENTRIES_PER_PAGE, ENTRY_ALIGNMENT> PageType;
 
     THERON_FORCEINLINE static uint32_t PageIndex(const uint32_t index)
     {

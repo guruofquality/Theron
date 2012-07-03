@@ -1,8 +1,6 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
 
 
-#include <Theron/Detail/MessageCache/MessageCache.h>
-
 #include <Theron/AllocatorManager.h>
 #include <Theron/Framework.h>
 
@@ -32,9 +30,6 @@ Framework::Framework(const uint32_t numThreads) :
 Framework::~Framework()
 {
     mThreadPool.Stop();
-
-    // Dereference the global free list to ensure it's destroyed.
-    Detail::MessageCache::Instance().Dereference();
 
     // Free the fallback handler object, if one is set.
     if (mFallbackMessageHandler)

@@ -1,8 +1,8 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
 
 
-#ifndef THERON_DETAIL_ALLOCATORS_DEFAULTALLOCATOR_H
-#define THERON_DETAIL_ALLOCATORS_DEFAULTALLOCATOR_H
+#ifndef THERON_DEFAULTALLOCATOR_H
+#define THERON_DEFAULTALLOCATOR_H
 
 
 /**
@@ -11,14 +11,15 @@ The allocator used within Theron by default.
 */
 
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/Align.h>
+#include <Theron/BasicTypes.h>
+#include <Theron/Defines.h>
+#include <Theron/IAllocator.h>
+
+#include <Theron/Detail/Allocators/TrivialAllocator.h>
 #include <Theron/Detail/Debug/Assert.h>
 #include <Theron/Detail/Threading/Lock.h>
 #include <Theron/Detail/Threading/Mutex.h>
-
-#include <Theron/Align.h>
-#include <Theron/Defines.h>
-#include <Theron/IAllocator.h>
 
 
 namespace Theron
@@ -29,8 +30,10 @@ namespace Theron
 \brief A simple general purpose memory allocator used by default.
 
 This is the allocator implementation used by default within Theron.
-It is a simple wrapper around global new and delete, adding alignment and
-some simple, optional, allocation checking.
+It is a simple wrapper around a lower-level allocator (which is by default
+itself a trivial wrapper around global new and delete). The purpose of DefaultAllocator
+is to extend the lower-level allocator with support for aligned allocations,
+allocation counting, and guardband checking.
 
 The DefaultAllocator is used by Theron for its internal allocations, unless it
 is replaced by a custom allocator via \ref AllocatorManager::SetAllocator.
@@ -73,9 +76,26 @@ public:
     static const uint32_t GUARD_VALUE = 0xdddddddd;
 
     /**
-    \brief Default constructor
+    \brief Default constructor.
+
+    Constructs a DefaultAllocator around an internally owned Detail::TrivialAllocator.
+    The TrivialAllocator acts as a trivial wrapper around global new and delete. The
+    DefaultAllocator adds support for alignment and tracking of allocations.
     */
     inline DefaultAllocator();
+
+    /**
+    \brief Explicit constructor.
+    
+    Constructs a DefaultAllocator around an explicitly provided lower-level allocator.
+    Constructed like this, the DefaultAllocator wraps the provided allocator, adding
+    support for alignment and tracking of allocations.
+
+    \note The provided allocator is expected to always align to at least 4-byte boundaries.
+
+    \param allocator Pointer to an allocator to be wrapped by the constructed DefaultAllocator.
+    */
+    inline explicit DefaultAllocator(IAllocator *const allocator);
 
     /**
     \brief Virtual destructor.
@@ -181,7 +201,7 @@ public:
 
     \note This method counts user allocations and doesn't include internal overheads
     introduced by alignment and memory tracking. The actual amount of memory
-    allocated via global new is typically larger.
+    allocated via the wrapped lower-level allocator is typically larger.
 
     \see GetPeakBytesAllocated
     */
@@ -209,7 +229,7 @@ public:
 
     \note This method counts user allocations and doesn't include internal overheads
     introduced by alignment and memory tracking. The actual amount of memory
-    allocated via global new is typically larger.
+    allocated via the wrapped lower-level allocator is typically larger.
 
     \see GetBytesAllocated
     */
@@ -223,16 +243,36 @@ private:
     /// Internal method which is force-inlined to avoid a function call.
     inline void *AllocateInline(const SizeType size, const SizeType alignment);
 
+    Detail::TrivialAllocator mTrivialAllocator;     ///< Trivial allocator used by default.
+    IAllocator *const mAllocator;                   ///< Pointer to a lower-level allocator wrapped by this allocator.
+
 #if THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
-    Detail::Mutex mMutex;           ///< Critical section object used to protect access to the allocation counts.
-    uint32_t mBytesAllocated;       ///< Tracks the number of bytes currently allocated not yet freed.
-    uint32_t mPeakAllocated;        ///< Tracks the peak number of bytes allocated but not yet freed.
+    Detail::Mutex mMutex;                           ///< Critical section object used to protect access to the allocation counts.
+    uint32_t mBytesAllocated;                       ///< Tracks the number of bytes currently allocated not yet freed.
+    uint32_t mPeakAllocated;                        ///< Tracks the peak number of bytes allocated but not yet freed.
 #endif // THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
 
 };
 
 
-inline DefaultAllocator::DefaultAllocator()
+inline DefaultAllocator::DefaultAllocator() :
+  mTrivialAllocator(),
+  mAllocator(&mTrivialAllocator)
+{
+
+#if THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
+    Detail::Lock lock(mMutex);
+
+    mBytesAllocated = 0;
+    mPeakAllocated = 0;
+#endif // THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
+
+}
+
+
+inline DefaultAllocator::DefaultAllocator(IAllocator *const allocator) :
+  mTrivialAllocator(),
+  mAllocator(allocator)
 {
 
 #if THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
@@ -367,8 +407,8 @@ THERON_FORCEINLINE void *DefaultAllocator::AllocateInline(const SizeType size, c
     const uint32_t postambleSize(numPostFields * sizeof(uint32_t));
     const uint32_t internalSize(preambleSize + size + postambleSize);
 
-    uint32_t *const block = reinterpret_cast<uint32_t *>(new unsigned char[internalSize]);
-    THERON_ASSERT_MSG(THERON_ALIGNED(block, 4), "Global new is assumed to always align to 4-byte boundaries");
+    uint32_t *const block = reinterpret_cast<uint32_t *>(mAllocator->Allocate(internalSize));
+    THERON_ASSERT_MSG(THERON_ALIGNED(block, 4), "Wrapped allocator is assumed to always align to 4-byte boundaries");
 
     if (block)
     {
@@ -417,5 +457,5 @@ THERON_FORCEINLINE void *DefaultAllocator::AllocateInline(const SizeType size, c
 } // namespace Theron
 
 
-#endif // THERON_DETAIL_ALLOCATORS_DEFAULTALLOCATOR_H
+#endif // THERON_DEFAULTALLOCATOR_H
 

@@ -11,7 +11,14 @@ Framework that hosts and executes actors.
 */
 
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/ActorRef.h>
+#include <Theron/Address.h>
+#include <Theron/AllocatorManager.h>
+#include <Theron/BasicTypes.h>
+#include <Theron/Defines.h>
+#include <Theron/IAllocator.h>
+#include <Theron/Receiver.h>
+
 #include <Theron/Detail/Core/ActorConstructor.h>
 #include <Theron/Detail/Core/ActorCore.h>
 #include <Theron/Detail/Core/ActorCreator.h>
@@ -24,12 +31,6 @@ Framework that hosts and executes actors.
 #include <Theron/Detail/Messages/MessageSender.h>
 #include <Theron/Detail/Threading/Mutex.h>
 #include <Theron/Detail/ThreadPool/ThreadPool.h>
-
-#include <Theron/ActorRef.h>
-#include <Theron/Address.h>
-#include <Theron/AllocatorManager.h>
-#include <Theron/Defines.h>
-#include <Theron/Receiver.h>
 
 
 namespace Theron
@@ -95,6 +96,8 @@ class Framework
 {
 public:
 
+    friend class Actor;
+    friend class ActorRef;
     friend class Detail::ActorCore;
     friend class Detail::MessageSender;
 
@@ -592,7 +595,8 @@ private:
     inline Detail::Mutex &GetMutex() const;
 
     /// Schedules an actor for processing by the framework's threadpool.
-    inline void Schedule(Detail::ActorCore *const actor) const;
+    /// \return True, if the threadpool was pulsed to wake a worker thread.
+    inline bool Schedule(Detail::ActorCore *const actor) const;
 
     /// Schedules an actor for processing by the framework's threadpool, without waking a worker thread.
     inline void TailSchedule(Detail::ActorCore *const actor) const;
@@ -603,6 +607,9 @@ private:
     /// Gets the fallback handler registered with this framework, if any.
     inline const Detail::IFallbackHandler *GetFallbackHandler() const;
 
+    /// Gets a pointer to the pulse counter owned by the framework.
+    inline uint32_t *GetPulseCounterAddress() const;
+
     mutable Detail::ThreadPool mThreadPool;                 ///< Pool of worker threads used to run actor message handlers.
     Detail::IFallbackHandler *mFallbackMessageHandler;      ///< Registered message handler run for unhandled messages.
     Detail::DefaultFallbackHandler mDefaultFallbackHandler; ///< Default handler for unhandled messages.
@@ -611,9 +618,6 @@ private:
 
 THERON_FORCEINLINE void Framework::Initialize(const uint32_t numThreads)
 {
-    // Reference the global free list to ensure it's created.
-    Detail::MessageCache::Instance().Reference();
-
     THERON_ASSERT_MSG(numThreads > 0, "numThreads must be greater than zero");
     mThreadPool.Start(numThreads);
 
@@ -651,7 +655,12 @@ inline ActorRef Framework::CreateActor(const typename ActorType::Parameters &par
 template <class ValueType>
 THERON_FORCEINLINE bool Framework::Send(const ValueType &value, const Address &from, const Address &to) const
 {
+    IAllocator *const messageAllocator(AllocatorManager::Instance().GetAllocator());
+    uint32_t *const pulseCounterAddress(GetPulseCounterAddress());
+
     return Detail::MessageSender::Send(
+        messageAllocator,
+        pulseCounterAddress,
         this,
         value,
         from,
@@ -800,9 +809,9 @@ THERON_FORCEINLINE Detail::Mutex &Framework::GetMutex() const
 }
 
 
-THERON_FORCEINLINE void Framework::Schedule(Detail::ActorCore *const actor) const
+THERON_FORCEINLINE bool Framework::Schedule(Detail::ActorCore *const actor) const
 {
-    mThreadPool.Push(actor);
+    return mThreadPool.Push(actor);
 }
 
 
@@ -827,6 +836,12 @@ THERON_FORCEINLINE bool Framework::ExecuteFallbackHandler(const Detail::IMessage
 THERON_FORCEINLINE const Detail::IFallbackHandler *Framework::GetFallbackHandler() const
 {
     return mFallbackMessageHandler;
+}
+
+
+THERON_FORCEINLINE uint32_t *Framework::GetPulseCounterAddress() const
+{
+    return mThreadPool.GetPulseCounterAddress();
 }
 
 

@@ -13,7 +13,11 @@ Utility that can receive messages from actors.
 
 #include <new>
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/Address.h>
+#include <Theron/AllocatorManager.h>
+#include <Theron/BasicTypes.h>
+#include <Theron/Defines.h>
+
 #include <Theron/Detail/Containers/IntrusiveList.h>
 #include <Theron/Detail/Debug/Assert.h>
 #include <Theron/Detail/Handlers/ReceiverHandler.h>
@@ -23,10 +27,6 @@ Utility that can receive messages from actors.
 #include <Theron/Detail/Messages/MessageTraits.h>
 #include <Theron/Detail/Threading/Lock.h>
 #include <Theron/Detail/Threading/Monitor.h>
-
-#include <Theron/Address.h>
-#include <Theron/AllocatorManager.h>
-#include <Theron/Defines.h>
 
 
 namespace UnitTests

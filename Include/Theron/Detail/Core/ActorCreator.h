@@ -5,7 +5,11 @@
 #define THERON_DETAIL_CORE_ACTORCREATOR_H
 
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/BasicTypes.h>
+#include <Theron/Address.h>
+#include <Theron/AllocatorManager.h>
+#include <Theron/Defines.h>
+
 #include <Theron/Detail/Core/ActorAlignment.h>
 #include <Theron/Detail/Core/ActorCore.h>
 #include <Theron/Detail/Debug/Assert.h>
@@ -13,10 +17,6 @@
 #include <Theron/Detail/Directory/Directory.h>
 #include <Theron/Detail/Threading/Mutex.h>
 #include <Theron/Detail/Threading/Lock.h>
-
-#include <Theron/Address.h>
-#include <Theron/AllocatorManager.h>
-#include <Theron/Defines.h>
 
 
 namespace Theron

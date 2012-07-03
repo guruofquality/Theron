@@ -5,7 +5,8 @@
 #define THERON_TESTS_TESTSUITES_THREADCOLLECTIONTESTSUITE_H
 
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/BasicTypes.h>
+
 #include <Theron/Detail/Containers/List.h>
 #include <Theron/Detail/ThreadPool/ThreadCollection.h>
 #include <Theron/Detail/Threading/Lock.h>

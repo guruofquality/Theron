@@ -3,7 +3,7 @@
 
 #include "TestSuites/DefaultAllocatorTestSuite.h"
 #include "TestSuites/PoolTestSuite.h"
-#include "TestSuites/MessageCacheTestSuite.h"
+#include "TestSuites/CachingAllocatorTestSuite.h"
 #include "TestSuites/ListTestSuite.h"
 #include "TestSuites/MessageTestSuite.h"
 #include "TestSuites/ReceiverTestSuite.h"
@@ -21,7 +21,7 @@ namespace UnitTests
 /// Instantiations of the unit test suites.
 DefaultAllocatorTestSuite defaultAllocatorTestSuite;
 PoolTestSuite poolTestSuite;
-MessageCacheTestSuite messageCacheTestSuite;
+CachingAllocatorTestSuite messageCacheTestSuite;
 ListTestSuite listTestSuite;
 MessageTestSuite messageTestSuite;
 ReceiverTestSuite receiverTestSuite;

@@ -11,11 +11,11 @@ Manager for allocators used within Theron.
 */
 
 
-#include <Theron/Detail/Debug/Assert.h>
-
 #include <Theron/DefaultAllocator.h>
 #include <Theron/Defines.h>
 #include <Theron/IAllocator.h>
+
+#include <Theron/Detail/Debug/Assert.h>
 
 
 namespace Theron
@@ -29,7 +29,7 @@ This class is a singleton, and its single instance can be accessed using the
 static \ref Instance method on the class.
 
 Non-static \ref SetAllocator and \ref GetAllocator methods on the singleton instance
-allow the allocator used by Theron to be set and retreived. Setting the allocator
+allow the allocator used by Theron to be set and retrieved. Setting the allocator
 replaces the \ref DefaultAllocator, which is used if no custom allocator is explicitly
 set. The \ref GetAllocator method returns a pointer to the currently set allocator,
 which is either the allocator set previously using \ref SetAllocator or the \ref
@@ -126,8 +126,8 @@ private:
 
     /// Default constructor. Private, since the AllocatorManager is a singleton class.
     inline AllocatorManager() :
-       mDefaultAllocator(),
-       mAllocator(&mDefaultAllocator)
+      mDefaultAllocator(),
+      mAllocator(&mDefaultAllocator)
     {
     }
 
@@ -136,7 +136,7 @@ private:
 
     static AllocatorManager smInstance;         ///< The single, static instance.
 
-    DefaultAllocator mDefaultAllocator;         ///< Default allocator used if none is explicitly set.
+    DefaultAllocator mDefaultAllocator;         ///< Default allocator used if no user allocator is set.
     IAllocator *mAllocator;                     ///< Pointer to a general allocator for use in internal allocations.
 };
 

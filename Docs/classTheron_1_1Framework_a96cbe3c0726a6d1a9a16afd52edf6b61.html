@@ -145,13 +145,13 @@ template&lt;class ValueType &gt; </div>
 <div class="memdoc">
 
 <p>Sends a message to the entity (typically an actor) at the given address. </p>
-<div class="fragment"><pre class="fragment">    <span class="keyword">class </span>Actor : <span class="keyword">public</span> Theron::Actor
+<div class="fragment"><pre class="fragment">    <span class="keyword">class </span><a class="code" href="classTheron_1_1Framework_ae4af50bf1743d112cb2c2c784bea21c8.html#ae4af50bf1743d112cb2c2c784bea21c8">Actor</a> : <span class="keyword">public</span> Theron::<a class="code" href="classTheron_1_1Framework_ae4af50bf1743d112cb2c2c784bea21c8.html#ae4af50bf1743d112cb2c2c784bea21c8">Actor</a>
     {
     };
 
     <a class="code" href="classTheron_1_1Framework.html" title="Manager class that hosts, manages, and executes actors.">Theron::Framework</a> framework;
     <a class="code" href="classTheron_1_1Receiver.html" title="A standalone entity that can accept messages sent by actors.">Theron::Receiver</a> receiver;
-    <a class="code" href="classTheron_1_1ActorRef.html" title="Used to reference an actor in user code.">Theron::ActorRef</a> actor(framework.<a class="code" href="classTheron_1_1Framework_aaa437cb5d31838c0d44eb0a48d08298f.html#aaa437cb5d31838c0d44eb0a48d08298f" title="Creates an Actor within the framework.">CreateActor</a>&lt;Actor&gt;());
+    <a class="code" href="classTheron_1_1ActorRef.html" title="Used to reference an actor in user code.">Theron::ActorRef</a> actor(framework.<a class="code" href="classTheron_1_1Framework_aaa437cb5d31838c0d44eb0a48d08298f.html#aaa437cb5d31838c0d44eb0a48d08298f" title="Creates an Actor within the framework.">CreateActor</a>&lt;<a class="code" href="classTheron_1_1Framework_ae4af50bf1743d112cb2c2c784bea21c8.html#ae4af50bf1743d112cb2c2c784bea21c8">Actor</a>&gt;());
 
     framework.<a class="code" href="classTheron_1_1Framework_a96cbe3c0726a6d1a9a16afd52edf6b61.html#a96cbe3c0726a6d1a9a16afd52edf6b61" title="Sends a message to the entity (typically an actor) at the given address.">Send</a>(std::string(<span class="stringliteral">&quot;Hello&quot;</span>), receiver.<a class="code" href="classTheron_1_1Receiver_a22a1d3557a6cc167d1ccb9ad9cb95816.html#a22a1d3557a6cc167d1ccb9ad9cb95816" title="Gets the unique address of the receiver.">GetAddress</a>(), actor.<a class="code" href="classTheron_1_1ActorRef_aa08f664b1bdee8952da884e7050451ee.html#aa08f664b1bdee8952da884e7050451ee" title="Returns the unique address of the referenced actor.">GetAddress</a>());
 </pre></div><p>If no actor or receiver exists with the given address, the message will not be delivered, and <a class="el" href="classTheron_1_1Framework_a96cbe3c0726a6d1a9a16afd52edf6b61.html#a96cbe3c0726a6d1a9a16afd52edf6b61">Send</a> will return false.</p>

@@ -5,13 +5,9 @@
   <PropertyGroup />
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProgramFiles)\JustSoftwareSolutions\JustThread\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>THERON_USE_BOOST_THREADS=0;THERON_USE_STD_THREADS=1;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <Link>
-      <AdditionalDependencies>justthread_vc10_md.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ProgramFiles)\JustSoftwareSolutions\JustThread\lib</AdditionalLibraryDirectories>
-    </Link>
+    <Link />
   </ItemDefinitionGroup>
   <ItemGroup />
 </Project>

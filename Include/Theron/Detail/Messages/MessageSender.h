@@ -5,13 +5,13 @@
 #define THERON_DETAIL_MESSAGES_MESSAGESENDER_H
 
 
-#include <Theron/Detail/Directory/Directory.h>
+#include <Theron/Address.h>
+#include <Theron/BasicTypes.h>
+#include <Theron/Defines.h>
+#include <Theron/IAllocator.h>
+
 #include <Theron/Detail/Messages/IMessage.h>
 #include <Theron/Detail/Messages/MessageCreator.h>
-#include <Theron/Detail/Threading/Lock.h>
-
-#include <Theron/Address.h>
-#include <Theron/Defines.h>
 
 
 namespace Theron
@@ -36,6 +36,8 @@ public:
     /// to some other address. 
     template <class ValueType>
     inline static bool Send(
+        IAllocator *const messageAllocator,
+        uint32_t *const pulseCount,
         const Framework *const framework,
         const ValueType &value,
         const Address &from,
@@ -45,6 +47,7 @@ public:
     /// to some other address, without waking a worker thread to process it.
     template <class ValueType>
     inline static bool TailSend(
+        IAllocator *const messageAllocator,
         const Framework *const framework,
         const ValueType &value,
         const Address &from,
@@ -54,41 +57,46 @@ private:
 
     /// Delivers the given message to the given address.
     /// This is a non-inlined called function to avoid code bloat.
-    static bool Deliver(const Framework *const framework, IMessage *const message, const Address &address);
+    static bool Deliver(
+        uint32_t *const pulseCount,
+        const Framework *const framework,
+        IMessage *const message,
+        const Address &address);
 
     /// Delivers the given message to the given address, without waking a worker thread to process it.
     /// This is a non-inlined called function to avoid code bloat.
-    static bool TailDeliver(const Framework *const framework, IMessage *const message, const Address &address);
+    static bool TailDeliver(
+        const Framework *const framework,
+        IMessage *const message,
+        const Address &address);
 };
 
 
 template <class ValueType>
 THERON_FORCEINLINE bool MessageSender::Send(
+    IAllocator *const messageAllocator,
+    uint32_t *const pulseCount,
     const Framework *const framework,
     const ValueType &value,
     const Address &from,
     const Address &to)
 {
-    IMessage *message(0);
-
-    {
-        // Allocate a message. It'll be deleted by the target after it's been handled.
-        // The directory lock is used to protect the global free list.
-        Lock lock(Directory::GetMutex());
-        message = MessageCreator::Create(value, from);
-    }
+    // Allocate a message. It'll be deleted by the target after it's been handled.
+    IMessage *const message(MessageCreator::Create(messageAllocator, value, from));
 
     if (message != 0)
     {
+        THERON_ASSERT(pulseCount);
+        THERON_ASSERT(framework);
+
         // This call is non-inlined to reduce code bloat.
-        if (Deliver(framework, message, to))
+        if (Deliver(pulseCount, framework, message, to))
         {
             return true;
         }
 
         // If the message wasn't delivered we need to delete it ourselves.
-        Lock lock(Directory::GetMutex());
-        MessageCreator::Destroy(message);
+        MessageCreator::Destroy(messageAllocator, message);
     }
 
     return false;
@@ -97,22 +105,19 @@ THERON_FORCEINLINE bool MessageSender::Send(
 
 template <class ValueType>
 THERON_FORCEINLINE bool MessageSender::TailSend(
+    IAllocator *const messageAllocator,
     const Framework *const framework,
     const ValueType &value,
     const Address &from,
     const Address &to)
 {
-    IMessage *message(0);
-
-    {
-        // Allocate a message. It'll be deleted by the target after it's been handled.
-        // The directory lock is used to protect the global free list.
-        Lock lock(Directory::GetMutex());
-        message = MessageCreator::Create(value, from);
-    }
+    // Allocate a message. It'll be deleted by the target after it's been handled.
+    IMessage *const message(MessageCreator::Create(messageAllocator, value, from));
 
     if (message != 0)
     {
+        THERON_ASSERT(framework);
+
         // This call is non-inlined to reduce code bloat.
         // This 'tail' call doesn't wake a worker thread to process the message.
         if (TailDeliver(framework, message, to))
@@ -121,8 +126,7 @@ THERON_FORCEINLINE bool MessageSender::TailSend(
         }
 
         // If the message wasn't delivered we need to delete it ourselves.
-        Lock lock(Directory::GetMutex());
-        MessageCreator::Destroy(message);
+        MessageCreator::Destroy(messageAllocator, message);
     }
 
     return false;

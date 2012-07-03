@@ -5,13 +5,13 @@
 #define THERON_DETAIL_DIRECTORY_ACTORDIRECTORY_H
 
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/BasicTypes.h>
+#include <Theron/Address.h>
+#include <Theron/Defines.h>
+
 #include <Theron/Detail/Core/ActorCore.h>
 #include <Theron/Detail/Debug/Assert.h>
 #include <Theron/Detail/PagedPool/PagedPool.h>
-
-#include <Theron/Address.h>
-#include <Theron/Defines.h>
 
 
 namespace Theron
@@ -58,7 +58,8 @@ public:
 
 private:
 
-    typedef PagedPool<ActorCore, THERON_MAX_ACTORS> ActorPool;
+    // Actor cores are padded and aligned to cache line boundaries to avoid false sharing.
+    typedef PagedPool<ActorCore, THERON_MAX_ACTORS, THERON_CACHELINE_ALIGNMENT> ActorPool;
 
     ActorDirectory(const ActorDirectory &other);
     ActorDirectory &operator=(const ActorDirectory &other);

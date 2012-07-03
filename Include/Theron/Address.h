@@ -11,11 +11,12 @@ Address object, the unique name of an actor.
 */
 
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/BasicTypes.h>
+#include <Theron/Defines.h>
+
 #include <Theron/Detail/Threading/Mutex.h>
 #include <Theron/Detail/Threading/Lock.h>
 
-#include <Theron/Defines.h>
 
 
 namespace Theron

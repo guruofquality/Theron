@@ -5,9 +5,8 @@
 #define THERON_TESTS_TESTSUITES_DEFAULTALLOCATORTESTSUITE_H
 
 
-#include <Theron/Detail/BasicTypes.h>
-
 #include <Theron/Align.h>
+#include <Theron/BasicTypes.h>
 #include <Theron/DefaultAllocator.h>
 
 #include "TestFramework/TestSuite.h"

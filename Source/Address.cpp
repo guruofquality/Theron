@@ -1,10 +1,10 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
 
 
-#include <Theron/Detail/BasicTypes.h>
-#include <Theron/Detail/Threading/Mutex.h>
-
 #include <Theron/Address.h>
+#include <Theron/BasicTypes.h>
+
+#include <Theron/Detail/Threading/Mutex.h>
 
 
 namespace Theron

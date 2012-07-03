@@ -15,7 +15,7 @@ int main()
     if (!allPassed)
     {
         const TestManager::ErrorList &errors(TestManager::Instance()->GetErrors());
-        printf("Tests FAILED with %d error%s\n", errors.size(), errors.size() == 1 ? "" : "s");
+        printf("Tests FAILED with %d error%s\n", static_cast<int>(errors.size()), errors.size() == 1 ? "" : "s");
         return 1;
     }
 

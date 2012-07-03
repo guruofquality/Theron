@@ -7,15 +7,14 @@
 
 #include <new>
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/Address.h>
+#include <Theron/AllocatorManager.h>
+#include <Theron/BasicTypes.h>
+#include <Theron/Framework.h>
+#include <Theron/Receiver.h>
 
 #include <Theron/Detail/Messages/IMessage.h>
 #include <Theron/Detail/Messages/Message.h>
-
-#include <Theron/Address.h>
-#include <Theron/AllocatorManager.h>
-#include <Theron/Framework.h>
-#include <Theron/Receiver.h>
 
 #include "TestFramework/TestSuite.h"
 

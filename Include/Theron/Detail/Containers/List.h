@@ -7,11 +7,11 @@
 
 #include <new>
 
-#include <Theron/Detail/BasicTypes.h>
-#include <Theron/Detail/Debug/Assert.h>
-
+#include <Theron/BasicTypes.h>
 #include <Theron/AllocatorManager.h>
 #include <Theron/Defines.h>
+
+#include <Theron/Detail/Debug/Assert.h>
 
 
 namespace Theron
@@ -308,7 +308,7 @@ THERON_FORCEINLINE void List<ItemType>::Clear()
     while (node)
     {
         Node *const next = node->mNext;
-        AllocatorManager::Instance().GetAllocator()->Free(node);
+        AllocatorManager::Instance().GetAllocator()->Free(node, sizeof(Node));
         node = next;
     }
 
@@ -380,7 +380,7 @@ inline bool List<ItemType>::Remove(const ItemType &item)
             previous->mNext = node->mNext;
         }
 
-        AllocatorManager::Instance().GetAllocator()->Free(node);
+        AllocatorManager::Instance().GetAllocator()->Free(node, sizeof(Node));
         return true;
     }
 

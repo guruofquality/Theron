@@ -7,14 +7,14 @@
 
 #include <new>
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/AllocatorManager.h>
+#include <Theron/BasicTypes.h>
+#include <Theron/Defines.h>
+
 #include <Theron/Detail/Debug/Assert.h>
 #include <Theron/Detail/Messages/IMessage.h>
 #include <Theron/Detail/Messages/MessageTraits.h>
 #include <Theron/Detail/Messages/MessageAlignment.h>
-
-#include <Theron/AllocatorManager.h>
-#include <Theron/Defines.h>
 
 
 namespace Theron

@@ -5,12 +5,12 @@
 #define THERON_DETAIL_THREADPOOL_THREADCOLLECTION_H
 
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/BasicTypes.h>
+#include <Theron/Defines.h>
+
 #include <Theron/Detail/Containers/List.h>
 #include <Theron/Detail/Threading/Thread.h>
 #include <Theron/Detail/Threading/Mutex.h>
-
-#include <Theron/Defines.h>
 
 
 namespace Theron

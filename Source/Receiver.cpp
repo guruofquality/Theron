@@ -4,7 +4,6 @@
 #include <Theron/Detail/Debug/Assert.h>
 #include <Theron/Detail/Directory/Directory.h>
 #include <Theron/Detail/Directory/ReceiverDirectory.h>
-#include <Theron/Detail/MessageCache/MessageCache.h>
 #include <Theron/Detail/Messages/MessageCreator.h>
 #include <Theron/Detail/Threading/Lock.h>
 
@@ -25,16 +24,11 @@ Receiver::Receiver() :
   mMonitor(),
   mMessagesReceived(0)
 {
-    // Reference the global free list to ensure it's created.
-    Detail::MessageCache::Instance().Reference();
+    Detail::Lock lock(Detail::Directory::GetMutex());
 
-    {
-        Detail::Lock lock(Detail::Directory::GetMutex());
-
-        // Register this receiver with the directory and get its unique address.
-        mAddress = Detail::ReceiverDirectory::Instance().RegisterReceiver(this);
-        THERON_ASSERT(mAddress != Address::Null());
-    }
+    // Register this receiver with the directory and get its unique address.
+    mAddress = Detail::ReceiverDirectory::Instance().RegisterReceiver(this);
+    THERON_ASSERT(mAddress != Address::Null());
 }
 
 
@@ -55,9 +49,6 @@ Receiver::~Receiver()
             AllocatorManager::Instance().GetAllocator()->Free(handler);
         }
     }
-
-    // Dereference the global free list to ensure it's destroyed.
-    Detail::MessageCache::Instance().Dereference();
 }
 
 
@@ -81,16 +72,15 @@ void Receiver::Push(Detail::IMessage *const message)
             ++handlers;
         }
 
-        // Wake up anyone who's waiting for a message to arrive.
         ++mMessagesReceived;
 
+        // Wake up anyone who's waiting for a message to arrive.
         mMonitor.Pulse();
     }
 
     // Free the message, whether it was handled or not.
-    // The directory lock is used to protect the global free list.
-    Detail::Lock lock(Detail::Directory::GetMutex());
-    Detail::MessageCreator::Destroy(message);
+    IAllocator *const messageAllocator(AllocatorManager::Instance().GetAllocator());
+    Detail::MessageCreator::Destroy(messageAllocator, message);
 }
 
 

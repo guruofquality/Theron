@@ -5,7 +5,11 @@
 #define THERON_DETAIL_CORE_ACTORCORE_H
 
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/BasicTypes.h>
+#include <Theron/Address.h>
+#include <Theron/Defines.h>
+#include <Theron/IAllocator.h>
+
 #include <Theron/Detail/Containers/IntrusiveList.h>
 #include <Theron/Detail/Containers/IntrusiveQueue.h>
 #include <Theron/Detail/Debug/Assert.h>
@@ -14,10 +18,7 @@
 #include <Theron/Detail/Handlers/MessageHandlerCast.h>
 #include <Theron/Detail/Messages/IMessage.h>
 #include <Theron/Detail/Messages/MessageTraits.h>
-
-#include <Theron/Address.h>
-#include <Theron/Defines.h>
-#include <Theron/IAllocator.h>
+#include <Theron/Detail/ThreadPool/WorkerContext.h>
 
 
 namespace Theron
@@ -107,6 +108,18 @@ public:
     {
         THERON_ASSERT(mFramework);
         return mFramework;
+    }
+
+    /// Sets a pointer to the context structure of the worker thread currently executing the actor.
+    THERON_FORCEINLINE void SetWorkerContext(WorkerContext *const workerContext)
+    {
+        mWorkerContext = workerContext;
+    }
+
+    /// Gets a pointer to the context structure of the worker thread currently executing the actor.
+    THERON_FORCEINLINE WorkerContext *GetWorkerContext() const
+    {
+        return mWorkerContext;
     }
 
     /// Gets a reference to the mutex that protects the actor.
@@ -242,7 +255,8 @@ private:
     ActorCore *mNext;                           ///< Pointer to the next actor in a queue of actors.
     void *mOwner;                               ///< Pointer to the derived actor object that owns this core.
     Actor *mParent;                             ///< Pointer to the Actor baseclass component of the owning derived actor object.
-    Framework *mFramework;                      ///< The framework instance that owns this actor.
+    Framework *mFramework;                      ///< Pointer to the framework that owns this actor.
+    WorkerContext *mWorkerContext;              ///< Pointer to the context structure of the thread currently executing the actor.
     uint32_t mSequence;                         ///< Sequence number of the actor (half of its unique address).
     uint32_t mMessageCount;						///< Number of messages in the message queue.
     MessageQueue mMessageQueue;                 ///< Queue of messages awaiting processing.

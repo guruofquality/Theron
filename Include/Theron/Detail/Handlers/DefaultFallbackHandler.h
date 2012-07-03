@@ -9,10 +9,10 @@
 #include <stdio.h>
 #endif // THERON_ENABLE_UNHANDLED_MESSAGE_CHECKS
 
-#include <Theron/Detail/BasicTypes.h>
-#include <Theron/Detail/Debug/Assert.h>
-
+#include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
+
+#include <Theron/Detail/Debug/Assert.h>
 
 
 #if THERON_ENABLE_UNHANDLED_MESSAGE_CHECKS
@@ -55,7 +55,7 @@ inline void DefaultFallbackHandler::Handle(
 
         for (const unsigned int *word(begin); word != end; ++word)
         {
-            fprintf(stderr, format, word - begin, *word);
+            fprintf(stderr, format, static_cast<int>(word - begin), static_cast<int>(*word));
         }
     }
 

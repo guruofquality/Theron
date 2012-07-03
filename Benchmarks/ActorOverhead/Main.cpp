@@ -34,8 +34,8 @@ class EmptyActor : public Theron::Actor
 
 int main()
 {
-    printf("The 'empty' actor has size %d bytes\n", sizeof(Example::EmptyActor));
-    printf("Additionally, the core object referenced by the actor has size %d bytes\n", sizeof(Theron::Detail::ActorCore));
+    printf("The 'empty' actor has size %d bytes\n", static_cast<int>(sizeof(Example::EmptyActor)));
+    printf("Additionally, the core object referenced by the actor has size %d bytes\n", static_cast<int>(sizeof(Theron::Detail::ActorCore)));
     return 0;
 }
 

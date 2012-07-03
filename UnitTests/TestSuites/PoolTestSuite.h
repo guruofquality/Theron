@@ -5,9 +5,10 @@
 #define THERON_TESTS_TESTSUITES_POOLTESTSUITE_H
 
 
-#include <Theron/Detail/BasicTypes.h>
-#include <Theron/Detail/MessageCache/Pool.h>
 #include <Theron/Align.h>
+#include <Theron/BasicTypes.h>
+
+#include <Theron/Detail/Allocators/Pool.h>
 
 #include "TestFramework/TestSuite.h"
 

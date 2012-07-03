@@ -132,7 +132,7 @@ private:
         const size_t numValues(contents.size());
         const char *delimiter = ":";
 
-        printf("Received message with %d values", numValues);
+        printf("Received message with %d values", static_cast<int>(numValues));
         for (size_t index = 0; index < numValues; ++index)
         {
             printf("%s %d", delimiter, contents[index]);

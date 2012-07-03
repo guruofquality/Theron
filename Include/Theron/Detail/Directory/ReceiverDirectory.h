@@ -5,13 +5,13 @@
 #define THERON_DETAIL_DIRECTORY_RECEIVERDIRECTORY_H
 
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/BasicTypes.h>
+#include <Theron/Address.h>
+#include <Theron/Defines.h>
+
 #include <Theron/Detail/Debug/Assert.h>
 #include <Theron/Detail/PagedPool/PagedPool.h>
 #include <Theron/Detail/Threading/Mutex.h>
-
-#include <Theron/Address.h>
-#include <Theron/Defines.h>
 
 
 namespace Theron
@@ -52,7 +52,8 @@ public:
 
 private:
 
-    typedef PagedPool<Receiver *, THERON_MAX_RECEIVERS> ReceiverPool;
+    // Receiver pointers don't need special alignment so we align them to 4 byte boundaries.
+    typedef PagedPool<Receiver *, THERON_MAX_RECEIVERS, 4> ReceiverPool;
 
     ReceiverDirectory(const ReceiverDirectory &other);
     ReceiverDirectory &operator=(const ReceiverDirectory &other);

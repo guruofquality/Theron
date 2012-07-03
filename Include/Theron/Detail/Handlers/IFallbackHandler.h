@@ -5,10 +5,10 @@
 #define THERON_DETAIL_HANDLERS_IFALLBACKHANDLER_H
 
 
-#include <Theron/Detail/BasicTypes.h>
-#include <Theron/Detail/Messages/IMessage.h>
-
+#include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
+
+#include <Theron/Detail/Messages/IMessage.h>
 
 
 namespace Theron

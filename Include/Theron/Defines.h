@@ -330,5 +330,27 @@ The value of \ref THERON_MAX_RECEIVERS can be overridden by defining it globally
 #endif // THERON_MAX_RECEIVERS
 
 
+#ifndef THERON_CACHELINE_ALIGNMENT
+/**
+\brief Describes the size of a cache line on the target platform.
+
+This define is used internally to align allocated structures to cache-line boundaries.
+By default it is set to 64 bytes, the size of a cache line on many systems.
+
+The value of \ref THERON_CACHELINE_ALIGNMENT can be overridden by defining it globally in the build
+(in the makefile using -D, or in the project preprocessor settings in Visual Studio).
+
+By defining \ref THERON_CACHELINE_ALIGNMENT  globally within your own project build, you can
+override the default value and specify a different size, either to optimize allocations for
+a system with a different cache-line width, or else to disable cache-line alignment completely
+by specifying a harmless alignment such as 4 bytes.
+
+\note Changing this value is unlikely to provide any benefit unless you know for sure
+that you need to change it.
+*/
+#define THERON_CACHELINE_ALIGNMENT 64
+#endif // THERON_CACHELINE_ALIGNMENT
+
+
 #endif // THERON_DEFINES_H
 

@@ -5,13 +5,13 @@
 #define THERON_DETAIL_HANDLERS_BLINDFALLBACKHANDLER_H
 
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/BasicTypes.h>
+#include <Theron/Address.h>
+#include <Theron/Defines.h>
+
 #include <Theron/Detail/Debug/Assert.h>
 #include <Theron/Detail/Handlers/IFallbackHandler.h>
 #include <Theron/Detail/Messages/IMessage.h>
-
-#include <Theron/Address.h>
-#include <Theron/Defines.h>
 
 
 namespace Theron

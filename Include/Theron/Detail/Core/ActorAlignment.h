@@ -5,7 +5,7 @@
 #define THERON_DETAIL_CORE_ACTORALIGNMENT_H
 
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/BasicTypes.h>
 
 
 namespace Theron

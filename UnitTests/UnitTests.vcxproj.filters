@@ -52,9 +52,6 @@
     <ClInclude Include="TestSuites\ListTestSuite.h">
       <Filter>Header Files\TestSuites</Filter>
     </ClInclude>
-    <ClInclude Include="TestSuites\MessageCacheTestSuite.h">
-      <Filter>Header Files\TestSuites</Filter>
-    </ClInclude>
     <ClInclude Include="TestSuites\MessageTestSuite.h">
       <Filter>Header Files\TestSuites</Filter>
     </ClInclude>
@@ -68,6 +65,9 @@
       <Filter>Header Files\TestSuites</Filter>
     </ClInclude>
     <ClInclude Include="TestSuites\DefaultAllocatorTestSuite.h">
+      <Filter>Header Files\TestSuites</Filter>
+    </ClInclude>
+    <ClInclude Include="TestSuites\CachingAllocatorTestSuite.h">
       <Filter>Header Files\TestSuites</Filter>
     </ClInclude>
   </ItemGroup>

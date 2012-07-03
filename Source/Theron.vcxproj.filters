@@ -45,11 +45,11 @@
     <Filter Include="Header Files\Detail\PagedPool">
       <UniqueIdentifier>{18d17da7-d695-4e12-8167-16f0b04851d9}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\Detail\MessageCache">
-      <UniqueIdentifier>{cdbc63a2-7450-4bb6-bee4-6901c551ef54}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\Detail\Threading\Std">
       <UniqueIdentifier>{29e1490e-6c02-493f-a162-4d61245d21ff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Detail\Allocators">
+      <UniqueIdentifier>{82bbc2e5-1e2e-495e-b28c-1aca749b33c7}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -71,9 +71,6 @@
     <ClCompile Include="Framework.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MessageCache.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Receiver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -93,6 +90,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ActorCreator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ActorRef.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Actor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -262,12 +265,6 @@
     <ClInclude Include="..\Include\Theron\Detail\PagedPool\PagedPool.h">
       <Filter>Header Files\Detail\PagedPool</Filter>
     </ClInclude>
-    <ClInclude Include="..\Include\Theron\Detail\MessageCache\MessageCache.h">
-      <Filter>Header Files\Detail\MessageCache</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Include\Theron\Detail\MessageCache\Pool.h">
-      <Filter>Header Files\Detail\MessageCache</Filter>
-    </ClInclude>
     <ClInclude Include="..\Include\Theron\Detail\Handlers\FallbackHandler.h">
       <Filter>Header Files\Detail\Handlers</Filter>
     </ClInclude>
@@ -297,6 +294,21 @@
     </ClInclude>
     <ClInclude Include="..\Include\Theron\Detail\Threading\Std\Thread.h">
       <Filter>Header Files\Detail\Threading\Std</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\ThreadPool\WorkerContext.h">
+      <Filter>Header Files\Detail\ThreadPool</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\ThreadPool\ActorProcessor.h">
+      <Filter>Header Files\Detail\ThreadPool</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Allocators\CachingAllocator.h">
+      <Filter>Header Files\Detail\Allocators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Allocators\Pool.h">
+      <Filter>Header Files\Detail\Allocators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Allocators\TrivialAllocator.h">
+      <Filter>Header Files\Detail\Allocators</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

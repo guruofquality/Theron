@@ -1,16 +1,17 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
 
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/Actor.h>
+#include <Theron/AllocatorManager.h>
+#include <Theron/BasicTypes.h>
+#include <Theron/Framework.h>
+#include <Theron/IAllocator.h>
+
 #include <Theron/Detail/Core/ActorCore.h>
 #include <Theron/Detail/Debug/Assert.h>
 #include <Theron/Detail/Directory/Directory.h>
 #include <Theron/Detail/Messages/MessageCreator.h>
 #include <Theron/Detail/Threading/Lock.h>
-
-#include <Theron/Actor.h>
-#include <Theron/AllocatorManager.h>
-#include <Theron/Framework.h>
 
 
 namespace Theron
@@ -24,6 +25,7 @@ ActorCore::ActorCore() :
   mOwner(0),
   mParent(0),
   mFramework(0),
+  mWorkerContext(0),
   mSequence(0),
   mMessageCount(0),
   mMessageQueue(),
@@ -40,6 +42,7 @@ ActorCore::ActorCore(const uint32_t sequence, Framework *const framework, void *
   mOwner(owner),
   mParent(actor),
   mFramework(framework),
+  mWorkerContext(0),
   mSequence(sequence),
   mMessageCount(0),
   mMessageQueue(),
@@ -62,15 +65,15 @@ ActorCore::~ActorCore()
     }
 
     {
+        IAllocator *const messageAllocator(AllocatorManager::Instance().GetAllocator());
         Lock frameworkLock(mFramework->GetMutex());
 
-        // The directory lock, which the caller is expected to hold, is used to protect the global free list.
         // Free any left-over messages that haven't been processed.
         // This is undesirable but can happen if the actor is killed while
         // still processing messages.
         while (IMessage *const message = mMessageQueue.Pop())
         {
-            MessageCreator::Destroy(message);
+            MessageCreator::Destroy(messageAllocator, message);
             --mMessageCount;
         }
 

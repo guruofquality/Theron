@@ -5,10 +5,10 @@
 #define THERON_DETAIL_PAGEDPOOL_FREELIST_H
 
 
-#include <Theron/Detail/BasicTypes.h>
-#include <Theron/Detail/Debug/Assert.h>
-
+#include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
+
+#include <Theron/Detail/Debug/Assert.h>
 
 
 namespace Theron

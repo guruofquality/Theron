@@ -117,7 +117,7 @@ template&lt;class ActorType &gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">void(ActorType::*)(const void *const data, const uint32_t size, const <a class="el" href="classTheron_1_1Address.html">Address</a> from)&nbsp;</td>
+          <td class="paramtype">void(ActorType::*)(const void *const data, const <a class="el" href="namespaceTheron_aa154bad6b7514de43642bbbb02ca974d.html#aa154bad6b7514de43642bbbb02ca974d">uint32_t</a> size, const <a class="el" href="classTheron_1_1Address.html">Address</a> from)&nbsp;</td>
           <td class="paramname"> <em>handler</em></td><td>&nbsp;</td>
         </tr>
         <tr>
@@ -143,7 +143,7 @@ template&lt;class ActorType &gt; </div>
 
     <span class="keyword">private</span>:
 
-        <span class="keyword">inline</span> <span class="keywordtype">void</span> DefaultHandler(<span class="keyword">const</span> <span class="keywordtype">void</span> *<span class="keyword">const</span> data, <span class="keyword">const</span> Theron::uint32_t size, <span class="keyword">const</span> <a class="code" href="classTheron_1_1Address.html" title="The unique address of an entity that can send or receive messages.">Theron::Address</a> from)
+        <span class="keyword">inline</span> <span class="keywordtype">void</span> DefaultHandler(<span class="keyword">const</span> <span class="keywordtype">void</span> *<span class="keyword">const</span> data, <span class="keyword">const</span> <a class="code" href="namespaceTheron_aa154bad6b7514de43642bbbb02ca974d.html#aa154bad6b7514de43642bbbb02ca974d" title="A 32-bit unsigned integer.">Theron::uint32_t</a> size, <span class="keyword">const</span> <a class="code" href="classTheron_1_1Address.html" title="The unique address of an entity that can send or receive messages.">Theron::Address</a> from)
         {
             printf(<span class="stringliteral">&quot;Actor received unknown message of size %d from address &#39;%d&#39;\n&quot;</span>, size, from.<a class="code" href="classTheron_1_1Address_a29b5e920da956e60cc6b7e072b1cef27.html#a29b5e920da956e60cc6b7e072b1cef27" title="Gets the unique value of the address as an unsigned integer.">AsInteger</a>());
         }

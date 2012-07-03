@@ -5,14 +5,14 @@
 #define THERON_DETAIL_HANDLERS_BLINDDEFAULTHANDLER_H
 
 
-#include <Theron/Detail/BasicTypes.h>
+#include <Theron/BasicTypes.h>
+#include <Theron/Address.h>
+#include <Theron/Defines.h>
+
 #include <Theron/Detail/Debug/Assert.h>
 #include <Theron/Detail/Messages/IMessage.h>
 #include <Theron/Detail/Messages/Message.h>
 #include <Theron/Detail/Handlers/IDefaultHandler.h>
-
-#include <Theron/Address.h>
-#include <Theron/Defines.h>
 
 
 namespace Theron

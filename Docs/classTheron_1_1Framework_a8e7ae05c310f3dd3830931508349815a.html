@@ -118,7 +118,7 @@ window.onload = initDynSections;
         <tr>
           <td class="memname">Theron::Framework::Framework </td>
           <td>(</td>
-          <td class="paramtype">const uint32_t&nbsp;</td>
+          <td class="paramtype">const <a class="el" href="namespaceTheron_aa154bad6b7514de43642bbbb02ca974d.html#aa154bad6b7514de43642bbbb02ca974d">uint32_t</a>&nbsp;</td>
           <td class="paramname"> <em>numThreads</em></td>
           <td>&nbsp;)&nbsp;</td>
           <td><code> [explicit]</code></td>
@@ -130,7 +130,7 @@ window.onload = initDynSections;
 <p>Constructor. </p>
 <p>Constructs a framework with the given number of worker threads.</p>
 <p>It's possible to construct multiple <a class="el" href="classTheron_1_1Framework.html" title="Manager class that hosts, manages, and executes actors.">Framework</a> objects within a single application. The actors created within each <a class="el" href="classTheron_1_1Framework.html" title="Manager class that hosts, manages, and executes actors.">Framework</a> are processed by separate pools of worker threads. <a class="el" href="classTheron_1_1Actor.html" title="The actor baseclass.">Actor</a> addresses are globally unique across all frameworks. Actors in one framework can send messages to actors in other frameworks.</p>
-<div class="fragment"><pre class="fragment">    <span class="keyword">class </span>MyActor : <span class="keyword">public</span> Theron::Actor
+<div class="fragment"><pre class="fragment">    <span class="keyword">class </span>MyActor : <span class="keyword">public</span> Theron::<a class="code" href="classTheron_1_1Framework_ae4af50bf1743d112cb2c2c784bea21c8.html#ae4af50bf1743d112cb2c2c784bea21c8">Actor</a>
     {
     };
 

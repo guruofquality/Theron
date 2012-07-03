@@ -58,7 +58,7 @@ public:
 
             for (const unsigned int *word(begin); word != end; ++word)
             {
-                printf(format, word - begin, *word);
+                printf(format, static_cast<int>(word - begin), *word);
             }
         }
     }

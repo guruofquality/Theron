@@ -80,8 +80,8 @@ void ThreadCollection::CreateThread(Thread::EntryPoint userEntryPoint, void *con
     }
     else
     {
-        // Allocate a new thread.
-        void *const threadMemory = AllocatorManager::Instance().GetAllocator()->Allocate(sizeof(Thread));
+        // Allocate a new thread, aligning the memory to a cache-line boundary to reduce false-sharing of cache-lines.
+        void *const threadMemory = AllocatorManager::Instance().GetAllocator()->AllocateAligned(sizeof(Thread), THERON_CACHELINE_ALIGNMENT);
         if (threadMemory == 0)
         {
             return;
@@ -91,7 +91,7 @@ void ThreadCollection::CreateThread(Thread::EntryPoint userEntryPoint, void *con
         void *const dataMemory = AllocatorManager::Instance().GetAllocator()->Allocate(sizeof(ThreadData));
         if (dataMemory == 0)
         {
-            AllocatorManager::Instance().GetAllocator()->Free(threadMemory);
+            AllocatorManager::Instance().GetAllocator()->Free(threadMemory, sizeof(Thread));
             return;
         }
 
@@ -131,8 +131,8 @@ void ThreadCollection::DestroyThreads()
         thread->~Thread();
 
         // Free the memory for the thread and the context block.
-        AllocatorManager::Instance().GetAllocator()->Free(threadData);
-        AllocatorManager::Instance().GetAllocator()->Free(thread);
+        AllocatorManager::Instance().GetAllocator()->Free(threadData, sizeof(ThreadData));
+        AllocatorManager::Instance().GetAllocator()->Free(thread, sizeof(Thread));
     }
 
     mThreads.Clear();

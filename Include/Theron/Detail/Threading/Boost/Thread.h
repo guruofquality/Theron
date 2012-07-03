@@ -130,7 +130,7 @@ THERON_FORCEINLINE void Thread::Join()
     // Explicitly destruct because allocated with placement new.
     mThread->~thread();
 
-    AllocatorManager::Instance().GetAllocator()->Free(mThread); 
+    AllocatorManager::Instance().GetAllocator()->Free(mThread, sizeof(boost::thread)); 
     mThread = 0;
 }
 

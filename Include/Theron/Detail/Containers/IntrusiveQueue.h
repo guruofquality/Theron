@@ -5,11 +5,11 @@
 #define THERON_DETAIL_CONTAINERS_INTRUSIVEQUEUE_H
 
 
-#include <Theron/Detail/BasicTypes.h>
-#include <Theron/Detail/Debug/Assert.h>
-
+#include <Theron/BasicTypes.h>
 #include <Theron/Align.h>
 #include <Theron/Defines.h>
+
+#include <Theron/Detail/Debug/Assert.h>
 
 
 namespace Theron
