@@ -87,17 +87,17 @@ window.onload = initDynSections;
       <div class="navtab">
         <table>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645">Actor</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a5639d7ce2d33217f658de3b39ae1d80b.html#a5639d7ce2d33217f658de3b39ae1d80b">Actor</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a8f0fd920b4d270cf8c8184104b958092.html#a8f0fd920b4d270cf8c8184104b958092">DeregisterHandler</a></td></tr>
-          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a41a42e5c507e83ec3b5f0806a8869715.html#a41a42e5c507e83ec3b5f0806a8869715">GetAddress</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a268613b27d2d718b55e2eb489118aa04.html#a268613b27d2d718b55e2eb489118aa04">GetAddress</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_afe30f86e99ff80691ec11e207711a46a.html#afe30f86e99ff80691ec11e207711a46a">GetFramework</a></td></tr>
-          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a4f6af5dba4b36bbb55ee216589ccfb63.html#a4f6af5dba4b36bbb55ee216589ccfb63">GetNumQueuedMessages</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a6bfdf3ec59943e2c8f1e686d2e3c1077.html#a6bfdf3ec59943e2c8f1e686d2e3c1077">IsHandlerRegistered</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a6a5a4bd492f490bf730274c247b584da.html#a6a5a4bd492f490bf730274c247b584da">RegisterHandler</a></td></tr>
           <tr><td class="navtab"><a class="qindexHL" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2">Send</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a9d2a84c501b187c0b531ac9f5a30e2c9.html#a9d2a84c501b187c0b531ac9f5a30e2c9">SetDefaultHandler</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_acefedebe52fe74026c65cfab5a209a11.html#acefedebe52fe74026c65cfab5a209a11">SetDefaultHandler</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_af566742b7486c810cc694897adcbe958.html#af566742b7486c810cc694897adcbe958">TailSend</a></td></tr>
-          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_ab60796f45fdf65fbcc2f27abdeac37f9.html#ab60796f45fdf65fbcc2f27abdeac37f9">~Actor</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a95ce244d6cd6f4f3bfaea29dfb89ab6c.html#a95ce244d6cd6f4f3bfaea29dfb89ab6c">~Actor</a></td></tr>
         </table>
       </div>
    </td>
@@ -129,7 +129,7 @@ template&lt;class ValueType &gt; </div>
 </div>
 <div class="memdoc">
 
-<p>Sends a message to the entity (actor or receiver) at the given address. </p>
+<p>Sends a message to the entity (actor or <a class="el" href="classTheron_1_1Receiver.html" title="A standalone entity that can accept messages sent by actors.">Receiver</a>) at the given address. </p>
 <div class="fragment"><pre class="fragment">    <span class="keyword">class </span>Responder : <span class="keyword">public</span> Theron::<a class="code" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645" title="Default constructor.">Actor</a>
     {
     <span class="keyword">public</span>:
@@ -138,43 +138,54 @@ template&lt;class ValueType &gt; </div>
         {
         };
 
-        Responder()
+        <span class="keyword">explicit</span> Responder(<a class="code" href="classTheron_1_1Framework.html" title="Manager class that hosts, manages, and executes actors.">Theron::Framework</a> &amp;framework) : Theron::<a class="code" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645" title="Default constructor.">Actor</a>(framework)
         {
             <a class="code" href="classTheron_1_1Actor_a6a5a4bd492f490bf730274c247b584da.html#a6a5a4bd492f490bf730274c247b584da" title="Registers a handler for a specific message type.">RegisterHandler</a>(<span class="keyword">this</span>, &amp;Responder::Respond);
         }
 
     <span class="keyword">private</span>:
 
-        <span class="keyword">inline</span> <span class="keywordtype">void</span> Respond(<span class="keyword">const</span> Message &amp;message, <span class="keyword">const</span> <a class="code" href="classTheron_1_1Address.html" title="The unique address of an entity that can send or receive messages.">Theron::Address</a> from)
+        <span class="keywordtype">void</span> Respond(<span class="keyword">const</span> Message &amp;message, <span class="keyword">const</span> <a class="code" href="classTheron_1_1Address.html" title="The unique address of an entity that can send or receive messages.">Theron::Address</a> from)
         {
             <span class="comment">// Send the message back to the sender.</span>
-            <a class="code" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2" title="Sends a message to the entity (actor or receiver) at the given address.">Send</a>(message, from);
+            <a class="code" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2" title="Sends a message to the entity (actor or Receiver) at the given address.">Send</a>(message, from);
         }
     };
-</pre></div><p>Any copyable class or Plain Old Datatype can be sent in a message. Messages are copied when they are sent, so that the recipient sees a different piece of memory with the same value. The copying is performed with the copy-constructor of the message class.</p>
-<p>In general it is unsafe to pass pointers in messages, since doing so re-introduces shared memory, where multiple actors can access the same memory at the same time. The exception is where steps are taken to ensure that the sender is prevented from accessing the referenced memory after the send (for example using an auto-pointer). Effectively ownership is transferred to the recipient.</p>
-<p>Note that C arrays can't be sent as messages, since they aren't copyable. For example the first call to Send in the following code won't compile, because the literal string message is an array. The second, where the array is sent as a pointer instead, works fine. Of course, a safer approach is to send a std::string, as shown as the third call:</p>
+</pre></div><p>Any copyable class or Plain-Old-Data type can be sent in a message. Messages are copied when they are sent, so that the recipient sees a different piece of memory with the same value. The copying is performed with the copy-constructor of the message class.</p>
+<p>Typically non-POD message classes should be provided with a meaningful default constructor, copy constructor, assignment operator and destructor. If the message type is derived from a base type (in an inheritance hierarchy of message types) then the base class should typically have a virtual destructor.</p>
+<p>In general it is unsafe to pass pointers in messages, since doing so re-introduces shared memory, where multiple actors can access the same memory at the same time. The exception is where steps are taken to ensure that the sender is prevented from accessing the referenced memory after the send (for example using an auto-pointer). In such cases ownership is effectively transferred to the recipient by the message.</p>
+<p>Note that immediate C arrays can't be sent as messages, since they aren't copyable. For example the first call to Send in the following code won't compile, because the literal string message is an array. The second, where the array is sent as a pointer instead, works fine. Arrays can safely be sent as members of message classes. Of course, a safer approach is to send a std::string, as shown as the final call:</p>
 <div class="fragment"><pre class="fragment">    <span class="keyword">class </span><a class="code" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645" title="Default constructor.">Actor</a> : <span class="keyword">public</span> Theron::<a class="code" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645" title="Default constructor.">Actor</a>
     {
     <span class="keyword">public</span>:
-        <a class="code" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645" title="Default constructor.">Actor</a>()
+
+        <span class="keyword">struct </span>Message
         {
-            <a class="code" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2" title="Sends a message to the entity (actor or receiver) at the given address.">Send</a>(<span class="stringliteral">&quot;hello&quot;</span>, someAddress);                 <span class="comment">// C array; won&#39;t compile!</span>
+            <span class="keywordtype">char</span> mBuffer[32];
+        }
 
-            <span class="keyword">const</span> <span class="keywordtype">char</span> *<span class="keyword">const</span> message(<span class="stringliteral">&quot;hello&quot;</span>);
-            <a class="code" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2" title="Sends a message to the entity (actor or receiver) at the given address.">Send</a>(message, someAddress);                 <span class="comment">// Works and fast but use with care.</span>
+        <span class="keyword">explicit</span> <a class="code" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645" title="Default constructor.">Actor</a>(<a class="code" href="classTheron_1_1Framework.html" title="Manager class that hosts, manages, and executes actors.">Theron::Framework</a> &amp;framework) : Theron::<a class="code" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645" title="Default constructor.">Actor</a>(framework)
+        {
+            <a class="code" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2" title="Sends a message to the entity (actor or Receiver) at the given address.">Send</a>(<span class="stringliteral">&quot;hello&quot;</span>, someAddress);                 <span class="comment">// Immediate C array; won&#39;t compile!</span>
 
-            <a class="code" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2" title="Sends a message to the entity (actor or receiver) at the given address.">Send</a>(std::string(<span class="stringliteral">&quot;hello&quot;</span>), someAddress);    <span class="comment">// Safest but involves a copy.</span>
+            <span class="keywordtype">char</span> *<span class="keyword">const</span> message(<span class="stringliteral">&quot;hello&quot;</span>);
+            <a class="code" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2" title="Sends a message to the entity (actor or Receiver) at the given address.">Send</a>(message, someAddress);                 <span class="comment">// Fastest, but use with care!</span>
+
+            Message message2;
+            strcpy(message2.mBuffer, <span class="stringliteral">&quot;hello&quot;</span>);
+            <a class="code" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2" title="Sends a message to the entity (actor or Receiver) at the given address.">Send</a>(message2, someAddress);                <span class="comment">// Safe but involves a shallow copy.</span>
+
+            <a class="code" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2" title="Sends a message to the entity (actor or Receiver) at the given address.">Send</a>(std::string(<span class="stringliteral">&quot;hello&quot;</span>), someAddress);    <span class="comment">// Safest but involves a deep copy.</span>
         }
     }
 </pre></div><p>If no actor or receiver exists with the given address, the message will not be delivered, and <a class="el" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2">Send</a> will return false.</p>
-<p>This can happen if the target entity is an actor and has been garbage collected, due to becoming unreferenced. To ensure that actors are not prematurely garbage collected, simply hold at least one <a class="el" href="classTheron_1_1ActorRef.html">ActorRef</a> referencing the actor.</p>
-<p>If the destination address exists, but the receiving entity has no handler registered for messages of the sent type, then the message will be ignored, but this method will still return true.</p>
+<p>This can happen if the target entity is an actor and has been destructed, due to going out of scope or explicitly deleted.</p>
+<p>If an actor is still registered at the destination address, but it has no handler registered for messages of the sent type, then the message will be ignored, but this method will still return true.</p>
 <p>Such undelivered or unhandled messages will be caught and reported as asserts by the default fallback handler, unless it is replaced by a custom user implementation using <a class="el" href="classTheron_1_1Framework_a31af6a890f23de2f16eef2363b217f70.html#a31af6a890f23de2f16eef2363b217f70">Framework::SetFallbackHandler</a>.</p>
-<p>This method can safely be called within the constructor or destructor of a derived actor object, as well as more typically within its message handler functions.</p>
+<p>This method can safely be called within the constructor or destructor of a derived actor object, as well as (more typically) within its message handler functions.</p>
 <dl><dt><b>Template Parameters:</b></dt><dd>
   <table border="0" cellspacing="2" cellpadding="0">
-    <tr><td valign="top"></td><td valign="top"><em>ValueType</em>&nbsp;</td><td>The message type (any copyable class or Plain Old Datatype). </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>ValueType</em>&nbsp;</td><td>The message type (any copyable class or Plain-Old-Data type). </td></tr>
   </table>
   </dd>
 </dl>
@@ -185,10 +196,8 @@ template&lt;class ValueType &gt; </div>
   </dd>
 </dl>
 <dl class="return"><dt><b>Returns:</b></dt><dd>True, if the message was delivered to the target entity, otherwise false.</dd></dl>
-<dl class="note"><dt><b>Note:</b></dt><dd>An important detail of message handling in <a class="el" href="namespaceTheron.html" title="Main namespace, containing all public API components.">Theron</a> is that message handling order is guaranteed. That is, if an actor A sends two messages m1 and m2 successively to another actor B, then it's guaranteed that m1 and m2 will arrive at B, and be handled, in that order. <a class="el" href="namespaceTheron.html" title="Main namespace, containing all public API components.">Theron</a> is able to guarantee this because it currently only supports actors within the same process, so message transfer is entirely under its control. If <a class="el" href="namespaceTheron.html" title="Main namespace, containing all public API components.">Theron</a> is ever extended to support actors across multiple processes, or multiple hosts, then this guarantee may have to be relaxed; nevertheless the arrival order of messages sent between actors in the same process will still be guaranteed. Of course the guarantee doesn't apply to messages sent by different actors: If two actors A and B send messages m1 and m2 to a third actor C, there is explicitly no guarantee on the arrival order of m1 and m2 at C.</dd></dl>
-<dl class="see"><dt><b>See also:</b></dt><dd><a class="el" href="classTheron_1_1Actor_af566742b7486c810cc694897adcbe958.html#af566742b7486c810cc694897adcbe958" title="Sends a message to the entity at the given address, without waking a worker thread...">TailSend</a> </dd>
-<dd>
-<a href="http://www.theron-library.com/index.php?t=page&amp;p=SendingMessages">Sending messages</a> </dd></dl>
+<dl class="note"><dt><b>Note:</b></dt><dd>An important detail of message handling in <a class="el" href="namespaceTheron.html" title="Main namespace containing all public API components.">Theron</a> is that message handling order is guaranteed. That is, if an actor A sends two messages m1 and m2 successively to another actor B, then it's guaranteed that m1 and m2 will arrive at B, and be handled, in that order. <a class="el" href="namespaceTheron.html" title="Main namespace containing all public API components.">Theron</a> is able to guarantee this because it currently only supports actors within the same process, so message transfer is entirely under its control. If <a class="el" href="namespaceTheron.html" title="Main namespace containing all public API components.">Theron</a> is ever extended to support actors across multiple processes, or multiple hosts, then this guarantee may have to be relaxed; nevertheless the arrival order of messages sent between actors in the same process will still be guaranteed. Moreover, messages will still be <em>handled</em> by an actor in the order they arrived. Of course the guarantee doesn't apply to messages sent by different actors: If two actors A and B send messages m1 and m2 to a third actor C, there is explicitly no guarantee on the arrival order of m1 and m2 at C.</dd></dl>
+<dl class="see"><dt><b>See also:</b></dt><dd><a class="el" href="classTheron_1_1Actor_af566742b7486c810cc694897adcbe958.html#af566742b7486c810cc694897adcbe958" title="Sends a message to the entity at the given address, without waking a worker thread...">TailSend</a> </dd></dl>
 
 </div>
 </div>
@@ -201,7 +210,7 @@ template&lt;class ValueType &gt; </div>
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Files</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Enumerations</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(8)"><span class="SelectionMark">&nbsp;</span>Enumerator</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(9)"><span class="SelectionMark">&nbsp;</span>Defines</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Files</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Defines</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">

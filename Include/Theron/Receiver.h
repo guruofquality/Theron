@@ -1,6 +1,4 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_RECEIVER_H
 #define THERON_RECEIVER_H
 
@@ -15,24 +13,21 @@ Utility that can receive messages from actors.
 
 #include <Theron/Address.h>
 #include <Theron/AllocatorManager.h>
+#include <Theron/Assert.h>
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
 
 #include <Theron/Detail/Containers/IntrusiveList.h>
-#include <Theron/Detail/Debug/Assert.h>
+#include <Theron/Detail/Directory/Entry.h>
 #include <Theron/Detail/Handlers/ReceiverHandler.h>
 #include <Theron/Detail/Handlers/IReceiverHandler.h>
 #include <Theron/Detail/Handlers/ReceiverHandlerCast.h>
 #include <Theron/Detail/Messages/IMessage.h>
+#include <Theron/Detail/Messages/MessageCreator.h>
 #include <Theron/Detail/Messages/MessageTraits.h>
-#include <Theron/Detail/Threading/Lock.h>
-#include <Theron/Detail/Threading/Monitor.h>
-
-
-namespace UnitTests
-{
-    class ReceiverTestSuite;
-}
+#include <Theron/Detail/Threading/Atomic.h>
+#include <Theron/Detail/Threading/SpinLock.h>
+#include <Theron/Detail/Threading/Utils.h>
 
 
 namespace Theron
@@ -41,7 +36,7 @@ namespace Theron
 
 namespace Detail
 {
-    class MessageSender;
+class MessageSender;
 }
 
 
@@ -75,20 +70,12 @@ to the handler function on execution, allowing it to examine, process, or store 
 The ability to synchronize with the arrival of messages via \ref Wait allows calling
 threads to ensure they examine the results of executed handler functions only after
 the messages they handle have arrived, and the associated handlers have been executed.
-
-The maximum number of receivers that can be created in an application is limited
-by the \ref THERON_MAX_RECEIVERS define, which defines the number of unique
-receiver addresses.
-
-\see <a href="http://www.theron-library.com/index.php?t=page&p=Receiver">Using a Receiver</a>
-\see <a href="http://www.theron-library.com/index.php?t=page&p=TerminatingTheFramework">Terminating the Framework</a>
 */
-class Receiver
+class Receiver : public Detail::Entry::Entity
 {
 public:
 
     friend class Detail::MessageSender;
-    friend class UnitTests::ReceiverTestSuite;
 
     /**
     \brief Default constructor.
@@ -103,12 +90,9 @@ public:
     ~Receiver();
 
     /**
-    \brief Gets the unique address of the receiver.
+    \brief Returns the unique address of the receiver.
     */
-    THERON_FORCEINLINE const Address &GetAddress() const
-    {
-        return mAddress;
-    }
+    inline Address GetAddress() const;
 
     /**
     \brief Registers a message handler for a specific message type.
@@ -118,8 +102,14 @@ public:
     indicating the sender of the message. The handler will be executed whenever
     messages of type ValueType are received.
 
-    A common pattern is to register a "catch" handler on a simple "catcher" object
-    whose purpose is to catch and hold the value of an arrived message:
+    The \ref Catcher helper is a useful utility that can be used as a "catcher"
+    for messages received by receivers. It's a template and can be instantiated
+    against a specific message type, which it then catches. Its \ref Catcher::Push "Push"
+    method has the signature of a message handler and so can be registered as a message
+    handler using RegisterHandler. It has the semantics of a queue, and acts as
+    a FIFO buffer of received messages, ensuring that newly arrived messages don't
+    simply overwrite previously received ones. In addition it is thread-safe and
+    so can safely be read (popped) while still registered as a handler on a Receiver.
 
     \code
     struct Message
@@ -127,30 +117,30 @@ public:
         int mValue;
     };
 
-    class Catcher
-    {
-    public:
-
-        inline void Catch(const Message &message, const Theron::Address from)
-        {
-            mMessage = message;
-        }
-
-        Message mMessage;
-    };
-
     Theron::Receiver receiver;
-    Catcher catcher;
+    Theron::Catcher<Message> catcher;
 
-    receiver.RegisterHandler(&catcher, &Catcher::Catch);
+    // Register the Push method of the Catcher as a handler.
+    receiver.RegisterHandler(&catcher, &Theron::Catcher<Message>::Push);
     \endcode
 
-    Having registered the catcher, the calling thread then examines the caught message
-    after synchronizing with its arrival via a blocking call to \ref Wait:
+    Having registered the catcher, the calling thread then pops caught messages
+    from the Catcher after synchronizing with their arrival via blocking calls to \ref Wait:
 
     \code
+    // Wait for two messages to arrive.
     receiver.Wait();
-    printf("Caught message with value %d\n", catcher.mMessage.mValue);
+    receiver.Wait();
+
+    // Read the arrived messages from the catcher's internal queue.
+    Message message;
+    Theron::Address from;
+
+    catcher.Pop(message, from);
+    printf("Caught message with value %d\n", message.mValue);
+
+    catcher.Pop(message, from);
+    printf("Caught message with value %d\n", message.mValue);
     \endcode
 
     \tparam ClassType The type of the registered handler class.
@@ -158,8 +148,6 @@ public:
     \param owner Pointer to the registered handler object.
     \param handler Member function pointer to the registered handler function.
     \return True, if the handler was successfully registered.
-
-    \see <a href="http://www.theron-library.com/index.php?t=page&p=Receiver">Using a Receiver</a>
     */
     template <class ClassType, class ValueType>
     inline bool RegisterHandler(
@@ -198,7 +186,7 @@ public:
 
     The \ref Count method allows a calling thread to query the Receiver's count
     of arrived but unconsumed messages. The count is returned without blocking the
-    calling thread or waiting for any messages to be recieved.
+    calling thread or waiting for any messages to be received.
 
     Each Receiver maintains an internal count of the number of messages it
     has received which have not yet been accounted for by calls to \ref Wait
@@ -259,8 +247,6 @@ public:
 
     \param max Maximum number of arrived messages to be consumed on this call.
     \return The actual number of arrived messages consumed on this call.
-    \see <a href="http://www.theron-library.com/index.php?t=page&p=Receiver">Using a Receiver</a>
-    \see <a href="http://www.theron-library.com/index.php?t=page&p=TerminatingTheFramework">Terminating the Framework</a>
     */
     inline uint32_t Wait(const uint32_t max = 1);
 
@@ -305,23 +291,22 @@ private:
     Receiver(const Receiver &other);
     Receiver &operator=(const Receiver &other);
 
-    /// \brief Pushes a message into the receiver.
-    /// \param message Pointer to the message.
-    /// \param wake Indicates whether a worker thread should be woken.
-    /// \return True, if the receiver accepted the message.
-    /// \note This method is "private" and is not intended for use in user code.
-    void Push(Detail::IMessage *const message);
+    /**
+    \brief Pushes a message into the receiver.
+    */
+    inline void Push(Detail::IMessage *const message);
 
-    /// \brief Pushes a message into the receiver.
-    /// For receivers, this method behaves identically to Push.
-    /// \note This method is "private" and is not intended for use in user code.
-    inline void TailPush(Detail::IMessage *const message);
-
-    Address mAddress;                           ///< Unique Theron address, or 'name', of the receiver.
-    MessageHandlerList mMessageHandlers;        ///< List of registered message handlers.
-    mutable Detail::Monitor mMonitor;           ///< Synchronizes access to the message handlers.
-    uint32_t mMessagesReceived;                 ///< Indicates that a message was received.
+    Address mAddress;                                   ///< Unique address of this receiver.
+    MessageHandlerList mMessageHandlers;                ///< List of registered message handlers.
+    mutable Detail::SpinLock mSpinLock;                 ///< Synchronizes access to the message handlers.
+    mutable Detail::Atomic::UInt32 mMessagesReceived;   ///< Counts arrived messages not yet waited on.
 };
+
+
+THERON_FORCEINLINE Address Receiver::GetAddress() const
+{
+    return mAddress;
+}
 
 
 template <class ClassType, class ValueType>
@@ -349,10 +334,9 @@ inline bool Receiver::RegisterHandler(
         return false;
     }
 
-    {
-        Detail::Lock lock(mMonitor.GetMutex());
-        mMessageHandlers.Insert(messageHandler);
-    }
+    mSpinLock.Lock();
+    mMessageHandlers.Insert(messageHandler);
+    mSpinLock.Unlock();
     
     return true;
 }
@@ -370,36 +354,34 @@ inline bool Receiver::DeregisterHandler(
     typedef Detail::ReceiverHandler<ClassType, ValueType> MessageHandlerType;
     typedef Detail::ReceiverHandlerCast<ClassType, Detail::MessageTraits<ValueType>::HAS_TYPE_NAME> HandlerCaster;
 
+    mSpinLock.Lock();
+
+    // Find the handler in the registered handler list.
+    const typename MessageHandlerList::Iterator handlersBegin(mMessageHandlers.Begin());
+    const typename MessageHandlerList::Iterator handlersEnd(mMessageHandlers.End());
+
+    for (MessageHandlerList::Iterator handlers(handlersBegin); handlers != handlersEnd; ++handlers)
     {
-        Detail::Lock lock(mMonitor.GetMutex());
-
-        // Find the handler in the registered handler list.
-        typename MessageHandlerList::Iterator handlers(mMessageHandlers.Begin());
-        const typename MessageHandlerList::Iterator handlersEnd(mMessageHandlers.End());
-
-        while (handlers != handlersEnd)
-        {
-            Detail::IReceiverHandler *const messageHandler(*handlers);
+        Detail::IReceiverHandler *const messageHandler(*handlers);
             
-            // Try to convert this handler, of unknown type, to the target type.
-            const MessageHandlerType *const typedHandler = HandlerCaster:: template CastHandler<ValueType>(messageHandler);
-            if (typedHandler)
+        // Try to convert this handler, of unknown type, to the target type.
+        const MessageHandlerType *const typedHandler = HandlerCaster:: template CastHandler<ValueType>(messageHandler);
+        if (typedHandler)
+        {
+            if (typedHandler->GetHandlerFunction() == handler)
             {
-                if (typedHandler->GetHandlerFunction() == handler)
-                {
-                    // Remove the handler from the list.
-                    mMessageHandlers.Remove(messageHandler);
+                // Remove the handler from the list.
+                mMessageHandlers.Remove(messageHandler);
 
-                    // Free the handler object, which was allocated on registration.
-                    AllocatorManager::Instance().GetAllocator()->Free(messageHandler);
+                // Free the handler object, which was allocated on registration.
+                AllocatorManager::Instance().GetAllocator()->Free(messageHandler);
 
-                    return true;
-                }
+                break;
             }
-
-            ++handlers;
         }
     }
+
+    mSpinLock.Unlock();
 
     return false;
 }
@@ -407,69 +389,92 @@ inline bool Receiver::DeregisterHandler(
 
 THERON_FORCEINLINE void Receiver::Reset()
 {
-    Detail::Lock lock(mMonitor.GetMutex());
-    mMessagesReceived = 0;
+    mMessagesReceived.Store(0);
 }
 
 
 THERON_FORCEINLINE uint32_t Receiver::Count() const
 {
-    uint32_t count(0);
-
-    {
-        Detail::Lock lock(mMonitor.GetMutex());
-        count = mMessagesReceived;
-    }
-
-    return count;
-}
-
-
-THERON_FORCEINLINE void Receiver::TailPush(Detail::IMessage *const message)
-{
-    // Receivers don't have worker threads so TailPush is identical to Push.
-    Push(message);
+    return static_cast<uint32_t>(mMessagesReceived.Load());
 }
 
 
 THERON_FORCEINLINE uint32_t Receiver::Wait(const uint32_t max)
 {
-    Detail::Lock lock(mMonitor.GetMutex());
-
     THERON_ASSERT(max > 0);
 
+    // TODO: Support timeout.
+    // Wait for at least one message to arrive.
     // If messages were received since the last wait (or creation),
     // then we regard those messages as qualifying and early-exit.
-    while (mMessagesReceived == 0)
+    uint32_t backoff(0);
+    while (mMessagesReceived.Load() == 0)
     {
-        // Wait to be woken by an arriving message.
-        // This blocks until a message arrives!
-        mMonitor.Wait(lock);
+        Detail::Utils::Backoff(backoff);
     }
 
-    uint32_t numConsumed(mMessagesReceived);
-    if (mMessagesReceived > max)
+    // TODO: Use atomic test-and-decrement.
+    // Consume up to the maximum number of arrived messages.
+    mSpinLock.Lock();
+
+    uint32_t count(0);
+    while (count < max && mMessagesReceived.Load() > 0)
     {
-        numConsumed = max;
+        ++count;
+        mMessagesReceived.Decrement();
     }
 
-    mMessagesReceived -= numConsumed;
-    return numConsumed;
+    mSpinLock.Unlock();
+
+    return count;
 }
 
 
 THERON_FORCEINLINE uint32_t Receiver::Consume(const uint32_t max)
 {
-    Detail::Lock lock(mMonitor.GetMutex());
+    // TODO: Use atomic test-and-decrement.
+    // Consume up to the maximum number of arrived messages.
+    mSpinLock.Lock();
 
-    uint32_t numConsumed(mMessagesReceived);
-    if (mMessagesReceived > max)
+    uint32_t count(0);
+    while (count < max && mMessagesReceived.Load() > 0)
     {
-        numConsumed = max;
+        ++count;
+        mMessagesReceived.Decrement();
     }
 
-    mMessagesReceived -= numConsumed;
-    return numConsumed;
+    mSpinLock.Unlock();
+
+    return count;
+}
+
+
+THERON_FORCEINLINE void Receiver::Push(Detail::IMessage *const message)
+{
+    THERON_ASSERT(message);
+
+    mSpinLock.Lock();
+
+    // TODO: Use ReceiverHandlerCollection for thread-safety.
+    const MessageHandlerList::Iterator handlersBegin(mMessageHandlers.Begin());
+    const MessageHandlerList::Iterator handlersEnd(mMessageHandlers.End());
+
+    for (MessageHandlerList::Iterator handlers(handlersBegin); handlers != handlersEnd; ++handlers)
+    {
+        // Execute the handler.
+        // It does nothing if it can't handle the message type.
+        Detail::IReceiverHandler *const handler(*handlers);
+        handler->Handle(message);
+    }
+
+    mSpinLock.Unlock();
+
+    mMessagesReceived.Increment();
+
+    // Destroy the message.
+    // We use the global allocator to allocate messages sent to receivers.
+    IAllocator *const messageAllocator(AllocatorManager::Instance().GetAllocator());
+    Detail::MessageCreator::Destroy(messageAllocator, message);
 }
 
 
@@ -477,4 +482,3 @@ THERON_FORCEINLINE uint32_t Receiver::Consume(const uint32_t max)
 
 
 #endif // THERON_RECEIVER_H
-

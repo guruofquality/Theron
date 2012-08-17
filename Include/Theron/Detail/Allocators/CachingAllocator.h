@@ -1,17 +1,15 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_DETAIL_ALLOCATORS_CACHINGALLOCATOR_H
 #define THERON_DETAIL_ALLOCATORS_CACHINGALLOCATOR_H
 
 
+#include <Theron/Assert.h>
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
 #include <Theron/IAllocator.h>
 
 #include <Theron/Detail/Allocators/Pool.h>
 #include <Theron/Detail/Allocators/TrivialAllocator.h>
-#include <Theron/Detail/Debug/Assert.h>
 
 
 namespace Theron
@@ -20,45 +18,65 @@ namespace Detail
 {
 
 
-/// A caching allocator that caches free memory blocks of various small sizes.
+/**
+A caching allocator that caches free memory blocks of various small sizes.
+*/
 template <uint32_t POOL_COUNT>
 class CachingAllocator : public Theron::IAllocator
 {
 public:
 
-    /// Default constructor.
-    /// Constructs a CachingAllocator around an internally owned Detail::TrivialAllocator.
-    /// The TrivialAllocator acts as a trivial wrapper around global new and delete. The
-    /// CachingAllocator adds caching of small allocations.
+    /**
+    Default constructor.
+    Constructs a CachingAllocator around an internally owned Detail::TrivialAllocator.
+    The TrivialAllocator acts as a trivial wrapper around global new and delete. The
+    CachingAllocator adds caching of small allocations.
+    */
     inline CachingAllocator();
 
-    /// Explicit constructor.
-    /// Constructs a CachingAllocator around an externally owned lower-level allocator.
-    /// The CachingAllocator adds caching of small allocations.
-    /// \param allocator Pointer to a lower-level allocator which the cache will wrap.
+    /**
+    Explicit constructor.
+    Constructs a CachingAllocator around an externally owned lower-level allocator.
+    The CachingAllocator adds caching of small allocations.
+    \param allocator Pointer to a lower-level allocator which the cache will wrap.
+    */
     inline explicit CachingAllocator(IAllocator *const allocator);
 
-    /// Destructor.
+    /**
+    Destructor.
+    */
     inline virtual ~CachingAllocator();
 
-    /// Allocates a memory block of the given size.
+    /**
+    Allocates a memory block of the given size.
+    */
     inline virtual void *Allocate(const uint32_t size);
 
-    /// Allocates a memory block of the given size and alignment.
+    /**
+    Allocates a memory block of the given size and alignment.
+    */
     inline virtual void *AllocateAligned(const uint32_t size, const uint32_t alignment);
 
-    /// Frees a previously allocated memory block.
+    /**
+    Frees a previously allocated memory block.
+    */
     inline virtual void Free(void *const block);
 
-    /// Frees a previously allocated memory block of a known size.
+    /**
+    Frees a previously allocated memory block of a known size.
+    */
     inline virtual void Free(void *const block, const uint32_t size);
 
-    /// Frees all currently cached memory blocks.
+    /**
+    Frees all currently cached memory blocks.
+    */
     inline void Clear();
 
 private:
 
-    /// Hashes a block size to a pool index.
+    /**
+    Hashes a block size to a pool index.
+    */
     inline static uint32_t MapBlockSizeToPool(const uint32_t size);
 
     CachingAllocator(const CachingAllocator &other);
@@ -150,7 +168,8 @@ inline void CachingAllocator<POOL_COUNT>::Free(void *const block, const uint32_t
     if (poolIndex < POOL_COUNT)
     {
         // Add the block to the pool, if there is space left in the pool.
-        if (mPools[poolIndex].Add(block))
+        Pool &pool(mPools[poolIndex]);
+        if (pool.Add(block))
         {
             return;
         }
@@ -201,4 +220,3 @@ THERON_FORCEINLINE uint32_t CachingAllocator<POOL_COUNT>::MapBlockSizeToPool(con
 
 
 #endif // THERON_DETAIL_ALLOCATORS_CACHINGALLOCATOR_H
-

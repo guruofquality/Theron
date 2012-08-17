@@ -87,17 +87,17 @@ window.onload = initDynSections;
       <div class="navtab">
         <table>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645">Actor</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a5639d7ce2d33217f658de3b39ae1d80b.html#a5639d7ce2d33217f658de3b39ae1d80b">Actor</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a8f0fd920b4d270cf8c8184104b958092.html#a8f0fd920b4d270cf8c8184104b958092">DeregisterHandler</a></td></tr>
-          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a41a42e5c507e83ec3b5f0806a8869715.html#a41a42e5c507e83ec3b5f0806a8869715">GetAddress</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a268613b27d2d718b55e2eb489118aa04.html#a268613b27d2d718b55e2eb489118aa04">GetAddress</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_afe30f86e99ff80691ec11e207711a46a.html#afe30f86e99ff80691ec11e207711a46a">GetFramework</a></td></tr>
-          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a4f6af5dba4b36bbb55ee216589ccfb63.html#a4f6af5dba4b36bbb55ee216589ccfb63">GetNumQueuedMessages</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a6bfdf3ec59943e2c8f1e686d2e3c1077.html#a6bfdf3ec59943e2c8f1e686d2e3c1077">IsHandlerRegistered</a></td></tr>
           <tr><td class="navtab"><a class="qindexHL" href="classTheron_1_1Actor_a6a5a4bd492f490bf730274c247b584da.html#a6a5a4bd492f490bf730274c247b584da">RegisterHandler</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2">Send</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a9d2a84c501b187c0b531ac9f5a30e2c9.html#a9d2a84c501b187c0b531ac9f5a30e2c9">SetDefaultHandler</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_acefedebe52fe74026c65cfab5a209a11.html#acefedebe52fe74026c65cfab5a209a11">SetDefaultHandler</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_af566742b7486c810cc694897adcbe958.html#af566742b7486c810cc694897adcbe958">TailSend</a></td></tr>
-          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_ab60796f45fdf65fbcc2f27abdeac37f9.html#ab60796f45fdf65fbcc2f27abdeac37f9">~Actor</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a95ce244d6cd6f4f3bfaea29dfb89ab6c.html#a95ce244d6cd6f4f3bfaea29dfb89ab6c">~Actor</a></td></tr>
         </table>
       </div>
    </td>
@@ -138,7 +138,7 @@ template&lt;class ActorType , class ValueType &gt; </div>
 
         <span class="keyword">struct </span>HelloMessage { };
 
-        HelloWorld()
+        <span class="keyword">explicit</span> HelloWorld(<a class="code" href="classTheron_1_1Framework.html" title="Manager class that hosts, manages, and executes actors.">Theron::Framework</a> &amp;framework) : Theron::<a class="code" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645" title="Default constructor.">Actor</a>(framework)
         {
             <a class="code" href="classTheron_1_1Actor_a6a5a4bd492f490bf730274c247b584da.html#a6a5a4bd492f490bf730274c247b584da" title="Registers a handler for a specific message type.">RegisterHandler</a>(<span class="keyword">this</span>, &amp;HelloWorld::Hello);
         }
@@ -151,7 +151,7 @@ template&lt;class ActorType , class ValueType &gt; </div>
         }
     };
 </pre></div><p>Message handlers can be registered at basically any point in the lifetime of the actor. In particular they can safely be registered in the derived actor constructor, as well as from within other message handlers of the actor (themselves previously registered and then executed in response to received messages).</p>
-<p>If a message handler is registered multiple times, it will be executed multiple times in response to received messages of its expected type.</p>
+<p>If a message handler is registered multiple times, it will be executed multiple times in response to received messages of its expected type. Each subsequent de-registration then removes just one of the multiple registrations.</p>
 <p>One subtlety to be aware of is that message handlers aren't executed on receipt of messages of types <em>derived</em> from the message types expected by the handler. In order to handle derived message types, register separate handlers for those types - and call the handler registered for the base message type explicitly from the derived handler, if required.</p>
 <div class="fragment"><pre class="fragment">    <span class="keyword">class </span>HelloWorld : <span class="keyword">public</span> Theron::<a class="code" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645" title="Default constructor.">Actor</a>
     {
@@ -160,7 +160,7 @@ template&lt;class ActorType , class ValueType &gt; </div>
         <span class="keyword">struct </span>HelloMessage { };
         <span class="keyword">struct </span>HowdyMessage : <span class="keyword">public</span> HelloMessage { };
 
-        HelloWorld()
+        <span class="keyword">explicit</span> HelloWorld(<a class="code" href="classTheron_1_1Framework.html" title="Manager class that hosts, manages, and executes actors.">Theron::Framework</a> &amp;framework) : Theron::<a class="code" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645" title="Default constructor.">Actor</a>(framework)
         {
             <a class="code" href="classTheron_1_1Actor_a6a5a4bd492f490bf730274c247b584da.html#a6a5a4bd492f490bf730274c247b584da" title="Registers a handler for a specific message type.">RegisterHandler</a>(<span class="keyword">this</span>, &amp;HelloWorld::Hello);
             <a class="code" href="classTheron_1_1Actor_a6a5a4bd492f490bf730274c247b584da.html#a6a5a4bd492f490bf730274c247b584da" title="Registers a handler for a specific message type.">RegisterHandler</a>(<span class="keyword">this</span>, &amp;HelloWorld::Howdy);
@@ -168,38 +168,38 @@ template&lt;class ActorType , class ValueType &gt; </div>
 
     <span class="keyword">private</span>:
 
-        <span class="keyword">inline</span> <span class="keywordtype">void</span> Hello(<span class="keyword">const</span> HelloMessage &amp;message, <span class="keyword">const</span> <a class="code" href="classTheron_1_1Address.html" title="The unique address of an entity that can send or receive messages.">Theron::Address</a> from)
+        <span class="keywordtype">void</span> Hello(<span class="keyword">const</span> HelloMessage &amp;message, <span class="keyword">const</span> <a class="code" href="classTheron_1_1Address.html" title="The unique address of an entity that can send or receive messages.">Theron::Address</a> from)
         {
             printf(<span class="stringliteral">&quot;Hello world!\n&quot;</span>);
         }
 
-        <span class="keyword">inline</span> <span class="keywordtype">void</span> Howdy(<span class="keyword">const</span> HowdyMessage &amp;message, <span class="keyword">const</span> <a class="code" href="classTheron_1_1Address.html" title="The unique address of an entity that can send or receive messages.">Theron::Address</a> from)
+        <span class="keywordtype">void</span> Howdy(<span class="keyword">const</span> HowdyMessage &amp;message, <span class="keyword">const</span> <a class="code" href="classTheron_1_1Address.html" title="The unique address of an entity that can send or receive messages.">Theron::Address</a> from)
         {
             Hello(message, from);
             printf(<span class="stringliteral">&quot;How y&#39;all doin?\n&quot;</span>);
         }
     };
-</pre></div><p>Another tricky subtlety is that <em>identical</em> handlers are sometimes treated as the same function, by the compiler, in optimized builds. The following example shows this confusing effect:</p>
+</pre></div><p>Another tricky subtlety is that the compiler may treat handlers that are exactly identical as the same function, in optimized builds. The following example shows this confusing effect:</p>
 <div class="fragment"><pre class="fragment">    <span class="keyword">class </span>HelloWorld : <span class="keyword">public</span> Theron::<a class="code" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645" title="Default constructor.">Actor</a>
     {
     <span class="keyword">public</span>:
 
         <span class="keyword">struct </span>HelloMessage { };
 
-        HelloWorld()
+        <span class="keyword">explicit</span> HelloWorld(<a class="code" href="classTheron_1_1Framework.html" title="Manager class that hosts, manages, and executes actors.">Theron::Framework</a> &amp;framework) : Theron::<a class="code" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645" title="Default constructor.">Actor</a>(framework)
         {
             <a class="code" href="classTheron_1_1Actor_a6a5a4bd492f490bf730274c247b584da.html#a6a5a4bd492f490bf730274c247b584da" title="Registers a handler for a specific message type.">RegisterHandler</a>(<span class="keyword">this</span>, &amp;HelloWorld::HelloOne);
-            <a class="code" href="classTheron_1_1Actor_a6bfdf3ec59943e2c8f1e686d2e3c1077.html#a6bfdf3ec59943e2c8f1e686d2e3c1077" title="Checks whether the given message handler is registered with the actor.">IsHandlerRegistered</a>(<span class="keyword">this</span>, &amp;HelloWorld::HelloTwo);   <span class="comment">// Returns true, if some optimized builds.</span>
+            <a class="code" href="classTheron_1_1Actor_a6bfdf3ec59943e2c8f1e686d2e3c1077.html#a6bfdf3ec59943e2c8f1e686d2e3c1077" title="Checks whether the given message handler is registered with the actor.">IsHandlerRegistered</a>(<span class="keyword">this</span>, &amp;HelloWorld::HelloTwo);   <span class="comment">// May returns true, in some optimized builds.</span>
         }
 
     <span class="keyword">private</span>:
 
-        <span class="keyword">inline</span> <span class="keywordtype">void</span> HelloOne(<span class="keyword">const</span> HelloMessage &amp;message, <span class="keyword">const</span> <a class="code" href="classTheron_1_1Address.html" title="The unique address of an entity that can send or receive messages.">Theron::Address</a> from)
+        <span class="keywordtype">void</span> HelloOne(<span class="keyword">const</span> HelloMessage &amp;message, <span class="keyword">const</span> <a class="code" href="classTheron_1_1Address.html" title="The unique address of an entity that can send or receive messages.">Theron::Address</a> from)
         {
             printf(<span class="stringliteral">&quot;Hello world!\n&quot;</span>);
         }
 
-        <span class="keyword">inline</span> <span class="keywordtype">void</span> HelloTwo(<span class="keyword">const</span> HelloMessage &amp;message, <span class="keyword">const</span> <a class="code" href="classTheron_1_1Address.html" title="The unique address of an entity that can send or receive messages.">Theron::Address</a> from)
+        <span class="keywordtype">void</span> HelloTwo(<span class="keyword">const</span> HelloMessage &amp;message, <span class="keyword">const</span> <a class="code" href="classTheron_1_1Address.html" title="The unique address of an entity that can send or receive messages.">Theron::Address</a> from)
         {
             printf(<span class="stringliteral">&quot;Hello world!\n&quot;</span>);
         }
@@ -218,10 +218,7 @@ template&lt;class ActorType , class ValueType &gt; </div>
   </table>
   </dd>
 </dl>
-<dl class="return"><dt><b>Returns:</b></dt><dd>True, if the registration was successful. Failure may indicate out-of-memory.</dd></dl>
-<dl class="see"><dt><b>See also:</b></dt><dd><a href="http://www.theron-library.com/index.php?t=page&amp;p=HandlingMessages">Handling messages</a> </dd>
-<dd>
-<a href="http://www.theron-library.com/index.php?t=page&amp;p=DynamicHandlerRegistration">Dynamic handler registration</a> </dd></dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>True, if the registration was successful. Failure may indicate out-of-memory. </dd></dl>
 
 </div>
 </div>
@@ -234,7 +231,7 @@ template&lt;class ActorType , class ValueType &gt; </div>
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Files</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Enumerations</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(8)"><span class="SelectionMark">&nbsp;</span>Enumerator</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(9)"><span class="SelectionMark">&nbsp;</span>Defines</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Files</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Defines</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">

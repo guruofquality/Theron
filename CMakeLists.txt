@@ -46,22 +46,27 @@ endif()
 # Build library
 ########################################################################
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Include/External)
+
+if(MSVC)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Include/External/Standard)
+endif(MSVC)
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     add_definitions(-DTHERON_DEBUG)
     add_definitions(-DTHERON_ENABLE_ASSERTS)
 endif()
 
-file(GLOB theron_sources "${CMAKE_CURRENT_SOURCE_DIR}/Source/*.cpp")
+file(GLOB theron_sources "${CMAKE_CURRENT_SOURCE_DIR}/Theron/*.cpp")
 add_library(theron STATIC ${theron_sources})
 target_link_libraries(theron ${theron_libs})
-set_target_properties(theron PROPERTIES VERSION "3.03.00")
+set_target_properties(theron PROPERTIES VERSION "4.01.00")
 
 ########################################################################
 # Build unittests
 ########################################################################
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/UnitTests)
-file(GLOB test_sources "${CMAKE_CURRENT_SOURCE_DIR}/UnitTests/*.cpp")
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Tests)
+file(GLOB test_sources "${CMAKE_CURRENT_SOURCE_DIR}/Tests/*.cpp")
 add_executable(test_suite ${test_sources})
 target_link_libraries(test_suite theron ${theron_libs})
 add_test(theron_test_suite test_suite)
@@ -69,8 +74,10 @@ add_test(theron_test_suite test_suite)
 ########################################################################
 # Build samples
 ########################################################################
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Samples)
-file(GLOB sample_dirs "${CMAKE_CURRENT_SOURCE_DIR}/Samples/*")
+file(GLOB sample_dirs
+    "${CMAKE_CURRENT_SOURCE_DIR}/Benchmarks/*"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Tutorial/*"
+)
 foreach(sample_dir ${sample_dirs})
     get_filename_component(sample ${sample_dir} NAME)
     file(GLOB sample_sources "${sample_dir}/*.cpp")

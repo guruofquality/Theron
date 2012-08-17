@@ -1,9 +1,10 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_DETAIL_HANDLERS_IDEFAULTHANDLER_H
 #define THERON_DETAIL_HANDLERS_IDEFAULTHANDLER_H
 
+
+#include <Theron/BasicTypes.h>
+#include <Theron/Defines.h>
 
 #include <Theron/Detail/Messages/IMessage.h>
 
@@ -19,23 +20,36 @@ namespace Detail
 {
 
 
-/// Interface that allows a default handler on an unknown actor to be referenced.
+/**
+Baseclass that allows default handlers to be stored in lists.
+*/
 class IDefaultHandler
 {
 public:
 
-    /// Default constructor.
+    /**
+    Default constructor.
+    */
     inline IDefaultHandler()
     {
     }
 
-    /// Virtual destructor.
+    /**
+    Virtual destructor.
+    */
     inline virtual ~IDefaultHandler()
     {
     }
 
-    /// Handles the given message.
+    /**
+    Handles the given message.
+    */
     virtual void Handle(Actor *const actor, const IMessage *const message) const = 0;
+
+private:
+
+    IDefaultHandler(const IDefaultHandler &other);
+    IDefaultHandler &operator=(const IDefaultHandler &other);
 };
 
 
@@ -44,4 +58,3 @@ public:
 
 
 #endif // THERON_DETAIL_HANDLERS_IDEFAULTHANDLER_H
-

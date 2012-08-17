@@ -1,15 +1,12 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_DETAIL_ALLOCATORS_POOL_H
 #define THERON_DETAIL_ALLOCATORS_POOL_H
 
 
 #include <Theron/Align.h>
+#include <Theron/Assert.h>
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
-
-#include <Theron/Detail/Debug/Assert.h>
 
 
 namespace Theron
@@ -18,32 +15,46 @@ namespace Detail
 {
 
 
-/// A list of free memory blocks.
+/**
+A list of free memory blocks.
+*/
 class Pool
 {
 public:
 
-    /// Constructor.
+    /**
+    Constructor.
+    */
     inline Pool();
 
-    /// Returns true if the pool contains no memory blocks.
+    /**
+    Returns true if the pool contains no memory blocks.
+    */
     inline bool Empty() const;
 
-    /// Adds a memory block to the pool.
+    /**
+    Adds a memory block to the pool.
+    */
     inline bool Add(void *memory);
 
-    /// Retreives a memory block from the pool with the given alignment.
-    /// \return Zero if no suitable blocks in pool.
+    /**
+    Retrieves a memory block from the pool with the given alignment.
+    \return Zero if no suitable blocks in pool.
+    */
     inline void *FetchAligned(const uint32_t alignment);
 
-    /// Retreives a memory block from the pool with any alignment.
-    /// \return Zero if no blocks in pool.
+    /**
+    Retrieves a memory block from the pool with any alignment.
+    \return Zero if no blocks in pool.
+    */
     inline void *Fetch();
 
 private:
 
-    /// A node representing a free memory block within the pool.
-    /// Nodes are created in-place within the free blocks they represent.
+    /**
+    A node representing a free memory block within the pool.
+    Nodes are created in-place within the free blocks they represent.
+    */
     struct Node
     {
         THERON_FORCEINLINE Node() : mNext(0)
@@ -145,4 +156,3 @@ THERON_FORCEINLINE void *Pool::Fetch()
 
 
 #endif // THERON_DETAIL_ALLOCATORS_POOL_H
-

@@ -1,6 +1,4 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_DETAIL_MESSAGES_MESSAGE_H
 #define THERON_DETAIL_MESSAGES_MESSAGE_H
 
@@ -8,13 +6,13 @@
 #include <new>
 
 #include <Theron/AllocatorManager.h>
+#include <Theron/Assert.h>
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
 
-#include <Theron/Detail/Debug/Assert.h>
+#include <Theron/Detail/Alignment/MessageAlignment.h>
 #include <Theron/Detail/Messages/IMessage.h>
 #include <Theron/Detail/Messages/MessageTraits.h>
-#include <Theron/Detail/Messages/MessageAlignment.h>
 
 
 namespace Theron
@@ -23,7 +21,9 @@ namespace Detail
 {
 
 
-/// Message class, used for sending data between actors.
+/**
+Message class, used for sending data between actors.
+*/
 template <class ValueType>
 class Message : public IMessage
 {
@@ -31,12 +31,16 @@ public:
 
     typedef Message<ValueType> ThisType;
 
-    /// Virtual destructor.
+    /**
+    Virtual destructor.
+    */
     THERON_FORCEINLINE virtual ~Message()
     {
     }
 
-    /// Returns the memory block size required to initialize a message of this type.
+    /**
+    Returns the memory block size required to initialize a message of this type.
+    */
     THERON_FORCEINLINE static uint32_t GetSize()
     {
         // We allocate an aligned buffer to hold the message and its copy of the value.
@@ -46,14 +50,18 @@ public:
         return GetValueSize() + sizeof(ThisType);
     }
 
-    /// Returns the memory block alignment required to initialize a message of this type.
+    /**
+    Returns the memory block alignment required to initialize a message of this type.
+    */
     THERON_FORCEINLINE static uint32_t GetAlignment()
     {
         return MessageAlignment<ValueType>::ALIGNMENT;
     }
 
-    /// Initializes a message of this type in the provided memory block.
-    /// The block is allocated and freed by the caller.
+    /**
+    Initializes a message of this type in the provided memory block.
+    The block is allocated and freed by the caller.
+    */
     THERON_FORCEINLINE static ThisType *Initialize(void *const block, const ValueType &value, const Address &from)
     {
         THERON_ASSERT(block);
@@ -68,15 +76,19 @@ public:
         return new (pObject) ThisType(pValue, from);
     }
 
-    /// Returns the name of the message type.
-    /// This uniquely identifies the type of the message value.
-    /// \note Unless explicitly specified to avoid C++ RTTI, message names are null.
+    /**
+    Returns the name of the message type.
+    This uniquely identifies the type of the message value.
+    \note Unless explicitly specified to avoid C++ RTTI, message names are null.
+    */
     virtual const char *TypeName() const
     {
         return MessageTraits<ValueType>::TYPE_NAME;
     }
 
-    /// Allows the message instance to destruct its constructed value object before being freed.
+    /**
+    Allows the message instance to destruct its constructed value object before being freed.
+    */
     virtual void Release()
     {
         // The referenced block owned by this message is blind data, but we know it holds
@@ -85,7 +97,9 @@ public:
         Value().~ValueType();
     }
 
-    /// Returns the size in bytes of the message value.
+    /**
+    Returns the size in bytes of the message value.
+    */
     virtual uint32_t GetMessageSize() const
     {
         // Calculate the size of the message value itself. There's no padding between the
@@ -93,7 +107,9 @@ public:
         return GetBlockSize() - static_cast<uint32_t>(sizeof(ThisType));
     }
 
-    /// Gets the value carried by the message.
+    /**
+    Gets the value carried by the message.
+    */
     THERON_FORCEINLINE const ValueType &Value() const
     {
         // The value is stored at the start of the memory block.
@@ -102,7 +118,9 @@ public:
 
 private:
 
-    /// Private constructor.
+    /**
+    Private constructor.
+    */
     THERON_FORCEINLINE Message(void *const block, const Address &from) :
       IMessage(from, block, ThisType::GetSize())
     {

@@ -1,22 +1,16 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_ADDRESS_H
 #define THERON_ADDRESS_H
 
 
 /**
 \file Address.h
-Address object, the unique name of an actor.
+Address object by which messages are addressed.
 */
 
 
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
-
-#include <Theron/Detail/Threading/Mutex.h>
-#include <Theron/Detail/Threading/Lock.h>
-
 
 
 namespace Theron
@@ -25,11 +19,12 @@ namespace Theron
 
 namespace Detail
 {
-
-class ActorDirectory;
-class ReceiverDirectory;
-
+class MessageSender;
 }
+
+
+class Framework;
+class Receiver;
 
 
 /**
@@ -56,18 +51,15 @@ Because knowing the address of an actor means being able to send it a message,
 addresses constitute the security and encapsulation mechanism within \ref Actor "actor"
 subsystems. If an actor creates a collection of 'child' actors that it owns and manages,
 then no code outside that actor can access the child actors or send them messages,
-unless the actor publicly exposes their addresses.
-
-\note The maximum numbers of actor and receiver addresses in Theron are limited
-by the \ref THERON_MAX_ACTORS and \ref THERON_MAX_RECEIVERS defines, which can
-both be overridden in user projects via project-level definitions.
+unless the actor publicly exposes either the actors or their addresses.
 */
 class Address
 {
 public:
 
-    friend class Detail::ActorDirectory;
-    friend class Detail::ReceiverDirectory;
+    friend class Detail::MessageSender;
+    friend class Framework;
+    friend class Receiver;
 
     /**
     \brief Static method that returns the unique 'null' address.
@@ -77,31 +69,22 @@ public:
     \code
     class Actor : public Theron::Actor
     {
+        explicit Actor(Theron::Framework &framework) : Theron::Actor(framework)
+        {
+        }
     };
 
     Theron::Framework framework;
-    Theron::ActorRef actor(framework.CreateActor<Actor>());
+    Actor actor(framework);
 
     assert(actor.GetAddress() != Address::Null(), "Created actor has null address!");
     \endcode
 
     \return The unique null address.
     */
-    inline static Address Null()
+    THERON_FORCEINLINE static Address Null()
     {
         return Address();
-    }
-
-    /**
-    \brief Returns true if the given address is an actor address, false if it is a receiver address.
-
-    \note This refers purely to the 'kind' of the address and doesn't check whether the address
-    actually references a valid actor or receiver.
-    */
-    THERON_FORCEINLINE static bool IsActorAddress(const Address &address)
-    {
-        // Receiver addresses are flagged with a bit flag in their index fields.
-        return ((address.mIndex & RECEIVER_FLAG) == 0);
     }
 
     /**
@@ -109,7 +92,7 @@ public:
 
     Constructs a null address, equal to the address returned by Address::Null().
     */
-    THERON_FORCEINLINE Address() : mSequence(0), mIndex(0)
+    THERON_FORCEINLINE Address() : mValue()
     {
     }
 
@@ -121,16 +104,21 @@ public:
     \code
     class Actor : public Theron::Actor
     {
+        explicit Actor(Theron::Framework &framework) : Theron::Actor(framework)
+        {
+        }
     };
 
     Theron::Framework framework;
-    Theron::ActorRef actor(framework.CreateActor<Actor>());
+    Actor actor(framework);
+
+    // Copy-construct the actor's address.
     Theron::Address address(actor.GetAddress());
     \endcode
 
     \param other The existing address to be copied.
     */
-    THERON_FORCEINLINE Address(const Address &other) : mSequence(other.mSequence), mIndex(other.mIndex)
+    THERON_FORCEINLINE Address(const Address &other) : mValue(other.mValue)
     {
     }
 
@@ -142,11 +130,15 @@ public:
     \code
     class Actor : public Theron::Actor
     {
+        explicit Actor(Theron::Framework &framework) : Theron::Actor(framework)
+        {
+        }
     };
 
     Theron::Framework framework;
-    Theron::ActorRef actor(framework.CreateActor<Actor>());
+    Actor actor(framework);
     
+    // Assign the actor's address into a default-constructed address.
     Theron::Address address;
     address = actor.GetAddress();
     \endcode
@@ -155,28 +147,143 @@ public:
     */
     THERON_FORCEINLINE Address &operator=(const Address &other)
     {
-        mSequence = other.mSequence;
-        mIndex = other.mIndex;
+        mValue = other.mValue;
         return *this;
     }
 
     /**
-    \brief Gets the unique value of the address as an unsigned integer.
+    \brief Gets an integer index identifying the host containing the addressed entity.
 
     \code
     class Actor : public Theron::Actor
     {
+        explicit Actor(Theron::Framework &framework) : Theron::Actor(framework)
+        {
+        }
     };
 
     Theron::Framework framework;
-    Theron::ActorRef actor(framework.CreateActor<Actor>());
+    Actor actor(framework);
 
-    printf("Actor has address %d\n", actor.GetAddress().AsInteger());
+    printf("Actor is in host %lu\n", actor.GetAddress().GetHost());
     \endcode
+
+    \note At present, Theron doesn't support multiple hosts, and the results of this
+    method are undefined.
+    */
+    THERON_FORCEINLINE uint32_t GetHost() const
+    {
+        return mValue.mComponents.mGlobal.mBits.mHost;
+    }
+
+    /**
+    \brief Gets an integer index identifying the process containing the addressed entity.
+
+    \code
+    class Actor : public Theron::Actor
+    {
+        explicit Actor(Theron::Framework &framework) : Theron::Actor(framework)
+        {
+        }
+    };
+
+    Theron::Framework framework;
+    Actor actor(framework);
+
+    printf("Actor is in process %lu\n", actor.GetAddress().GetProcess());
+    \endcode
+
+    \note At present, Theron doesn't support multiple processes, and the results of this
+    method are undefined.
+    */
+    THERON_FORCEINLINE uint32_t GetProcess() const
+    {
+        return mValue.mComponents.mGlobal.mBits.mProcess;
+    }
+
+    /**
+    \brief Gets an integer index identifying the framework containing the addressed entity.
+
+    \code
+    class Actor : public Theron::Actor
+    {
+        explicit Actor(Theron::Framework &framework) : Theron::Actor(framework)
+        {
+        }
+    };
+
+    Theron::Framework framework;
+    Actor actor(framework);
+
+    printf("Actor is in framework %lu\n", actor.GetAddress().GetFramework());
+    \endcode
+
+    \note A value of zero indicates that the entity is a Receiver, which is global to the
+    current process and not associated with any specific framework.
+    */
+    THERON_FORCEINLINE uint32_t GetFramework() const
+    {
+        return mValue.mComponents.mLocal.mBits.mFramework;
+    }
+
+    /**
+    \brief Gets the value of the address as an unsigned 32-bit integer.
+
+    \note The returned integer value of an address represents its index within the
+    framework within which it was created, and isn't unique across multiple frameworks
+    within the same process, across multiple processes within the same host, or across
+    multiple hosts. In order to uniquely characterize actors across all frameworks within
+    a process, either use \ref AsUInt64 or combine the value returned by AsInteger with
+    the value returned by \ref GetFramework, which uniquely identifies the framework
+    hosting the actor within the current process.
+
+    \code
+    class Actor : public Theron::Actor
+    {
+        explicit Actor(Theron::Framework &framework) : Theron::Actor(framework)
+        {
+        }
+    };
+
+    Theron::Framework framework;
+    Actor actor(framework);
+
+    printf("Actor has address %lu\n", actor.GetAddress().AsInteger());
+    \endcode
+
+    \see AsUInt64
     */
     THERON_FORCEINLINE uint32_t AsInteger() const
     {
-        return mSequence;
+        return mValue.mComponents.mLocal.mBits.mIndex;
+    }
+
+    /**
+    \brief Gets the unique value of the address as an unsigned 64-bit integer.
+
+    \note The 64-bit value of an address is guaranteed to be unique even across multiple hosts
+    or multiple processes within the same host. Currently Theron doesn't support multiple
+    processors or multiple hosts, so this value is trivially unique for every actor.
+
+    \code
+    class Actor : public Theron::Actor
+    {
+        explicit Actor(Theron::Framework &framework) : Theron::Actor(framework)
+        {
+        }
+    };
+
+    Theron::Framework framework;
+    Actor actor(framework);
+
+    printf("Actor has address %llu\n", actor.GetAddress().AsUInt64());
+    \endcode
+
+    \see AsInteger
+    */
+    THERON_FORCEINLINE uint64_t AsUInt64() const
+    {
+        return mValue.mUInt64;
     }
 
     /**
@@ -189,7 +296,7 @@ public:
     */
     THERON_FORCEINLINE bool operator==(const Address &other) const
     {
-        return (mSequence == other.mSequence);
+        return (mValue == other.mValue);
     }
 
     /**
@@ -202,7 +309,7 @@ public:
     */
     THERON_FORCEINLINE bool operator!=(const Address &other) const
     {
-        return (mSequence != other.mSequence);
+        return (mValue != other.mValue);
     }
 
     /**
@@ -213,11 +320,14 @@ public:
     \code
     class Actor : public Theron::Actor
     {
+        explicit Actor(Theron::Framework &framework) : Theron::Actor(framework)
+        {
+        }
     };
 
     Theron::Framework framework;
-    Theron::ActorRef actorOne(framework.CreateActor<Actor>());
-    Theron::ActorRef actorTwo(framework.CreateActor<Actor>());
+    Actor actorOne(framework);
+    Actor actorTwo(framework);
 
     std::set<Theron::Address> addresses;
     addresses.insert(actorOne.GetAddress());
@@ -226,61 +336,89 @@ public:
     */
     THERON_FORCEINLINE bool operator<(const Address &other) const
     {
-        return (mSequence < other.mSequence);
+        return (mValue < other.mValue);
     }
 
 private:
 
-    static const uint32_t RECEIVER_FLAG = (1UL << 31);
-
-    static Detail::Mutex smMutex;       ///< Mutex that protects access to the static 'next value' member.
-    static uint32_t smNextValue;        ///< Static member that remembers the next unique address value.
-
-    /// \brief Returns the next unique address in sequence.
-    inline static uint32_t GetNextSequenceNumber()
+    /**
+    Internal explicit constructor, used by friend classes.
+    */
+    THERON_FORCEINLINE explicit Address(const uint32_t framework, const uint32_t index) : mValue(framework, index)
     {
-        Detail::Lock lock(smMutex);
+    }
 
-        // Skip the special null value.
-        if (smNextValue)
+    struct GlobalComponents
+    {
+        uint32_t mHost : 16;       ///< Integer index identifying the host within a distributed network.
+        uint32_t mProcess : 16;    ///< Integer index identifying the process within the host.
+    };
+
+    struct LocalComponents
+    {
+        uint32_t mFramework : 12;  ///< Integer index identifying the framework within the process (zero indicates a receiver).
+        uint32_t mIndex : 20;      ///< Integer index with the framework.
+    };
+
+    struct Components
+    {
+        union
         {
-            return smNextValue++;
+            GlobalComponents mBits;
+            uint32_t mUInt32;
+
+        } mGlobal;
+
+        union
+        {
+            LocalComponents mBits;
+            uint32_t mUInt32;
+
+        } mLocal;
+    };
+
+    union Value
+    {
+        THERON_FORCEINLINE Value() : mUInt64(0)
+        {
         }
 
-        smNextValue = 2;
-        return 1;
-    }
+        THERON_FORCEINLINE Value(const uint32_t framework, const uint32_t index) : mUInt64(0)
+        {
+            mComponents.mLocal.mBits.mFramework = framework;
+            mComponents.mLocal.mBits.mIndex = index;
+        }
 
-    THERON_FORCEINLINE static Address MakeActorAddress(const uint32_t index)
-    {
-        const uint32_t sequence(GetNextSequenceNumber());
-        return Address(sequence, index);
-    }
+        THERON_FORCEINLINE Value(const Value &other) : mUInt64(other.mUInt64)
+        {
+        }
 
-    THERON_FORCEINLINE static Address MakeReceiverAddress(const uint32_t index)
-    {
-        const uint32_t sequence(GetNextSequenceNumber());
-        return Address(sequence, index | Address::RECEIVER_FLAG);
-    }
+        THERON_FORCEINLINE Value &operator=(const Value &other)
+        {
+             mUInt64 = other.mUInt64;
+             return *this;
+        }
 
-    /// Constructor that accepts a specific value for the address.
-    /// \param value The value for the newly constructed address.
-    THERON_FORCEINLINE Address(const uint32_t sequence, const uint32_t index) : mSequence(sequence), mIndex(index)
-    {
-    }
+        THERON_FORCEINLINE bool operator==(const Value &other) const
+        {
+            return (mUInt64 == other.mUInt64);
+        }
 
-    THERON_FORCEINLINE uint32_t GetSequence() const
-    {
-        return mSequence;
-    }
+        THERON_FORCEINLINE bool operator!=(const Value &other) const
+        {
+            return (mUInt64 != other.mUInt64);
+        }
 
-    THERON_FORCEINLINE uint32_t GetIndex() const
-    {
-        return (mIndex & (~RECEIVER_FLAG));
-    }
+        THERON_FORCEINLINE bool operator<(const Value &other) const
+        {
+            return (mUInt64 < other.mUInt64);
+        }
 
-    uint32_t mSequence;                 ///< Unique sequence number.
-    uint32_t mIndex;                    ///< Pool index at which the addressed entity is registered.
+        uint64_t mUInt64;           ///< Unique unsigned 64-bit value.
+        Components mComponents;     ///< Individual components of the address.
+    };
+
+    Value mValue;                   ///< 64-bit address value, accessible as bitfield components.
 };
 
 
@@ -288,4 +426,3 @@ private:
 
 
 #endif // THERON_ADDRESS_H
-

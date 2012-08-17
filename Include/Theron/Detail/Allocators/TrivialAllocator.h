@@ -1,14 +1,11 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_DETAIL_ALLOCATORS_TRIVIALALLOCATOR_H
 #define THERON_DETAIL_ALLOCATORS_TRIVIALALLOCATOR_H
 
 
+#include <Theron/Assert.h>
 #include <Theron/BasicTypes.h>
 #include <Theron/IAllocator.h>
-
-#include <Theron/Detail/Debug/Assert.h>
 
 
 namespace Theron

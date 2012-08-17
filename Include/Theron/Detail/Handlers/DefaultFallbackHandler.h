@@ -1,6 +1,4 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_DETAIL_HANDLERS_DEFAULTFALLBACKHANDLER_H
 #define THERON_DETAIL_HANDLERS_DEFAULTFALLBACKHANDLER_H
 
@@ -9,10 +7,9 @@
 #include <stdio.h>
 #endif // THERON_ENABLE_UNHANDLED_MESSAGE_CHECKS
 
+#include <Theron/Assert.h>
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
-
-#include <Theron/Detail/Debug/Assert.h>
 
 
 #if THERON_ENABLE_UNHANDLED_MESSAGE_CHECKS
@@ -73,4 +70,3 @@ inline void DefaultFallbackHandler::Handle(
 
 
 #endif // THERON_DETAIL_HANDLERS_DEFAULTFALLBACKHANDLER_H
-

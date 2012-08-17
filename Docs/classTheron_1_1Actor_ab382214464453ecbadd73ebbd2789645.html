@@ -87,17 +87,17 @@ window.onload = initDynSections;
       <div class="navtab">
         <table>
           <tr><td class="navtab"><a class="qindexHL" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645">Actor</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a5639d7ce2d33217f658de3b39ae1d80b.html#a5639d7ce2d33217f658de3b39ae1d80b">Actor</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a8f0fd920b4d270cf8c8184104b958092.html#a8f0fd920b4d270cf8c8184104b958092">DeregisterHandler</a></td></tr>
-          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a41a42e5c507e83ec3b5f0806a8869715.html#a41a42e5c507e83ec3b5f0806a8869715">GetAddress</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a268613b27d2d718b55e2eb489118aa04.html#a268613b27d2d718b55e2eb489118aa04">GetAddress</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_afe30f86e99ff80691ec11e207711a46a.html#afe30f86e99ff80691ec11e207711a46a">GetFramework</a></td></tr>
-          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a4f6af5dba4b36bbb55ee216589ccfb63.html#a4f6af5dba4b36bbb55ee216589ccfb63">GetNumQueuedMessages</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a6bfdf3ec59943e2c8f1e686d2e3c1077.html#a6bfdf3ec59943e2c8f1e686d2e3c1077">IsHandlerRegistered</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a6a5a4bd492f490bf730274c247b584da.html#a6a5a4bd492f490bf730274c247b584da">RegisterHandler</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2">Send</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a9d2a84c501b187c0b531ac9f5a30e2c9.html#a9d2a84c501b187c0b531ac9f5a30e2c9">SetDefaultHandler</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_acefedebe52fe74026c65cfab5a209a11.html#acefedebe52fe74026c65cfab5a209a11">SetDefaultHandler</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_af566742b7486c810cc694897adcbe958.html#af566742b7486c810cc694897adcbe958">TailSend</a></td></tr>
-          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_ab60796f45fdf65fbcc2f27abdeac37f9.html#ab60796f45fdf65fbcc2f27abdeac37f9">~Actor</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a95ce244d6cd6f4f3bfaea29dfb89ab6c.html#a95ce244d6cd6f4f3bfaea29dfb89ab6c">~Actor</a></td></tr>
         </table>
       </div>
    </td>
@@ -111,23 +111,44 @@ window.onload = initDynSections;
           <td>(</td>
           <td class="paramname"></td>
           <td>&nbsp;)&nbsp;</td>
-          <td><code> [inline]</code></td>
+          <td></td>
         </tr>
       </table>
 </div>
 <div class="memdoc">
 
 <p>Default constructor. </p>
-<p><a class="el" href="classTheron_1_1Actor.html" title="The actor baseclass.">Actor</a> classes can be instantiated using the CreateActor methods of a <a class="el" href="classTheron_1_1Framework.html">Framework</a> object, which returns an <a class="el" href="classTheron_1_1ActorRef.html">ActorRef</a> object referencing the created actor. The created actor can't be accessed directly. Instead it is referenced in user code by <a class="el" href="classTheron_1_1ActorRef.html">ActorRef</a> objects, which are copyable, lightweight references to the actor. <a class="el" href="classTheron_1_1ActorRef.html" title="Used to reference an actor in user code.">ActorRef</a> objects are like conventional references and can be copied, assigned, passed by value or reference, and returned by value from functions.</p>
-<div class="fragment"><pre class="fragment">    <span class="keyword">class </span>MyActor : <span class="keyword">public</span> Theron::<a class="code" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645" title="Default constructor.">Actor</a>
+<dl class="note"><dt><b>Note:</b></dt><dd>Direct default-construction of <a class="el" href="classTheron_1_1Actor.html" title="The actor baseclass.">Actor</a> baseclasses is forbidden. This public default constructor is provided for backwards compatibility with the legacy actor creation pattern used by versions of <a class="el" href="namespaceTheron.html" title="Main namespace containing all public API components.">Theron</a> prior to version 4.0.</dd></dl>
+<p>Always use one of the two supported actor creation patterns: the version 4 syntax or (if necessary) the deprecated version 3.x syntax, which is still supported for backwards compatibility. When writing new code, always use the new, simpler, version 4 syntax.</p>
+<p>In versions of <a class="el" href="namespaceTheron.html" title="Main namespace containing all public API components.">Theron</a> prior to 4.0, actors couldn't be constructed directly in user code. Instead you had to ask a <a class="el" href="classTheron_1_1Framework.html" title="Manager class that hosts, manages, and executes actors.">Framework</a> to create one for you, using the CreateActor method template. Instead of returning the actor itself, CreateActor returned a <em>reference</em> to the actor in the form of an <a class="el" href="classTheron_1_1ActorRef.html">ActorRef</a> object.</p>
+<div class="fragment"><pre class="fragment">    <span class="comment">// LEGACY CODE!</span>
+    <span class="keyword">class </span>MyActor : <span class="keyword">public</span> Theron::<a class="code" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645" title="Default constructor.">Actor</a>
     {
     };
 
-    <a class="code" href="classTheron_1_1Framework.html" title="Manager class that hosts, manages, and executes actors.">Theron::Framework</a> framework;
-    <a class="code" href="classTheron_1_1ActorRef.html" title="Used to reference an actor in user code.">Theron::ActorRef</a> myActor = framework.<a class="code" href="classTheron_1_1Framework_aaa437cb5d31838c0d44eb0a48d08298f.html#aaa437cb5d31838c0d44eb0a48d08298f" title="Creates an Actor within the framework.">CreateActor</a>&lt;MyActor&gt;();
-</pre></div><p>A powerful feature of actors is that they can create other actors, allowing the building of complex subsystems of actors using object-like abstraction. See the documentation of the <a class="el" href="classTheron_1_1Actor_afe30f86e99ff80691ec11e207711a46a.html#afe30f86e99ff80691ec11e207711a46a">GetFramework</a> method for more information.</p>
-<dl class="note"><dt><b>Note:</b></dt><dd>Only the <a class="el" href="classTheron_1_1Framework.html">Framework</a> can construct actors. </dd></dl>
+    <span class="keywordtype">int</span> main()
+    {
+        <a class="code" href="classTheron_1_1Framework.html" title="Manager class that hosts, manages, and executes actors.">Theron::Framework</a> framework;
+        <a class="code" href="classTheron_1_1ActorRef.html" title="Legacy utility for backwards compatibility.">Theron::ActorRef</a> actorRef(framework.<a class="code" href="classTheron_1_1Framework_aaa437cb5d31838c0d44eb0a48d08298f.html#aaa437cb5d31838c0d44eb0a48d08298f" title="Deprecated method provided for backwards compatibility.">CreateActor</a>&lt;MyActor&gt;());
+    }
+</pre></div><p>In versions of <a class="el" href="namespaceTheron.html" title="Main namespace containing all public API components.">Theron</a> starting with 4.0, Actors are first-class citizens and behave like vanilla C++ objects. They can be constructed directly with no call to <a class="el" href="classTheron_1_1Framework_aaa437cb5d31838c0d44eb0a48d08298f.html#aaa437cb5d31838c0d44eb0a48d08298f" title="Deprecated method provided for backwards compatibility.">Framework::CreateActor</a>. Once constructed they are referenced directly by user code with no need for <a class="el" href="classTheron_1_1ActorRef.html" title="Legacy utility for backwards compatibility.">ActorRef</a> proxy objects.</p>
+<p>When writing new code, follow the new, simpler construction pattern where actors are constructed directly and not referenced by ActorRefs:</p>
+<div class="fragment"><pre class="fragment">    <span class="comment">// New code</span>
+    <span class="keyword">class </span>MyActor : <span class="keyword">public</span> Theron::<a class="code" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645" title="Default constructor.">Actor</a>
+    {
+    <span class="keyword">public</span>:
 
+        MyActor(<a class="code" href="classTheron_1_1Framework.html" title="Manager class that hosts, manages, and executes actors.">Theron::Framework</a> &amp;framework) : Theron::<a class="code" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645" title="Default constructor.">Actor</a>(framework)
+        {
+        }
+    };
+
+    <span class="keywordtype">int</span> main()
+    {
+        <a class="code" href="classTheron_1_1Framework.html" title="Manager class that hosts, manages, and executes actors.">Theron::Framework</a> framework;
+        MyActor actor(framework);
+    }
+</pre></div> 
 </div>
 </div>
     </td>
@@ -139,7 +160,7 @@ window.onload = initDynSections;
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Files</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Enumerations</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(8)"><span class="SelectionMark">&nbsp;</span>Enumerator</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(9)"><span class="SelectionMark">&nbsp;</span>Defines</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Files</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Defines</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">

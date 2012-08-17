@@ -90,8 +90,6 @@ window.onload = initDynSections;
       <li class="current"><a href="functions_func.html"><span>Functions</span></a></li>
       <li><a href="functions_vars.html"><span>Variables</span></a></li>
       <li><a href="functions_type.html"><span>Typedefs</span></a></li>
-      <li><a href="functions_enum.html"><span>Enumerations</span></a></li>
-      <li><a href="functions_eval.html"><span>Enumerator</span></a></li>
     </ul>
   </div>
   <div class="tabs">
@@ -99,6 +97,7 @@ window.onload = initDynSections;
       <li><a href="#index_a"><span>a</span></a></li>
       <li><a href="#index_c"><span>c</span></a></li>
       <li><a href="#index_d"><span>d</span></a></li>
+      <li><a href="#index_e"><span>e</span></a></li>
       <li><a href="#index_f"><span>f</span></a></li>
       <li><a href="#index_g"><span>g</span></a></li>
       <li><a href="#index_i"><span>i</span></a></li>
@@ -121,7 +120,7 @@ window.onload = initDynSections;
 : <a class="el" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645">Theron::Actor</a>
 </li>
 <li>ActorRef()
-: <a class="el" href="classTheron_1_1ActorRef_a9f40b0eb181880ad34bf8c8cdf20abb7.html#a9f40b0eb181880ad34bf8c8cdf20abb7">Theron::ActorRef</a>
+: <a class="el" href="classTheron_1_1ActorRef_a5f47e5096e1365a09e9f55abd4b43aa4.html#a5f47e5096e1365a09e9f55abd4b43aa4">Theron::ActorRef</a>
 </li>
 <li>Address()
 : <a class="el" href="classTheron_1_1Address_ad497adcd24df041a3fc9304412bc29f6.html#ad497adcd24df041a3fc9304412bc29f6">Theron::Address</a>
@@ -131,16 +130,22 @@ window.onload = initDynSections;
 , <a class="el" href="classTheron_1_1DefaultAllocator_aa48cb1758a7f85de84b15047484dfb08.html#aa48cb1758a7f85de84b15047484dfb08">Theron::DefaultAllocator</a>
 </li>
 <li>AllocateAligned()
-: <a class="el" href="classTheron_1_1DefaultAllocator_ad649f26a87a1e43c0cf539b5914a974a.html#ad649f26a87a1e43c0cf539b5914a974a">Theron::DefaultAllocator</a>
-, <a class="el" href="classTheron_1_1IAllocator_a765be9c2496fae5b6f228d33b4ec2f87.html#a765be9c2496fae5b6f228d33b4ec2f87">Theron::IAllocator</a>
+: <a class="el" href="classTheron_1_1IAllocator_a765be9c2496fae5b6f228d33b4ec2f87.html#a765be9c2496fae5b6f228d33b4ec2f87">Theron::IAllocator</a>
+, <a class="el" href="classTheron_1_1DefaultAllocator_ad649f26a87a1e43c0cf539b5914a974a.html#ad649f26a87a1e43c0cf539b5914a974a">Theron::DefaultAllocator</a>
 </li>
 <li>AsInteger()
 : <a class="el" href="classTheron_1_1Address_a29b5e920da956e60cc6b7e072b1cef27.html#a29b5e920da956e60cc6b7e072b1cef27">Theron::Address</a>
+</li>
+<li>AsUInt64()
+: <a class="el" href="classTheron_1_1Address_ad0aad83d593d646deba2bc85a4795a15.html#ad0aad83d593d646deba2bc85a4795a15">Theron::Address</a>
 </li>
 </ul>
 
 
 <h3><a class="anchor" id="index_c">- c -</a></h3><ul>
+<li>Catcher()
+: <a class="el" href="classTheron_1_1Catcher_aac79f57e81e0db13c6a05894caef5669.html#aac79f57e81e0db13c6a05894caef5669">Theron::Catcher&lt; MessageType &gt;</a>
+</li>
 <li>Consume()
 : <a class="el" href="classTheron_1_1Receiver_aaecc6c19f587eac73103dc16c71a45df.html#aaecc6c19f587eac73103dc16c71a45df">Theron::Receiver</a>
 </li>
@@ -164,6 +169,13 @@ window.onload = initDynSections;
 </ul>
 
 
+<h3><a class="anchor" id="index_e">- e -</a></h3><ul>
+<li>Empty()
+: <a class="el" href="classTheron_1_1Catcher_a01d9813a87573a23ab0ed7be7bc29009.html#a01d9813a87573a23ab0ed7be7bc29009">Theron::Catcher&lt; MessageType &gt;</a>
+</li>
+</ul>
+
+
 <h3><a class="anchor" id="index_f">- f -</a></h3><ul>
 <li>Framework()
 : <a class="el" href="classTheron_1_1Framework_adcf4d72004a39270624a73891e3cd1a7.html#adcf4d72004a39270624a73891e3cd1a7">Theron::Framework</a>
@@ -173,14 +185,17 @@ window.onload = initDynSections;
 , <a class="el" href="classTheron_1_1DefaultAllocator_af0dab9d5e8c021d3eaf60bbfcbdcb0d9.html#af0dab9d5e8c021d3eaf60bbfcbdcb0d9">Theron::DefaultAllocator</a>
 , <a class="el" href="classTheron_1_1IAllocator_a55ab415ea21b84226c1211f583477a00.html#a55ab415ea21b84226c1211f583477a00">Theron::IAllocator</a>
 </li>
+<li>Front()
+: <a class="el" href="classTheron_1_1Catcher_a22b4108c2abf15c54192a9f025119dd5.html#a22b4108c2abf15c54192a9f025119dd5">Theron::Catcher&lt; MessageType &gt;</a>
+</li>
 </ul>
 
 
 <h3><a class="anchor" id="index_g">- g -</a></h3><ul>
 <li>GetAddress()
-: <a class="el" href="classTheron_1_1Actor_a41a42e5c507e83ec3b5f0806a8869715.html#a41a42e5c507e83ec3b5f0806a8869715">Theron::Actor</a>
-, <a class="el" href="classTheron_1_1ActorRef_aa08f664b1bdee8952da884e7050451ee.html#aa08f664b1bdee8952da884e7050451ee">Theron::ActorRef</a>
-, <a class="el" href="classTheron_1_1Receiver_a22a1d3557a6cc167d1ccb9ad9cb95816.html#a22a1d3557a6cc167d1ccb9ad9cb95816">Theron::Receiver</a>
+: <a class="el" href="classTheron_1_1Actor_a268613b27d2d718b55e2eb489118aa04.html#a268613b27d2d718b55e2eb489118aa04">Theron::Actor</a>
+, <a class="el" href="classTheron_1_1ActorRef_ab3f636bc01607262da610e7e78eed3e0.html#ab3f636bc01607262da610e7e78eed3e0">Theron::ActorRef</a>
+, <a class="el" href="classTheron_1_1Receiver_ade22428952084fee67865a194ade6df2.html#ade22428952084fee67865a194ade6df2">Theron::Receiver</a>
 </li>
 <li>GetAllocator()
 : <a class="el" href="classTheron_1_1AllocatorManager_acfa9da4061ec9cc5bc738ea20cb6c135.html#acfa9da4061ec9cc5bc738ea20cb6c135">Theron::AllocatorManager</a>
@@ -188,30 +203,18 @@ window.onload = initDynSections;
 <li>GetBytesAllocated()
 : <a class="el" href="classTheron_1_1DefaultAllocator_a368812ccfd6bf1780a9b74360b239826.html#a368812ccfd6bf1780a9b74360b239826">Theron::DefaultAllocator</a>
 </li>
-<li>GetCounterValue()
-: <a class="el" href="classTheron_1_1Framework_a5cbe732bc768ee9a6d41e38e98e0aad8.html#a5cbe732bc768ee9a6d41e38e98e0aad8">Theron::Framework</a>
-</li>
 <li>GetFramework()
-: <a class="el" href="classTheron_1_1Actor_afe30f86e99ff80691ec11e207711a46a.html#afe30f86e99ff80691ec11e207711a46a">Theron::Actor</a>
+: <a class="el" href="classTheron_1_1Address_a33a1cc68ee53d494a0823e379795f1dc.html#a33a1cc68ee53d494a0823e379795f1dc">Theron::Address</a>
+, <a class="el" href="classTheron_1_1Actor_afe30f86e99ff80691ec11e207711a46a.html#afe30f86e99ff80691ec11e207711a46a">Theron::Actor</a>
 </li>
-<li>GetMaxThreads()
-: <a class="el" href="classTheron_1_1Framework_a7d1eec252eaf09d35787d7ff42bb4f92.html#a7d1eec252eaf09d35787d7ff42bb4f92">Theron::Framework</a>
-</li>
-<li>GetMinThreads()
-: <a class="el" href="classTheron_1_1Framework_a90fe333c11791e419b3eeaeb332c5514.html#a90fe333c11791e419b3eeaeb332c5514">Theron::Framework</a>
-</li>
-<li>GetNumQueuedMessages()
-: <a class="el" href="classTheron_1_1Actor_a4f6af5dba4b36bbb55ee216589ccfb63.html#a4f6af5dba4b36bbb55ee216589ccfb63">Theron::Actor</a>
-, <a class="el" href="classTheron_1_1ActorRef_a0bd0df0b01ee90f660581c04b48447f0.html#a0bd0df0b01ee90f660581c04b48447f0">Theron::ActorRef</a>
-</li>
-<li>GetNumThreads()
-: <a class="el" href="classTheron_1_1Framework_a40159b92cc679a38d2f0cf45cdbdc7be.html#a40159b92cc679a38d2f0cf45cdbdc7be">Theron::Framework</a>
+<li>GetHost()
+: <a class="el" href="classTheron_1_1Address_af0d06e9f91c185c7f1e22a4ddddd1f43.html#af0d06e9f91c185c7f1e22a4ddddd1f43">Theron::Address</a>
 </li>
 <li>GetPeakBytesAllocated()
 : <a class="el" href="classTheron_1_1DefaultAllocator_a42b6356c075558e513648eae05df21cb.html#a42b6356c075558e513648eae05df21cb">Theron::DefaultAllocator</a>
 </li>
-<li>GetPeakThreads()
-: <a class="el" href="classTheron_1_1Framework_a15b2632e9004c3a7caa04e8d395fac3c.html#a15b2632e9004c3a7caa04e8d395fac3c">Theron::Framework</a>
+<li>GetProcess()
+: <a class="el" href="classTheron_1_1Address_aee89e09d5c2e833674d61c4fbfc766d7.html#aee89e09d5c2e833674d61c4fbfc766d7">Theron::Address</a>
 </li>
 </ul>
 
@@ -222,9 +225,6 @@ window.onload = initDynSections;
 </li>
 <li>Instance()
 : <a class="el" href="classTheron_1_1AllocatorManager_ad633481820cb8f1e05ac2ce18c23cfb1.html#ad633481820cb8f1e05ac2ce18c23cfb1">Theron::AllocatorManager</a>
-</li>
-<li>IsActorAddress()
-: <a class="el" href="classTheron_1_1Address_aebc169047094820b93ef94f7ff484294.html#aebc169047094820b93ef94f7ff484294">Theron::Address</a>
 </li>
 <li>IsHandlerRegistered()
 : <a class="el" href="classTheron_1_1Actor_a6bfdf3ec59943e2c8f1e686d2e3c1077.html#a6bfdf3ec59943e2c8f1e686d2e3c1077">Theron::Actor</a>
@@ -260,8 +260,15 @@ window.onload = initDynSections;
 
 
 <h3><a class="anchor" id="index_p">- p -</a></h3><ul>
+<li>Parameters()
+: <a class="el" href="structTheron_1_1Framework_1_1Parameters_a31336cb96ae9662281739ec429e58692.html#a31336cb96ae9662281739ec429e58692">Theron::Framework::Parameters</a>
+</li>
+<li>Pop()
+: <a class="el" href="classTheron_1_1Catcher_a6414c84de332310f0345bbec226f0542.html#a6414c84de332310f0345bbec226f0542">Theron::Catcher&lt; MessageType &gt;</a>
+</li>
 <li>Push()
 : <a class="el" href="classTheron_1_1ActorRef_aac55211188a75fd13bff6a07f5ca446c.html#aac55211188a75fd13bff6a07f5ca446c">Theron::ActorRef</a>
+, <a class="el" href="classTheron_1_1Catcher_a4f85127566eeb430c49ba995f59afe17.html#a4f85127566eeb430c49ba995f59afe17">Theron::Catcher&lt; MessageType &gt;</a>
 </li>
 </ul>
 
@@ -277,31 +284,22 @@ window.onload = initDynSections;
 <li>Reset()
 : <a class="el" href="classTheron_1_1Receiver_a4cd17c1a51a4f01e66313c2fa0a0de44.html#a4cd17c1a51a4f01e66313c2fa0a0de44">Theron::Receiver</a>
 </li>
-<li>ResetCounters()
-: <a class="el" href="classTheron_1_1Framework_af8b253cdc19bbe3871fdd221571e0672.html#af8b253cdc19bbe3871fdd221571e0672">Theron::Framework</a>
-</li>
 </ul>
 
 
 <h3><a class="anchor" id="index_s">- s -</a></h3><ul>
 <li>Send()
 : <a class="el" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2">Theron::Actor</a>
-, <a class="el" href="classTheron_1_1Framework_a96cbe3c0726a6d1a9a16afd52edf6b61.html#a96cbe3c0726a6d1a9a16afd52edf6b61">Theron::Framework</a>
+, <a class="el" href="classTheron_1_1Framework_af43150ae3a1c56d9b82426b02e1bb317.html#af43150ae3a1c56d9b82426b02e1bb317">Theron::Framework</a>
 </li>
 <li>SetAllocator()
 : <a class="el" href="classTheron_1_1AllocatorManager_a581bf1417a5f401caaa019b03fdb90c2.html#a581bf1417a5f401caaa019b03fdb90c2">Theron::AllocatorManager</a>
 </li>
 <li>SetDefaultHandler()
-: <a class="el" href="classTheron_1_1Actor_a9d2a84c501b187c0b531ac9f5a30e2c9.html#a9d2a84c501b187c0b531ac9f5a30e2c9">Theron::Actor</a>
+: <a class="el" href="classTheron_1_1Actor_acefedebe52fe74026c65cfab5a209a11.html#acefedebe52fe74026c65cfab5a209a11">Theron::Actor</a>
 </li>
 <li>SetFallbackHandler()
-: <a class="el" href="classTheron_1_1Framework_acb378db478caff5f111b13917ff65f72.html#acb378db478caff5f111b13917ff65f72">Theron::Framework</a>
-</li>
-<li>SetMaxThreads()
-: <a class="el" href="classTheron_1_1Framework_af3932db00a7bcf189bec9798980e8252.html#af3932db00a7bcf189bec9798980e8252">Theron::Framework</a>
-</li>
-<li>SetMinThreads()
-: <a class="el" href="classTheron_1_1Framework_ad7bd43e200620c216338340db1477d0a.html#ad7bd43e200620c216338340db1477d0a">Theron::Framework</a>
+: <a class="el" href="classTheron_1_1Framework_a31af6a890f23de2f16eef2363b217f70.html#a31af6a890f23de2f16eef2363b217f70">Theron::Framework</a>
 </li>
 </ul>
 
@@ -322,10 +320,13 @@ window.onload = initDynSections;
 
 <h3><a class="anchor" id="index_0x7e">- ~ -</a></h3><ul>
 <li>~Actor()
-: <a class="el" href="classTheron_1_1Actor_ab60796f45fdf65fbcc2f27abdeac37f9.html#ab60796f45fdf65fbcc2f27abdeac37f9">Theron::Actor</a>
+: <a class="el" href="classTheron_1_1Actor_a95ce244d6cd6f4f3bfaea29dfb89ab6c.html#a95ce244d6cd6f4f3bfaea29dfb89ab6c">Theron::Actor</a>
 </li>
 <li>~ActorRef()
 : <a class="el" href="classTheron_1_1ActorRef_a6f07270d25994df596c4ae3fbd3f9d7b.html#a6f07270d25994df596c4ae3fbd3f9d7b">Theron::ActorRef</a>
+</li>
+<li>~Catcher()
+: <a class="el" href="classTheron_1_1Catcher_a4bfbc9d3d15d1c6e02d9090bda58026f.html#a4bfbc9d3d15d1c6e02d9090bda58026f">Theron::Catcher&lt; MessageType &gt;</a>
 </li>
 <li>~DefaultAllocator()
 : <a class="el" href="classTheron_1_1DefaultAllocator_afda3ddc78b12ed2ad1df5a5c12c26be7.html#afda3ddc78b12ed2ad1df5a5c12c26be7">Theron::DefaultAllocator</a>
@@ -346,7 +347,7 @@ window.onload = initDynSections;
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Files</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Enumerations</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(8)"><span class="SelectionMark">&nbsp;</span>Enumerator</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(9)"><span class="SelectionMark">&nbsp;</span>Defines</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Files</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Defines</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">

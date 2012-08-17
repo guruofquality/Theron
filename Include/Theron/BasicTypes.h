@@ -1,43 +1,74 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_BASICTYPES_H
 #define THERON_BASICTYPES_H
 
 
-#if defined(_MSC_VER)
-// uintptr_t is already defined in Visual C++ builds.
-#elif defined(__GNUC__)
-// This header defines the uintptr_t type in gcc builds.
-// The header is defined in C99, and some modern compilers supply it.
+/**
+\file BasicTypes.h
+\brief Defines basic standard types in a hopefully cross-platform manner.
+*/
+
+
+#include <Theron/Defines.h>
+
+
+#if THERON_BOOST
+
+// Boost provides this header.
+#include <boost/cstdint.hpp>
+
+#elif THERON_CPP11
+
+// This header is assumed to be available in C++11 builds.
+#include <cstdint>
+
+#elif THERON_GCC
+
+// This header is typically available in GCC builds.
 #include <inttypes.h>
+
+#elif THERON_MSVC
+
+// These are packaged with Theron, and provide stdint functionality for MSVC.
+#include <Standard/stdint.h>
+#include <Standard/inttypes.h>
+
 #else
-// We rely on the typedef within the Theron namespace defined below.
-#endif // !defined(_MSC_VER)
+
+// Failing all else, we hope this C99 header is available.
+#include <inttypes.h>
+
+#endif
 
 
 namespace Theron
 {
 
 
-/// An 8-bit unsigned integer.
-typedef unsigned char uint8_t;
+#if THERON_BOOST
 
-/// A 32-bit unsigned integer.
-typedef unsigned int uint32_t;
+// In Boost builds we reuse the convenient Boost integer types.
+typedef boost::uint8_t uint8_t;
+typedef boost::uint32_t uint32_t;
+typedef boost::int32_t int32_t;
+typedef boost::uint64_t uint64_t;
 
-/// A 64-bit unsigned integer.
-typedef unsigned long long uint64_t;
-
-#if defined(__LP64__)
-// LP64 machine, OS X or Linux
-typedef unsigned long long uintptr_t;
-#elif defined(_WIN64)
-// LLP64 machine, Windows
+// Boost doesn't define uintptr_t so we have to define it ourselves.
+#if THERON_64BIT
 typedef unsigned long long uintptr_t;
 #else
-// 32-bit machine, Windows or Linux or OS X
 typedef unsigned long uintptr_t;
+#endif
+
+#else
+
+// Promote the global namespace types into the Theron namespace.
+typedef ::uint8_t uint8_t;
+typedef ::uint32_t uint32_t;
+typedef ::int32_t int32_t;
+typedef ::uint64_t uint64_t;
+typedef ::uintptr_t uintptr_t;
+
 #endif
 
 

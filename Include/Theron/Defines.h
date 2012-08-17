@@ -1,13 +1,11 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_DEFINES_H
 #define THERON_DEFINES_H
 
 
 /**
 \file Defines.h
-\brief Global user-overridable defines.
+\brief Global user-configurable defines.
 
 This file defines, in one place, all the defines which can be defined in order
 to override default options within Theron. Some of them enable or disable debugging
@@ -25,14 +23,153 @@ be easily overridden just by defining the defines yourself globally in your buil
 */
 
 
-#ifndef THERON_DEBUG
-#ifdef _MSC_VER
+/**
+\def THERON_WINDOWS
+
+\brief Controls the use of Windows features.
+
+This define is defined automatically if not predefined by the user. When automatically defined,
+it is defined as 1 if the Windows platform is detected, and 0 otherwise.
+
+In particular this define controls the use of Windows thread and atomic functionality.
+If Windows functionality is available then it is used in preference to other APIs.
+
+The default definition can be overridden by defining it globally in the build - either
+via the makefile command line options, on the GCC command line using -D, or in the project
+preprocessor settings in Visual Studio.
+*/
+
+
+#if !defined(THERON_WINDOWS)
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32) || defined(_WIN64) || defined(WINDOWS) || defined(_WIN32_CE) || defined(__CYGWIN__)
+#define THERON_WINDOWS 1
+#else
+#define THERON_WINDOWS 0
+#endif
+#endif // THERON_WINDOWS
+
+
+/**
+\def THERON_MSVC
+
+\brief Enables the use of Microsoft Visual C++ features.
+
+This define is defined automatically if not predefined by the user. When automatically defined,
+it is defined as 1 if the Microsoft Visual C++ compiler is detected, and 0 otherwise.
+
+The default definition can be overridden by defining it globally in the build - either
+via the makefile command line options, on the GCC command line using -D, or in the project
+preprocessor settings in Visual Studio.
+*/
+
+
+#if !defined(THERON_MSVC)
+#if defined(_MSC_VER)
+#define THERON_MSVC 1
+#else
+#define THERON_MSVC 0
+#endif
+#endif // THERON_MSVC
+
+
+/**
+\def THERON_GCC
+
+\brief Enables the use of GCC-specific features.
+
+This define is defined automatically if not predefined by the user. When automatically defined,
+it is defined as 1 if a version of the GCC compiler is detected, and 0 otherwise.
+
+The default definition can be overridden by defining it globally in the build - either
+via the makefile command line options, on the GCC command line using -D, or in the project
+preprocessor settings in Visual Studio.
+*/
+
+
+#if !defined(THERON_GCC)
+#if defined(__GNUC__)
+#define THERON_GCC 1
+#else
+#define THERON_GCC 0
+#endif
+#endif // THERON_GCC
+
+
+/**
+\def THERON_64BIT
+
+\brief Enables the use of 64-bit environment features.
+
+This define is defined automatically if not predefined by the user. When automatically
+defined, it is defined as 1 if a 64-bit environment is detected, as 0 if a 32-bit environment
+is detected, or as 1 by default if the environment isn't recognized.
+
+Pointers are assumed to be 8 bytes wide when it is defined as 1 and 4 bytes wide when it
+is defined as 0.
+
+The default definition can be overridden by defining it globally in the build - either
+via the makefile command line options, on the GCC command line using -D, or in the project
+preprocessor settings in Visual Studio.
+*/
+
+
+#if !defined(THERON_64BIT)
+#if THERON_WINDOWS
+
+#if defined(_WIN64)
+#define THERON_64BIT 1
+#else
+#define THERON_64BIT 0
+#endif
+
+#elif THERON_GCC
+
+#if defined(__x86_64__) || defined(__ppc64__)
+#define THERON_64BIT 1
+#else
+#define THERON_64BIT 0
+#endif
+
+#else
+
+// Assume 64-bit environment by default.
+#define THERON_64BIT 1
+
+#endif
+#endif // THERON_64BIT
+
+
+/**
+\def THERON_DEBUG
+
+\brief Controls generation of code for asserts, allocation checking, etc.
+
+This is a global define that decides default values for several other
+defines that individually control aspects of code generation related to debugging.
+
+The default definition can be overridden by defining it globally in the build - either
+via the makefile command line options, on the GCC command line using -D, or in the project
+preprocessor settings in Visual Studio.
+
+If not defined, then THERON_DEBUG defaults to 1 in GCC builds when NDEBUG is not
+defined, and to 1 in other builds (including Visual C++) when _DEBUG is defined.
+Otherwise it defaults to 0, disabling debug-related code generation.
+
+If THERON_DEBUG is defined as 1, then \ref THERON_ENABLE_ASSERTS defaults to 1,
+\ref THERON_FORCEINLINE defaults to 'inline', and \ref
+THERON_ENABLE_DEFAULTALLOCATOR_CHECKS defaults to 1. Otherwise those defines
+default to 0, forced inlining, and 0, respectively.
+*/
+
+
+#if !defined(THERON_DEBUG)
+#if THERON_MSVC
 #if defined(_DEBUG)
 #define THERON_DEBUG 1
 #else
 #define THERON_DEBUG 0
 #endif
-#elif defined(__GNUC__)
+#elif THERON_GCC
 #if defined(NDEBUG)
 #define THERON_DEBUG 0
 #else
@@ -42,144 +179,194 @@ be easily overridden just by defining the defines yourself globally in your buil
 #if defined(_DEBUG)
 #define THERON_DEBUG 1
 #else
-/**
-\brief Controls generation of code for asserts, allocation checking, etc.
-
-This is a global define that decides default values for several other
-defines that individually control aspects of code generation related to debugging.
-
-The value of \ref THERON_DEBUG can be overridden by defining it globally in the build
-(in the makefile using -D, or in the project preprocessor settings in Visual Studio).
-
-If not defined, then \ref THERON_DEBUG defaults to 1 in GCC builds when NDEBUG is not
-defined, and to 1 in other builds (including Visual C++) when _DEBUG is defined.
-Otherwise it defaults to 0, disabling debug-related code generation.
-
-If \ref THERON_DEBUG is defined as 1, then \ref THERON_ENABLE_ASSERTS defaults to 1,
-\ref THERON_FORCEINLINE defaults to 'inline', and \ref
-THERON_ENABLE_DEFAULTALLOCATOR_CHECKS defaults to 1. Otherwise those defines
-default to 0, forced inlining, and 0, respectively.
-*/
 #define THERON_DEBUG 0
 #endif
 #endif
 #endif // THERON_DEBUG
 
 
-#ifndef THERON_ENABLE_ASSERTS
-#if THERON_DEBUG
-#define THERON_ENABLE_ASSERTS 1
-#else
 /**
+\def THERON_ENABLE_ASSERTS
+
 \brief Enables generation of code for asserts within Theron.
 
 Defaults to 0, disabling asserts, when \ref THERON_DEBUG is 0.
 Defaults to 1, enabling asserts, when \ref THERON_DEBUG is 1.
 
-The value of \ref THERON_ENABLE_ASSERTS can be overridden by defining it globally
-in the build (in the makefile using -D, or in the project preprocessor settings
-in Visual Studio).
+The default definition can be overridden by defining it globally in the build - either
+via the makefile command line options, on the GCC command line using -D, or in the project
+preprocessor settings in Visual Studio.
 */
+
+
+#if !defined(THERON_ENABLE_ASSERTS)
+#if THERON_DEBUG
+#define THERON_ENABLE_ASSERTS 1
+#else
 #define THERON_ENABLE_ASSERTS 0
-#endif // THERON_DEBUG
-#endif // THERON_ENABLE_ASSERTS
+#endif
+#endif
 
 
-#ifndef THERON_USE_BOOST_THREADS
 /**
-\brief Controls whether Boost threads, locks, etc are used.
+\def THERON_BOOST
 
-If \ref THERON_USE_BOOST_THREADS is defined as 1 then Boost threads are used, introducing
-a dependency on boost::thread. If both THERON_USE_BOOST_THREADS and \ref THERON_USE_STD_THREADS
-are defined as 0, Windows threads are used, introducing a dependency on the windows.h header.
+\brief Controls whether Boost functionality is used.
 
-Defaults to 0 (Windows threads or std threads).
+If THERON_BOOST is defined as 1 then Boost is used, including using boost::thread
+for thread support and boost::atomic (packaged with Theron) for atomic support.
 
-The value of \ref THERON_USE_BOOST_THREADS can be overridden by defining it globally
-in the build (in the makefile using -D, or in the project preprocessor settings
-in Visual Studio).
+This define is defined automatically if not predefined by the user. When automatically
+defined, it is defined as 0, disabling the use of Boost. In Windows builds the Windows API is used
+instead, and in GCC builds Linux/POSIX API is used instead (pthreads). Note that the pthreads support
+is slow due to emulating atomic operations with locks, therefore it is preferable to use Boost or
+C++11 if available.
 
-\note The makefile build defines \ref THERON_USE_BOOST_THREADS as 1 by default, overriding
-the default value defined in the code. This is arranged this way on the assumption that
-users who are using the makefile build are likely to want to avoid a dependency on Windows.
-The value defined by the makefile can be controlled by specifying <code>threads=boost</code>
-or <code>threads=windows</code> on the make command line.
+The default definition can be overridden by defining it globally in the build - either
+via the makefile command line options, on the GCC command line using -D, or in the project
+preprocessor settings in Visual Studio.
 */
-#define THERON_USE_BOOST_THREADS 0
-#endif // THERON_USE_BOOST_THREADS
 
 
-#ifndef THERON_USE_STD_THREADS
 /**
-\brief Controls whether std threads, locks, etc are used.
+\def THERON_CPP11
 
-If \ref THERON_USE_BOOST_THREADS is defined as 0 and \ref THERON_USE_STD_THREADS is defined
-as 1 then std threads are used, introducing a dependency on std::thread. If both
-\ref THERON_USE_BOOST_THREADS and \ref THERON_USE_STD_THREADS are defined as 0, Windows threads
-are used, introducing a dependency on the windows.h header.
+\brief Controls whether C++11 features are used.
 
-Defaults to 0 (Windows threads or Boost threads).
+If THERON_CPP11 is defined as 1 then C++11 features are used, including using std::thread
+for thread support and std::atomic for atomic support. This requires either a C++ compiler with
+built-in support for these C++11 features (eg. a recent version of GCC such as 4.6 or later) or
+support provided by some third-party library (eg. JustThread).
 
-The value of \ref THERON_USE_STD_THREADS can be overridden by defining it globally
-in the build (in the makefile using -D, or in the project preprocessor settings
-in Visual Studio).
+This define is defined automatically if not predefined by the user. When automatically
+defined, it is defined as 0, disabling the use of C++11. In Windows builds the Windows API is used
+instead, and in GCC builds Linux/POSIX API is used instead (pthreads). Note that the pthreads support
+is slow due to emulating atomic operations with locks, therefore it is preferable to use Boost or
+C++11 if available.
 
-\note Support for std::thread is only available in C++11, so requires a C++11 compiler
-(for example GCC 4.6 or later).
+The default definition can be overridden by defining it globally in the build - either
+via the makefile command line options, on the GCC command line using -D, or in the project
+preprocessor settings in Visual Studio.
 */
-#define THERON_USE_STD_THREADS 0
-#endif // THERON_USE_STD_THREADS
 
 
+/**
+\def THERON_POSIX
+
+\brief Controls whether POSIX features are used.
+
+If THERON_POSIX is defined as 1 then POSIX features may be used, including using POSIX threads
+(pthreads) as the underlying thread support.
+
+This define is defined automatically if not predefined by the user. When automatically
+defined, it is defined as 1, enabling the use of POSIX features as a fallback if no more advanced
+API is available. Note that the pthreads support is slow due to emulating atomic operations with
+locks, therefore it is preferable to use Boost or C++11 if available.
+
+The default definition can be overridden by defining it globally in the build - either
+via the makefile command line options, on the GCC command line using -D, or in the project
+preprocessor settings in Visual Studio.
+*/
+
+
+// Support for legacy defines - use THERON_BOOST or THERON_CPP11 instead!
+#if defined(THERON_USE_BOOST_THREADS) || defined(THERON_USE_STD_THREADS)
 #if THERON_USE_BOOST_THREADS
-#if !defined(BOOST_THREAD_BUILD_DLL) && !defined(BOOST_THREAD_BUILD_LIB)
+#define THERON_BOOST 1
+#define THERON_CPP11 0
+#elif THERON_USE_STD_THREADS
+#define THERON_BOOST 0
+#define THERON_CPP11 1
+#endif
+#endif
+
+
+// Default definitions - but don't replace any user-defined definitions.
+#if !defined(THERON_BOOST)
+#define THERON_BOOST 0
+#endif
+#if !defined(THERON_CPP11)
+#define THERON_CPP11 0
+#endif
+#if !defined(THERON_POSIX)
+#define THERON_POSIX 1
+#endif
+
+
 /**
+\def BOOST_THREAD_BUILD_LIB
+
 \brief Controls whether boost::thread is built as a static library or dynamic/shared library.
 
 Unless specified otherwise, Theron defaults to building boost::thread as a library.
-Somewhat bizarrely Boost defaults to dynamically linked under gcc, in Boost 1.47,
-without this define.
+Somewhat bizarrely Boost defaults to dynamically linked under GCC without this define
+(at least in Boost 1.47).
 */
+
+
+#if THERON_BOOST
+#if !defined(BOOST_THREAD_BUILD_DLL) && !defined(BOOST_THREAD_BUILD_LIB)
 #define BOOST_THREAD_BUILD_LIB 1
-#endif // !defined(BOOST_THREAD_BUILD_DLL) && !defined(BOOST_THREAD_BUILD_LIB)
-#endif // THERON_USE_BOOST_THREADS
+#endif //
+#endif // THERON_BOOST
 
 
-#ifndef THERON_FORCEINLINE
-#if THERON_DEBUG
-#define THERON_FORCEINLINE inline
-#else // THERON_DEBUG
-#ifdef _MSC_VER
-#define THERON_FORCEINLINE __forceinline
-#elif defined(__GNUC__)
-#define THERON_FORCEINLINE inline __attribute__((always_inline))
-#else
 /**
+\def THERON_FORCEINLINE
+
 \brief Controls force-inlining of core functions within Theron.
+
+This define defines the keyword used for inlined function definitions.
+It is defined automatically if not predefined by the user. When automatically
+defined, in release builds (when \ref THERON_DEBUG is 0), it defaults to forced inlining
+in MSVC and GCC builds. In debug builds and on all other platforms, it defaults to the
+inline keyword, which is required on functions defined within headers.
 
 Many functions within Theron are force-inlined via compiler keywords, to avoid
 function call overhead, resulting in a significant speedup over optionally inlined code.
 The use of forced inlining does however lead to some code bloat. Therefore it may
 be desirable to turn it off in some builds. Moreover, it makes debugging difficult when
-enabled, so it is useful to be able to disable it, and desirable for it to be disabled,
-by default, in debug builds.
+enabled, so it is useful to be able to disable it - and for it to be disabled
+by default - in debug builds.
 
-\ref THERON_FORCEINLINE defines the keyword used for inlined function definitions.
-It defaults to __forceinline for Visual C++, and inline __attribute__((always_inline))
-for gcc, when \ref THERON_DEBUG is 0. Otherwise it defaults to the inline keyword, obligatory
-on functions defined in headers.
-
-The definition of \ref THERON_FORCEINLINE can be overridden by defining it globally
-in the build (in the makefile using -D, or in the project preprocessor settings
-in Visual Studio).
+The default definition can be overridden by defining it globally in the build - either
+via the makefile command line options, on the GCC command line using -D, or in the project
+preprocessor settings in Visual Studio.
 */
+
+
+#if !defined(THERON_FORCEINLINE)
+#if THERON_DEBUG
+#define THERON_FORCEINLINE inline
+#else // THERON_DEBUG
+#if THERON_MSVC
+#define THERON_FORCEINLINE __forceinline
+#elif THERON_GCC
+#define THERON_FORCEINLINE inline __attribute__((always_inline))
+#else
 #define THERON_FORCEINLINE inline
 #endif
 #endif // THERON_DEBUG
 #endif // THERON_FORCEINLINE
 
 
-#ifndef THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
+/**
+\def THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
+
+\brief Enables debug checking of allocations in the \ref Theron::DefaultAllocator "DefaultAllocator".
+
+This define controls the use of debugging checks in the default allocator used within
+Theron. It is defined automatically if not predefined by the user. When automatically
+defined, it is defined as 0 when \ref THERON_DEBUG is 0, and 1 when \ref THERON_DEBUG is 1,
+so that debug checks are enabled only in debug builds.
+
+The default definition can be overridden by defining it globally in the build - either
+via the makefile command line options, on the GCC command line using -D, or in the project
+preprocessor settings in Visual Studio.
+*/
+
+
+#if !defined(THERON_ENABLE_DEFAULTALLOCATOR_CHECKS)
 // Support THERON_ENABLE_SIMPLEALLOCATOR_CHECKS as a legacy synonym.
 #if defined(THERON_ENABLE_SIMPLEALLOCATOR_CHECKS)
 #define THERON_ENABLE_DEFAULTALLOCATOR_CHECKS THERON_ENABLE_SIMPLEALLOCATOR_CHECKS
@@ -187,27 +374,24 @@ in Visual Studio).
 #if THERON_DEBUG
 #define THERON_ENABLE_DEFAULTALLOCATOR_CHECKS 1
 #else
-/**
-\brief Enables debug checking of allocations in the \ref Theron::DefaultAllocator "DefaultAllocator".
-
-This define controls the use of debugging checks in the default allocator used within
-Theron. By default, this define is set to 0 when \ref THERON_DEBUG is 0, and 1 when \ref THERON_DEBUG is 1,
-so that debug checks are enabled only in debug builds. However the define can be defined explicitly,
-either to suppress the checking in debug builds or enforce it even in release builds, as required.
-
-The value of \ref THERON_ENABLE_DEFAULTALLOCATOR_CHECKS can be overridden by defining it
-globally in the build (in the makefile using -D, or in the project preprocessor
-settings in Visual Studio).
-*/
 #define THERON_ENABLE_DEFAULTALLOCATOR_CHECKS 0
 #endif // THERON_DEBUG
 #endif // defined(THERON_ENABLE_SIMPLEALLOCATOR_CHECKS)
 #endif // THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
 
 
-#ifndef THERON_ENABLE_MESSAGE_REGISTRATION_CHECKS
 /**
-\brief Enables run-time reporting of unregistered message types, which is off by default.
+\def THERON_ENABLE_MESSAGE_REGISTRATION_CHECKS
+
+\brief Controls run-time reporting of unregistered message types.
+
+This define controls run-time reporting of unregistered message types within
+Theron. It is defined automatically if not predefined by the user. When automatically
+defined, it is defined as 0, disabling the runtime checks.
+
+The default definition can be overridden by defining it globally in the build - either
+via the makefile command line options, on the GCC command line using -D, or in the project
+preprocessor settings in Visual Studio.
 
 Message types can be registered using the \ref THERON_REGISTER_MESSAGE macro, which notifies
 Theron of the unique name of a message type. Registering the message types sent within an
@@ -226,8 +410,10 @@ If any of the message types are omitted, then errors may ensue (usually caught b
 in debug builds).
 
 To make this easier, define \ref THERON_ENABLE_MESSAGE_REGISTRATION_CHECKS as 1 in your local
-build (ideally globally with a compiler option). This enables run-time error reports that
-helpfully detect message types that haven't been registered.
+build. This enables run-time error reports that helpfully detect message types that haven't been
+registered. The default definition can be overridden by defining it globally in the build - either
+via the makefile command line options, on the GCC command line using -D, or in the project
+preprocessor settings in Visual Studio.
 
 Of course, you should only enable this checking if you are actually intending to register your
 message types! If you don't care about the overheads of RTTI and dynamic_cast, then it's perfectly
@@ -236,15 +422,17 @@ disabled -- and then everything will work as normal.
 
 \note Note that unregistered message types are reported by asserts, so are only active if assert
 code is also enabled via \ref THERON_ENABLE_ASSERTS.
-
-\see <a href="http://www.theron-library.com/index.php?t=page&p=RegisteringMessages">Registering messages</a>
 */
+
+
+#if !defined(THERON_ENABLE_MESSAGE_REGISTRATION_CHECKS)
 #define THERON_ENABLE_MESSAGE_REGISTRATION_CHECKS 0
 #endif // THERON_ENABLE_MESSAGE_REGISTRATION_CHECKS
 
 
-#ifndef THERON_ENABLE_UNHANDLED_MESSAGE_CHECKS
 /**
+\def THERON_ENABLE_UNHANDLED_MESSAGE_CHECKS
+
 \brief Enables reporting of undelivered and unhandled messages, which is enabled by default.
 
 This define controls reporting of messages that are either not delivered (because no entity
@@ -260,8 +448,8 @@ unhandled messages). The default fallback handler registered with each framework
 used unless replaced explicitly by a custom user-specified fallback handler, reports such
 messages to stderr using printf, and asserts, if asserts are enabled with \ref THERON_ENABLE_ASSERTS.
 
-This define controls the activation of the default fallback handler. If defined to 1, the
-default fallback handler reports failures. If defined to 0, it does nothing, and unhandled
+This define controls the activation of the default fallback handler. If defined as 1, the
+default fallback handler reports failures. If defined as 0, it does nothing, and unhandled
 messages are silently unreported. Defining \ref THERON_ENABLE_UNHANDLED_MESSAGE_CHECKS to 0
 effectively turns off the checking. If the intention is to replace the reporting mechanism, then
 use \ref Theron::Framework::SetFallbackHandler "SetFallbackHandler" to replace the default handler
@@ -269,69 +457,20 @@ entirely with a custom handler implementation.
 
 Defaults to 1 (enabled). Set this to 0 to disable the reporting.
 
-The value of \ref THERON_ENABLE_UNHANDLED_MESSAGE_CHECKS can be overridden by defining it
-globally in the build (in the makefile using -D, or in the project preprocessor
-settings in Visual Studio).
+The default definition can be overridden by defining it globally in the build - either
+via the makefile command line options, on the GCC command line using -D, or in the project
+preprocessor settings in Visual Studio.
 */
+
+
+#if !defined(THERON_ENABLE_UNHANDLED_MESSAGE_CHECKS)
 #define THERON_ENABLE_UNHANDLED_MESSAGE_CHECKS 1
-#endif // THERON_ENABLE_UNHANDLED_MESSAGE_CHECKS
+#endif
 
 
-#ifndef THERON_MAX_THREADS_PER_FRAMEWORK
 /**
-\brief Hard limit on the maximum number of worker threads software is allowed to enable.
+\def THERON_CACHELINE_ALIGNMENT
 
-This define sets a hard limit on the number of worker threads each \ref Theron::Framework
-"Framework" is allowed to own at once. The actual number of threads in each framework is set in
-code; this is just a hard limit on the maximum number that can be set. Requests to create
-larger numbers of threads are clamped to the value defined by this define.
-
-Defaults to 1024.
-
-The value of \ref THERON_MAX_THREADS_PER_FRAMEWORK can be overridden by defining it
-globally in the build (in the makefile using -D, or in the project preprocessor
-settings in Visual Studio).
-*/
-#define THERON_MAX_THREADS_PER_FRAMEWORK 1024
-#endif // THERON_MAX_THREADS_PER_FRAMEWORK
-
-
-#ifndef THERON_MAX_ACTORS
-/**
-\brief Limits the maximum number of actors that can be created at once within Theron.
-
-If you want to create a very large number of simultaneous actors then you'll need to
-change the value of this define. Note that doing so may lead to higher fixed memory
-overheads, so should be avoided unless really necessary.
-
-Defaults to 8192.
-
-The value of \ref THERON_MAX_ACTORS can be overridden by defining it globally in the build
-(in the makefile using -D, or in the project preprocessor settings in Visual Studio).
-*/
-#define THERON_MAX_ACTORS 8192
-#endif // THERON_MAX_ACTORS
-
-
-#ifndef THERON_MAX_RECEIVERS
-/**
-\brief Limits the maximum number of receivers that can be created at once within Theron.
-
-If you want to create a very large number of simultaneous receivers then you'll need to
-change the value of this define. Note that doing so may lead to higher fixed memory
-overheads, so should be avoided unless really necessary.
-
-Defaults to 256.
-
-The value of \ref THERON_MAX_RECEIVERS can be overridden by defining it globally in the build
-(in the makefile using -D, or in the project preprocessor settings in Visual Studio).
-*/
-#define THERON_MAX_RECEIVERS 256
-#endif // THERON_MAX_RECEIVERS
-
-
-#ifndef THERON_CACHELINE_ALIGNMENT
-/**
 \brief Describes the size of a cache line on the target platform.
 
 This define is used internally to align allocated structures to cache-line boundaries.
@@ -340,7 +479,11 @@ By default it is set to 64 bytes, the size of a cache line on many systems.
 The value of \ref THERON_CACHELINE_ALIGNMENT can be overridden by defining it globally in the build
 (in the makefile using -D, or in the project preprocessor settings in Visual Studio).
 
-By defining \ref THERON_CACHELINE_ALIGNMENT  globally within your own project build, you can
+The default definition can be overridden by defining it globally in the build - either
+via the makefile command line options, on the GCC command line using -D, or in the project
+preprocessor settings in Visual Studio.
+
+By defining THERON_CACHELINE_ALIGNMENT globally within your own project build, you can
 override the default value and specify a different size, either to optimize allocations for
 a system with a different cache-line width, or else to disable cache-line alignment completely
 by specifying a harmless alignment such as 4 bytes.
@@ -348,8 +491,50 @@ by specifying a harmless alignment such as 4 bytes.
 \note Changing this value is unlikely to provide any benefit unless you know for sure
 that you need to change it.
 */
+
+
+#if !defined(THERON_CACHELINE_ALIGNMENT)
 #define THERON_CACHELINE_ALIGNMENT 64
-#endif // THERON_CACHELINE_ALIGNMENT
+#endif
+
+
+/**
+\def THERON_NUMA
+
+\brief Enables NUMA support.
+
+This define controls the use of NUMA (Non-Uniform Memory Architecture) libraries to
+implement support for NUMA-aware thread affinities.
+
+It is defined automatically if not predefined by the user. When automatically
+defined, it defaults to 1 in Windows builds and 0 in all other builds.
+
+Enabling NUMA support can lead to substantial performance improvements on NUMA hardware,
+for example some dual-socket Opteron systems.
+
+NUMA support is included within recent versions of Windows. On all other builds
+on all other platforms THERON_NUMA is disabled by default, and must be explicitly
+defined as 1 in order to enable NUMA support. NUMA support is currently only
+implemented in Windows and GCC builds. In non-Windows GCC builds NUMA support depends
+on the numa library.
+
+In GCC builds, for example on Linux, you may need to install the libnuma and
+libnuma-dev package distributions of the libnuma library in order to build
+Theron with NUMA support. Because libnuma-dev may not be installed on many
+systems, THERON_NUMA defaults to undefined in non-Windows builds even though
+NUMA runtime support may be available via libnuma.
+
+The default definition can be overridden by defining it globally in the build - either
+via the makefile command line options, on the GCC command line using -D, or in the project
+preprocessor settings in Visual Studio.
+*/
+
+
+#if THERON_WINDOWS
+#define THERON_NUMA 1
+#else
+#define THERON_NUMA 0
+#endif
 
 
 #endif // THERON_DEFINES_H

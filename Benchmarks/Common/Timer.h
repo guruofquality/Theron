@@ -1,50 +1,50 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
+#ifndef THERON_BENCHMARKS_COMMON_TIMER_H
+#define THERON_BENCHMARKS_COMMON_TIMER_H
 
 
-#ifndef THERON_DEMOS_TOKENRING_TIMER_H
-#define THERON_DEMOS_TOKENRING_TIMER_H
+#include <Theron/Defines.h>
 
 
-#ifdef _MSC_VER
+#if THERON_WINDOWS
 #include <windows.h>
-#elif defined(__GNUC__)
+#elif THERON_GCC
 #include <sys/time.h>
 #endif
 
 
 // Simple timer class.
-// Currently only implemented in Windows environments.
 class Timer
 {
 public:
 
     Timer() : mSupported(false)
     {
-#ifdef _MSC_VER
+#if THERON_WINDOWS
         // Read the counter frequency (in Hz) and an initial counter value.
         if (QueryPerformanceFrequency(&mTicksPerSecond) && QueryPerformanceCounter(&mCounterStartValue))
         {
             mSupported = true;
         }
-#elif defined(__GNUC__)
+#elif THERON_GCC
         mSupported = true;
 #endif
     }
 
     void Start()
     {
-#ifdef _MSC_VER
+#if THERON_WINDOWS
         QueryPerformanceCounter(&mCounterStartValue);
-#elif defined(__GNUC__)
+#elif THERON_GCC
         gettimeofday(&t1, NULL);
 #endif
     }
 
     void Stop()
     {
-#ifdef _MSC_VER
+#if THERON_WINDOWS
         QueryPerformanceCounter(&mCounterEndValue);
-#elif defined(__GNUC__)
+#elif THERON_GCC
         gettimeofday(&t2, NULL);
 #endif
     }
@@ -56,11 +56,11 @@ public:
 
     float Seconds() const
     {
-#ifdef _MSC_VER
+#if THERON_WINDOWS
         const float elapsedTicks(static_cast<float>(mCounterEndValue.QuadPart - mCounterStartValue.QuadPart));
         const float ticksPerSecond(static_cast<float>(mTicksPerSecond.QuadPart));
         return (elapsedTicks / ticksPerSecond);
-#elif defined(__GNUC__)
+#elif THERON_GCC
         return (t2.tv_sec - t1.tv_sec) + (t2.tv_usec - t1.tv_usec) * 1e-6f;
 #else
         return 0.0f;
@@ -74,16 +74,16 @@ private:
 
     bool mSupported;
 
-#ifdef _MSC_VER
+#if THERON_WINDOWS
     LARGE_INTEGER mTicksPerSecond;
     LARGE_INTEGER mCounterStartValue;
     LARGE_INTEGER mCounterEndValue;
-#elif defined(__GNUC__)
+#elif THERON_GCC
     timeval t1, t2;
 #endif
 
 };
 
 
-#endif // THERON_DEMOS_TOKENRING_TIMER_H
+#endif // THERON_BENCHMARKS_COMMON_TIMER_H
 

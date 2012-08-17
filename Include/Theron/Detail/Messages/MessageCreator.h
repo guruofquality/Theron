@@ -1,6 +1,4 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_DETAIL_MESSAGES_MESSAGECREATOR_H
 #define THERON_DETAIL_MESSAGES_MESSAGECREATOR_H
 
@@ -20,19 +18,25 @@ namespace Detail
 {
 
 
-/// Helper class that constructs and destroys Theron's internal message objects.
+/**
+Helper class that constructs and destroys Theron's internal message objects.
+*/
 class MessageCreator
 {
 public:
 
-    /// Allocates and constructs a message with the given value and from address.
+    /**
+    Allocates and constructs a message with the given value and from address.
+    */
     template <class ValueType>
     inline static Message<ValueType> *Create(
         IAllocator *const messageAllocator,
         const ValueType &value,
         const Address &from);
 
-    /// Destructs and frees a message of unknown type referenced by an interface pointer.
+    /**
+    Destructs and frees a message of unknown type referenced by an interface pointer.
+    */
     inline static void Destroy(
         IAllocator *const messageAllocator,
         IMessage *const message);
@@ -81,4 +85,3 @@ THERON_FORCEINLINE void MessageCreator::Destroy(
 
 
 #endif // THERON_DETAIL_MESSAGES_MESSAGECREATOR_H
-

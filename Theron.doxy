@@ -31,7 +31,7 @@ PROJECT_NAME           = Theron
 # This could be handy for archiving the generated documentation or 
 # if some version control system is used.
 
-PROJECT_NUMBER         = 3.05.01
+PROJECT_NUMBER         = 4.01.00
 
 # The OUTPUT_DIRECTORY tag is used to specify the (relative or absolute) 
 # base path where the generated documentation will be put. 
@@ -591,7 +591,7 @@ WARN_LOGFILE           = D:/Dev/Perforce/Theron_doxygen_warnings.log
 # with spaces.
 
 INPUT                  = Include \
-                         Source/mainpage.txt
+                         Theron/mainpage.txt
 
 # This tag can be used to specify the character encoding of the source files 
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is 
@@ -650,7 +650,8 @@ RECURSIVE              = YES
 # excluded from the INPUT source files. This way you can easily exclude a 
 # subdirectory from a directory tree whose root is specified with the INPUT tag.
 
-EXCLUDE                = Include/Theron/Detail
+EXCLUDE                = Include/Theron/Detail \
+                         Include/External
 
 # The EXCLUDE_SYMLINKS tag can be used select whether or not files or 
 # directories that are symbolic links (a Unix filesystem feature) are excluded 

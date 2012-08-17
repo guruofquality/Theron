@@ -1,6 +1,4 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_DEFAULTALLOCATOR_H
 #define THERON_DEFAULTALLOCATOR_H
 
@@ -12,14 +10,13 @@ The allocator used within Theron by default.
 
 
 #include <Theron/Align.h>
+#include <Theron/Assert.h>
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
 #include <Theron/IAllocator.h>
 
 #include <Theron/Detail/Allocators/TrivialAllocator.h>
-#include <Theron/Detail/Debug/Assert.h>
-#include <Theron/Detail/Threading/Lock.h>
-#include <Theron/Detail/Threading/Mutex.h>
+#include <Theron/Detail/Threading/SpinLock.h>
 
 
 namespace Theron
@@ -46,8 +43,7 @@ multiple of bytes, when requested. For example, when requested, it can allocate
 a block of memory starting at an address that is a multiple of 16 bytes.
 
 Because this allocator supports alignment, it can be safely used by users needing
-to align their actor types (using \ref THERON_ALIGN_ACTOR) or message types (using
-\ref THERON_ALIGN_MESSAGE).
+to align their message types (using \ref THERON_ALIGN_MESSAGE).
 
 The \ref THERON_ENABLE_DEFAULTALLOCATOR_CHECKS define, defined in \ref Defines.h,
 controls the enabling of various checking code, which is intended to be enabled
@@ -60,14 +56,13 @@ The checks performed when \ref THERON_ENABLE_DEFAULTALLOCATOR_CHECKS is enabled 
 - Detection and reporting of memory leaks on application exit via asserts.
 
 The checking of allocated memory, if enabled, is made thread-safe by means of an
-internal Mutex object, which unavoidably adds to the overhead of the checking.
+internal spin-lock, which unavoidably adds to the overhead of the checking.
 Generally the checking shouldn't be enabled in production code.
 
 \note This default allocator can be replaced with a custom allocator implementation
 using \ref AllocatorManager::SetAllocator.
 
 \see AllocatorManager
-\see <a href="http://www.theron-library.com/index.php?t=page&p=CustomAllocator">Using a custom allocator</a>
 */
 class DefaultAllocator : public IAllocator
 {
@@ -240,14 +235,14 @@ private:
     DefaultAllocator(const DefaultAllocator &other);
     DefaultAllocator &operator=(const DefaultAllocator &other);
 
-    /// Internal method which is force-inlined to avoid a function call.
+    // Internal method which is force-inlined to avoid a function call.
     inline void *AllocateInline(const SizeType size, const SizeType alignment);
 
     Detail::TrivialAllocator mTrivialAllocator;     ///< Trivial allocator used by default.
     IAllocator *const mAllocator;                   ///< Pointer to a lower-level allocator wrapped by this allocator.
 
 #if THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
-    Detail::Mutex mMutex;                           ///< Critical section object used to protect access to the allocation counts.
+    Detail::SpinLock mSpinLock;                     ///< Synchronization object used to protect access to the allocation counts.
     uint32_t mBytesAllocated;                       ///< Tracks the number of bytes currently allocated not yet freed.
     uint32_t mPeakAllocated;                        ///< Tracks the peak number of bytes allocated but not yet freed.
 #endif // THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
@@ -261,10 +256,12 @@ inline DefaultAllocator::DefaultAllocator() :
 {
 
 #if THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
-    Detail::Lock lock(mMutex);
+    mSpinLock.Lock();
 
     mBytesAllocated = 0;
     mPeakAllocated = 0;
+
+    mSpinLock.Unlock();
 #endif // THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
 
 }
@@ -276,10 +273,12 @@ inline DefaultAllocator::DefaultAllocator(IAllocator *const allocator) :
 {
 
 #if THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
-    Detail::Lock lock(mMutex);
+    mSpinLock.Lock();
 
     mBytesAllocated = 0;
     mPeakAllocated = 0;
+
+    mSpinLock.Unlock();
 #endif // THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
 
 }
@@ -337,12 +336,12 @@ inline void DefaultAllocator::Free(void *const memory)
         THERON_FAIL_MSG("Corrupted guardband indicates memory corruption");
     }
 
-    {
-        Detail::Lock lock(mMutex);
+    mSpinLock.Lock();
 
-        THERON_ASSERT_MSG(mBytesAllocated >= callerBlockSize, "Unallocated free, suggests duplicate free");
-        mBytesAllocated -= callerBlockSize;
-    }
+    THERON_ASSERT_MSG(mBytesAllocated >= callerBlockSize, "Unallocated free, suggests duplicate free");
+    mBytesAllocated -= callerBlockSize;
+
+    mSpinLock.Unlock();
 
 #else
     uint32_t *const offsetField(reinterpret_cast<uint32_t *>(callerBlock) - 1);
@@ -427,15 +426,16 @@ THERON_FORCEINLINE void *DefaultAllocator::AllocateInline(const SizeType size, c
         *preGuardField = GUARD_VALUE;
         *postGuardField = GUARD_VALUE;
 
-        {
-            Detail::Lock lock(mMutex);
+        mSpinLock.Lock();
 
-            mBytesAllocated += size;
-            if (mBytesAllocated > mPeakAllocated)
-            {
-                mPeakAllocated = mBytesAllocated;
-            }
+        mBytesAllocated += size;
+        if (mBytesAllocated > mPeakAllocated)
+        {
+            mPeakAllocated = mBytesAllocated;
         }
+
+        mSpinLock.Unlock();
+
 #else
         uint32_t *const offsetField(reinterpret_cast<uint32_t *>(callerBlock) - 1);
 #endif // THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
@@ -458,4 +458,3 @@ THERON_FORCEINLINE void *DefaultAllocator::AllocateInline(const SizeType size, c
 
 
 #endif // THERON_DEFAULTALLOCATOR_H
-

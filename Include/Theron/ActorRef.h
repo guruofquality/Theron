@@ -1,66 +1,99 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_ACTORREF_H
 #define THERON_ACTORREF_H
 
 
 /**
 \file ActorRef.h
-Actor reference, references an actor in user code.
+Legacy support for actor references, which were deprecated in version 4.0.
 */
 
 
-#include <Theron/Detail/Debug/Assert.h>
-#include <Theron/Detail/Messages/MessageSender.h>
-#include <Theron/Detail/ThreadPool/WorkerContext.h>
-
-#include <Theron/Actor.h>
 #include <Theron/Address.h>
-#include <Theron/AllocatorManager.h>
+#include <Theron/Assert.h>
 #include <Theron/Defines.h>
-#include <Theron/IAllocator.h>
+
+#include <Theron/Detail/Messages/IMessage.h>
+#include <Theron/Detail/Messages/MessageCreator.h>
+#include <Theron/Detail/Messages/MessageSender.h>
+#include <Theron/Detail/MailboxProcessor/ProcessorContext.h>
 
 
 namespace Theron
 {
 
 
+class Actor;
 class Framework;
 
 
 /**
-\brief Used to reference an actor in user code.
+\brief Legacy utility for backwards compatibility.
 
-\ref Actor "Actors" can't be created or referenced directly in user code.
-Instead, when an actor is created with \ref Framework::CreateActor,
-an ActorRef is returned referencing the created actor.
-ActorRef objects are like reference-counted smart pointers to actors,
-and expose only appropriate actor methods to the code that owns the
-reference.
+\note In versions of Theron from 4.0 onwards, there is no need to use ActorRef
+objects at all. They are provided only for backwards compatibility.
 
-ActorRef objects can be copied, assigned, passed by value or by reference to
-functions, and returned as function return values. When an ActorRef is copied
-or assigned, the actor it references is not copied, and remains unchanged.
-Only the reference is copied.
+In versions of Theron prior to 4.0, actors couldn't be constructed directly
+in user code. Instead you had to ask a Framework to create one for you, using
+the Framework::CreateActor method template. Instead of returning the actor itself,
+CreateActor returned a <i>reference</i> to the actor in the form of an ActorRef
+object.
 
-Internally, \ref Actor "Actors" are reference counted, and automatically destroyed
-when they become unreferenced. The number of ActorRef objects referencing each actor is
-tracked, and updated whenever an ActorRef is constructed, copied, assigned,
-or destructed. When the last ActorRef referencing an \ref Actor is destructed,
-the Actor's reference count drops to zero, indicating that the actor has become
-unreferenced. Unreferenced actors are scheduled for destruction, and will be
-destroyed by a worker thread after some short period. See the \ref ActorRef
-destructor documentation for more information.
+ActorRefs were lightweight, copyable references to actors. When an ActorRef was
+copied (or passed or returned by value) the ActorRef was copied, but the copy
+still referenced the same Actor, which was not itself copied. The Actor itself
+was reference-counted, and was scheduled for garbage collection when the last
+ActorRef referencing it was destructed, and it became unreferenced.
 
-\note Although actor references can be safely copied and assigned, copying actor
-references is not completely cost-free, and imposes some overhead due to the
-internal threadsafe reference counting used to detect unreferenced actors.
-Therefore it's more efficient to reference an existing ActorRef instance, where
-possible, rather than to copy it. For example, it's generally faster to pass actor
-references to functions by reference rather than by value.
+\code
+// LEGACY CODE!
+class MyActor : public Theron::Actor
+{
+};
 
-\see <a href="http://www.theron-library.com/index.php?t=page&p=UsingActorReferences">Using actor references</a>
+int main()
+{
+    Theron::Framework framework;
+    Theron::ActorRef actorRef(framework.CreateActor<MyActor>());
+
+    // (1) The actorRef goes out of scope and destructed.
+    // (2) Actor becomes unreferenced and is scheduled for garbage collection.
+    // (3) Framework worker threads garbage collect the unreferenced actor.
+    // (4) The framework goes out of scope and is destructed.
+}
+\endcode
+
+In versions of Theron starting with 4.0, Actors are first-class citizens and
+behave like vanilla C++ objects. They can be constructed directly with no
+call to Framework::CreateActor. Once constructed they are referenced directly
+by user code with no need for ActorRef proxy objects. Finally, like traditional
+C++ objects, once they go out of scope or are deleted they are destructed
+immediately rather than in a deferred fashion by a separate garbage collection
+process.
+
+When writing new code, follow the new, simpler construction pattern where actors
+are constructed directly and not referenced by ActorRefs:
+
+\code
+// New code
+class MyActor : public Theron::Actor
+{
+public:
+
+    MyActor(Theron::Framework &framework) : Theron::Actor(framework)
+    {
+    }
+};
+
+int main()
+{
+    Theron::Framework framework;
+    MyActor actor(framework);
+
+    // (1) The actor goes out of scope and destructed.
+    // (2) The Framework goes out of scope and is destructed.
+}
+\endcode
 */
 class ActorRef
 {
@@ -74,17 +107,6 @@ public:
 
     The null actor reference doesn't reference any actor and is guaranteed
     not to be equal to any non-null actor reference.
-
-    \code
-    class Actor : public Theron::Actor
-    {
-    };
-
-    Theron::Framework framework;
-    Theron::ActorRef actor(framework.CreateActor<Actor>());
-
-    assert(actor != ActorRef::Null(), "Failed to create actor!");
-    \endcode
     */
     inline static ActorRef Null()
     {
@@ -95,11 +117,6 @@ public:
     \brief Default constructor.
 
     Constructs a null actor reference, referencing no actor.
-
-    \code
-    Theron::ActorRef actor;
-    assert(actor == ActorRef::Null(), "Expected default ActorRef to be null");
-    \endcode
     */
     inline ActorRef();
 
@@ -108,38 +125,6 @@ public:
 
     Copies an actor reference, constructing another actor reference referencing
     the same actor as the first.
-
-    \code
-    class Actor : public Theron::Actor
-    {
-    };
-
-    Theron::Framework framework;
-    Theron::ActorRef actorOne(framework.CreateActor<Actor>());
-    Theron::ActorRef actorTwo(actorOne);
-
-    assert(actorOne == actorTwo, "Expected actor references to be equal");
-    \endcode
-
-    Although ActorRef objects are relatively lightweight, it is still faster to
-    reference an existing ActorRef than to copy it. For example, this style is preferable:
-
-    \code
-    void ProcessActor(ActorRef &actor)
-    {
-        /// Do stuff
-    }
-    \endcode
-
-    to this style:
-
-    \code
-    void ProcessActor(ActorRef actor)
-    {
-        /// Do stuff
-    }
-    \endcode
-
     */
     inline ActorRef(const ActorRef &other);
 
@@ -150,9 +135,6 @@ public:
     After assignment the actor previously referenced by this ActorRef, if any, is
     no longer referenced, and will be garbage collected if it has become completely
     unreferenced.
-
-    Although ActorRef objects are relatively lightweight, it is still faster to
-    reference an existing ActorRef than to assign it to another copy.
     */
     inline ActorRef &operator=(const ActorRef &other);
 
@@ -161,40 +143,10 @@ public:
 
     Destroys a reference to an actor.
 
-    Actors are automatically destructed by a process called \em garbage \em collection
-    when all of the ActorRef objects that reference them have been destructed.
-    The number of ActorRef objects referencing each actor is counted, and when the
-    count reaches zero on destruction of the last referencing ActorRef, the actor is
-    scheduled for deletion. The actual destruction of the dereferenced actor is 
-    asynchronous, and isn't guaranteed to happen immediately. However it's usually
-    almost immediate, and the actor will always be destroyed before destruction
-    of the Framework object that owned it.
-
-    \code
-    class Actor : public Theron::Actor
-    {
-    };
-
-    int main()
-    {
-        // Framework constructed.
-        Theron::Framework framework;
-
-        // Actor created and referenced by ActorRef.
-        Theron::ActorRef actor(framework.CreateActor<Actor>());
-
-        // Actor used
-        // ...
-
-        // ActorRef destructed, actor becomes unreferenced and is garbage collected.
-        // Framework destructed after destroying the actor.
-    }
-    \endcode
-
     \note An important requirement is that \ref Framework objects must always
     outlive all \ref ActorRef objects created with them. This ensures that the
-    actors created within the framework become dereferenced, and so are garbage
-    collected, prior to the destruction of the \ref Framework itself.
+    actors created within the framework become dereferenced, and so are destructed,
+    prior to the destruction of the Framework itself.
     */
     inline ~ActorRef();
 
@@ -220,7 +172,7 @@ public:
 
     \return The unique address of the actor.
     */
-    inline const Address &GetAddress() const;
+    Address GetAddress() const;
 
     /**
     \brief Pushes a message into the referenced actor.
@@ -238,7 +190,7 @@ public:
     necessarily that the actor took any action in response to the message.
     If the actor has no handlers registered for messages of that type, then
     the message will simply be consumed without any effect. In such cases
-    this method will still return true. This surprising behaviour is a result
+    this method will still return true. This surprising behavior is a result
     of the asynchronous nature of message sending: the sender doesn't wait
     for the recipient to process the message. It is the sender's
     responsibility to ensure that messages are appropriate for the actors to
@@ -248,20 +200,6 @@ public:
     template <class ValueType>
     inline bool Push(const ValueType &value, const Address &from);
 
-    /**
-    \brief Gets the number of messages queued at this actor, awaiting processing.
-
-    Returns the number of messages currently in the message queue of the referenced actor.
-    The messages in the queue are those that have been received by the actor but for
-    which registered message handlers have not yet been executed, and so are still
-    awaiting processing.
-    
-    \note If the referenced actor is being processed by a worker thread at the time of
-    the call, the returned count doesn't include the message whose receipt triggered the
-    processing.
-    */
-    inline uint32_t GetNumQueuedMessages() const;
-
 private:
 
     /// Constructor. Constructs a reference to the given actor.
@@ -270,13 +208,13 @@ private:
     inline explicit ActorRef(Actor *const actor);
 
     /// References the actor referenced by the actor reference.
-    inline void Reference();
+    void Reference();
 
     /// Dereferences the actor previously referenced by the actor reference.
-    inline void Dereference();
+    void Dereference();
 
-    /// Gets a pointer to the pulse counter of the framework that owns the referenced actor.
-    uint32_t *GetPulseCounterAddress() const;
+    Detail::ProcessorContext &GetProcessorContext();
+    uint32_t GetFrameworkIndex() const;
 
     Actor *mActor;      ///< Pointer to the referenced actor.
 };
@@ -327,52 +265,32 @@ THERON_FORCEINLINE bool ActorRef::operator!=(const ActorRef &other) const
 }
 
 
-THERON_FORCEINLINE const Address &ActorRef::GetAddress() const
-{
-    THERON_ASSERT(mActor);
-    return mActor->GetAddress();
-}
-
-
-THERON_FORCEINLINE void ActorRef::Reference()
-{
-    if (mActor)
-    {
-        mActor->Reference();
-    }
-}
-
-
-THERON_FORCEINLINE void ActorRef::Dereference()
-{
-    if (mActor)
-    {
-        mActor->Dereference();
-    }
-}
-
-
 template <class ValueType>
 THERON_FORCEINLINE bool ActorRef::Push(const ValueType &value, const Address &from)
 {
-    IAllocator *const messageAllocator(AllocatorManager::Instance().GetAllocator());
-    Framework *const framework(&mActor->GetFramework());
-    const Address actorAddress(mActor->GetAddress());
-    uint32_t *const pulseCounterAddress(GetPulseCounterAddress());
+    // Use the per-framework context, which is shared between threads.
+    Detail::ProcessorContext &processorContext(GetProcessorContext());
 
-    return Detail::MessageSender::Send(
-        messageAllocator,
-        pulseCounterAddress,
-        framework,
+    // Allocate a message. It'll be deleted by the worker thread that handles it.
+    Detail::IMessage *const message(Detail::MessageCreator::Create(
+        processorContext.mMessageAllocator,
         value,
-        from,
-        actorAddress);
-}
+        from));
 
+    if (message == 0)
+    {
+        return false;
+    }
 
-THERON_FORCEINLINE uint32_t ActorRef::GetNumQueuedMessages() const
-{
-    return mActor->GetNumQueuedMessages();
+    // Call the message sending implementation using the acquired processor context.
+    // Send the message to the actor via the usual path instead of trying to be sneaky.
+    return Detail::MessageSender::Send(
+        &processorContext,
+        GetFrameworkIndex(),
+        message,
+        GetAddress());
+
+    return true;
 }
 
 
@@ -380,4 +298,3 @@ THERON_FORCEINLINE uint32_t ActorRef::GetNumQueuedMessages() const
 
 
 #endif // THERON_ACTORREF_H
-

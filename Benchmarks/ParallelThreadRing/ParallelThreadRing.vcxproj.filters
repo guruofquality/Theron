@@ -11,7 +11,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Main.cpp">
+    <ClCompile Include="ParallelThreadRing.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

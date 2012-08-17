@@ -89,7 +89,7 @@ window.onload = initDynSections;
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Receiver_aaecc6c19f587eac73103dc16c71a45df.html#aaecc6c19f587eac73103dc16c71a45df">Consume</a></td></tr>
           <tr><td class="navtab"><a class="qindexHL" href="classTheron_1_1Receiver_a753087ea4ee8670ae098b4704b4056a4.html#a753087ea4ee8670ae098b4704b4056a4">Count</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Receiver_ab3a0693b1261d3d0853627d227dac3e6.html#ab3a0693b1261d3d0853627d227dac3e6">DeregisterHandler</a></td></tr>
-          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Receiver_a22a1d3557a6cc167d1ccb9ad9cb95816.html#a22a1d3557a6cc167d1ccb9ad9cb95816">GetAddress</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Receiver_ade22428952084fee67865a194ade6df2.html#ade22428952084fee67865a194ade6df2">GetAddress</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Receiver_af52a34e59cded82445938db098ea9e08.html#af52a34e59cded82445938db098ea9e08">Receiver</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Receiver_ad2383ac42470759d4c50e801922a8ae7.html#ad2383ac42470759d4c50e801922a8ae7">RegisterHandler</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Receiver_a4cd17c1a51a4f01e66313c2fa0a0de44.html#a4cd17c1a51a4f01e66313c2fa0a0de44">Reset</a></td></tr>
@@ -104,7 +104,7 @@ window.onload = initDynSections;
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="namespaceTheron_aa154bad6b7514de43642bbbb02ca974d.html#aa154bad6b7514de43642bbbb02ca974d">uint32_t</a> Theron::Receiver::Count </td>
+          <td class="memname"><a class="el" href="namespaceTheron_a254da7d1d07833b997828500fbf73daa.html#a254da7d1d07833b997828500fbf73daa">uint32_t</a> Theron::Receiver::Count </td>
           <td>(</td>
           <td class="paramname"></td>
           <td>&nbsp;)&nbsp;</td>
@@ -115,7 +115,7 @@ window.onload = initDynSections;
 <div class="memdoc">
 
 <p>Returns the number of messages received but not yet consumed. </p>
-<p>The <a class="el" href="classTheron_1_1Receiver_a753087ea4ee8670ae098b4704b4056a4.html#a753087ea4ee8670ae098b4704b4056a4">Count</a> method allows a calling thread to query the Receiver's count of arrived but unconsumed messages. The count is returned without blocking the calling thread or waiting for any messages to be recieved.</p>
+<p>The <a class="el" href="classTheron_1_1Receiver_a753087ea4ee8670ae098b4704b4056a4.html#a753087ea4ee8670ae098b4704b4056a4">Count</a> method allows a calling thread to query the Receiver's count of arrived but unconsumed messages. The count is returned without blocking the calling thread or waiting for any messages to be received.</p>
 <p>Each <a class="el" href="classTheron_1_1Receiver.html" title="A standalone entity that can accept messages sent by actors.">Receiver</a> maintains an internal count of the number of messages it has received which have not yet been accounted for by calls to <a class="el" href="classTheron_1_1Receiver_a5dbee36b18e7c0549ba860d93e2265fd.html#a5dbee36b18e7c0549ba860d93e2265fd">Wait</a> or <a class="el" href="classTheron_1_1Receiver_aaecc6c19f587eac73103dc16c71a45df.html#aaecc6c19f587eac73103dc16c71a45df">Consume</a>. Effectively this is the number of arrived messages of which the caller is not yet aware or has not yet synchronized.</p>
 <p>By periodically calling <a class="el" href="classTheron_1_1Receiver_a753087ea4ee8670ae098b4704b4056a4.html#a753087ea4ee8670ae098b4704b4056a4">Count</a>, a thread can check for arrived messages while also continuing with its own work. If the returned count indicates that the receiver contains newly arrived, unconsumed messages, then the calling thread can call <a class="el" href="classTheron_1_1Receiver_aaecc6c19f587eac73103dc16c71a45df.html#aaecc6c19f587eac73103dc16c71a45df">Consume</a> to mark one or more messages as consumed, subtracting them from the count.</p>
 <dl class="see"><dt><b>See also:</b></dt><dd><a class="el" href="classTheron_1_1Receiver_a4cd17c1a51a4f01e66313c2fa0a0de44.html#a4cd17c1a51a4f01e66313c2fa0a0de44" title="Resets to zero the count of messages received but not yet consumed.">Reset</a> </dd>
@@ -133,7 +133,7 @@ window.onload = initDynSections;
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Files</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Enumerations</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(8)"><span class="SelectionMark">&nbsp;</span>Enumerator</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(9)"><span class="SelectionMark">&nbsp;</span>Defines</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Files</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Defines</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">

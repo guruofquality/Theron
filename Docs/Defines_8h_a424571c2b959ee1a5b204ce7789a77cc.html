@@ -86,17 +86,19 @@ window.onload = initDynSections;
    <td valign="top">
       <div class="navtab">
         <table>
+          <tr><td class="navtab"><a class="qindex" href="Defines_8h_a344bc60db4b7e996f423dde5236491fd.html#a344bc60db4b7e996f423dde5236491fd">THERON_64BIT</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="Defines_8h_a0b9efe056acea27a0164457d09896e2d.html#a0b9efe056acea27a0164457d09896e2d">THERON_BOOST</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="Defines_8h_ad9e738803b8cc84305ba092ebb4c31ef.html#ad9e738803b8cc84305ba092ebb4c31ef">THERON_CACHELINE_ALIGNMENT</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="Defines_8h_ad0b3f3df7cc52c8950a1bf908001bb78.html#ad0b3f3df7cc52c8950a1bf908001bb78">THERON_CPP11</a></td></tr>
           <tr><td class="navtab"><a class="qindexHL" href="Defines_8h_a424571c2b959ee1a5b204ce7789a77cc.html#a424571c2b959ee1a5b204ce7789a77cc">THERON_DEBUG</a></td></tr>
-          <tr><td class="navtab"><a class="qindex" href="Defines_8h_a266c44b69e6490887e5829719521f61d.html#a266c44b69e6490887e5829719521f61d">THERON_ENABLE_ASSERTS</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="Defines_8h_ad51a5513a03bbbac961f4a559b2f6fcc.html#ad51a5513a03bbbac961f4a559b2f6fcc">THERON_ENABLE_DEFAULTALLOCATOR_CHECKS</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="Defines_8h_a45f62d8604cbbe0e0760ea1bf29d76a5.html#a45f62d8604cbbe0e0760ea1bf29d76a5">THERON_ENABLE_MESSAGE_REGISTRATION_CHECKS</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="Defines_8h_aaed406185c3d344b7f6f37be935120a2.html#aaed406185c3d344b7f6f37be935120a2">THERON_ENABLE_UNHANDLED_MESSAGE_CHECKS</a></td></tr>
-          <tr><td class="navtab"><a class="qindex" href="Defines_8h_adce9149fd94cc00b81d3975dacc3b87d.html#adce9149fd94cc00b81d3975dacc3b87d">THERON_MAX_ACTORS</a></td></tr>
-          <tr><td class="navtab"><a class="qindex" href="Defines_8h_a9856afae5f4e1b586b441d28eef9f3ca.html#a9856afae5f4e1b586b441d28eef9f3ca">THERON_MAX_RECEIVERS</a></td></tr>
-          <tr><td class="navtab"><a class="qindex" href="Defines_8h_af59728856e68171e62b1fc5bd64358f4.html#af59728856e68171e62b1fc5bd64358f4">THERON_MAX_THREADS_PER_FRAMEWORK</a></td></tr>
-          <tr><td class="navtab"><a class="qindex" href="Defines_8h_a8873b6cd3e6debb50488f5e7ea639dd4.html#a8873b6cd3e6debb50488f5e7ea639dd4">THERON_USE_BOOST_THREADS</a></td></tr>
-          <tr><td class="navtab"><a class="qindex" href="Defines_8h_aa4d353d034038797e32df696b4f106ef.html#aa4d353d034038797e32df696b4f106ef">THERON_USE_STD_THREADS</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="Defines_8h_a3d0395f23f4a7977fb7643f6712fd72f.html#a3d0395f23f4a7977fb7643f6712fd72f">THERON_GCC</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="Defines_8h_a105934ea95dec270ad05d20790c1a33e.html#a105934ea95dec270ad05d20790c1a33e">THERON_MSVC</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="Defines_8h_a6721c493481921173d9a7deb2d0d6a29.html#a6721c493481921173d9a7deb2d0d6a29">THERON_NUMA</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="Defines_8h_adb28e74b0f19fa534a95ebb07bd8eaff.html#adb28e74b0f19fa534a95ebb07bd8eaff">THERON_POSIX</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="Defines_8h_ad415388f6115265470aadc4e88c232f5.html#ad415388f6115265470aadc4e88c232f5">THERON_WINDOWS</a></td></tr>
         </table>
       </div>
    </td>
@@ -114,9 +116,9 @@ window.onload = initDynSections;
 
 <p>Controls generation of code for asserts, allocation checking, etc. </p>
 <p>This is a global define that decides default values for several other defines that individually control aspects of code generation related to debugging.</p>
-<p>The value of <a class="el" href="Defines_8h_a424571c2b959ee1a5b204ce7789a77cc.html#a424571c2b959ee1a5b204ce7789a77cc">THERON_DEBUG</a> can be overridden by defining it globally in the build (in the makefile using -D, or in the project preprocessor settings in Visual Studio).</p>
-<p>If not defined, then <a class="el" href="Defines_8h_a424571c2b959ee1a5b204ce7789a77cc.html#a424571c2b959ee1a5b204ce7789a77cc">THERON_DEBUG</a> defaults to 1 in GCC builds when NDEBUG is not defined, and to 1 in other builds (including Visual C++) when _DEBUG is defined. Otherwise it defaults to 0, disabling debug-related code generation.</p>
-<p>If <a class="el" href="Defines_8h_a424571c2b959ee1a5b204ce7789a77cc.html#a424571c2b959ee1a5b204ce7789a77cc">THERON_DEBUG</a> is defined as 1, then <a class="el" href="Defines_8h_a266c44b69e6490887e5829719521f61d.html#a266c44b69e6490887e5829719521f61d">THERON_ENABLE_ASSERTS</a> defaults to 1, THERON_FORCEINLINE defaults to 'inline', and <a class="el" href="Defines_8h_ad51a5513a03bbbac961f4a559b2f6fcc.html#ad51a5513a03bbbac961f4a559b2f6fcc">THERON_ENABLE_DEFAULTALLOCATOR_CHECKS</a> defaults to 1. Otherwise those defines default to 0, forced inlining, and 0, respectively. </p>
+<p>The default definition can be overridden by defining it globally in the build - either via the makefile command line options, on the GCC command line using -D, or in the project preprocessor settings in Visual Studio.</p>
+<p>If not defined, then THERON_DEBUG defaults to 1 in GCC builds when NDEBUG is not defined, and to 1 in other builds (including Visual C++) when _DEBUG is defined. Otherwise it defaults to 0, disabling debug-related code generation.</p>
+<p>If THERON_DEBUG is defined as 1, then THERON_ENABLE_ASSERTS defaults to 1, THERON_FORCEINLINE defaults to 'inline', and <a class="el" href="Defines_8h_ad51a5513a03bbbac961f4a559b2f6fcc.html#ad51a5513a03bbbac961f4a559b2f6fcc">THERON_ENABLE_DEFAULTALLOCATOR_CHECKS</a> defaults to 1. Otherwise those defines default to 0, forced inlining, and 0, respectively. </p>
 
 </div>
 </div>
@@ -129,7 +131,7 @@ window.onload = initDynSections;
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Files</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Enumerations</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(8)"><span class="SelectionMark">&nbsp;</span>Enumerator</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(9)"><span class="SelectionMark">&nbsp;</span>Defines</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Files</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Defines</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">

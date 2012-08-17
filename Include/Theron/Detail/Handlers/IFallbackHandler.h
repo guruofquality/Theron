@@ -1,6 +1,4 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_DETAIL_HANDLERS_IFALLBACKHANDLER_H
 #define THERON_DETAIL_HANDLERS_IFALLBACKHANDLER_H
 
@@ -8,6 +6,7 @@
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
 
+#include <Theron/Detail/Containers/IntrusiveList.h>
 #include <Theron/Detail/Messages/IMessage.h>
 
 
@@ -17,22 +16,30 @@ namespace Detail
 {
 
 
-/// Interface that allows a per-framework fallback message handler to be referenced.
-class IFallbackHandler
+/**
+Baseclass that allows fallback handlers to be stored in lists.
+*/
+class IFallbackHandler : public IntrusiveList<IFallbackHandler>::Node
 {
 public:
 
-    /// Default constructor.
+    /**
+    Default constructor.
+    */
     THERON_FORCEINLINE IFallbackHandler()
     {
     }
 
-    /// Virtual destructor.
+    /**
+    Virtual destructor.
+    */
     inline virtual ~IFallbackHandler()
     {
     }
 
-    /// Handles the given message.
+    /**
+    Handles the given message.
+    */
     virtual void Handle(const IMessage *const message) const = 0;
 
 private:

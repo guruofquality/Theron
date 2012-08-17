@@ -1,6 +1,4 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_FRAMEWORK_H
 #define THERON_FRAMEWORK_H
 
@@ -10,47 +8,60 @@
 Framework that hosts and executes actors.
 */
 
+#include <new>
 
 #include <Theron/ActorRef.h>
 #include <Theron/Address.h>
 #include <Theron/AllocatorManager.h>
+#include <Theron/Assert.h>
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
 #include <Theron/IAllocator.h>
-#include <Theron/Receiver.h>
 
-#include <Theron/Detail/Core/ActorConstructor.h>
-#include <Theron/Detail/Core/ActorCore.h>
-#include <Theron/Detail/Core/ActorCreator.h>
-#include <Theron/Detail/Debug/Assert.h>
-#include <Theron/Detail/Handlers/BlindFallbackHandler.h>
+#include <Theron/Detail/Alignment/ActorAlignment.h>
+#include <Theron/Detail/Allocators/CachingAllocator.h>
+#include <Theron/Detail/Allocators/ThreadsafeAllocator.h>
+#include <Theron/Detail/Directory/Directory.h>
+#include <Theron/Detail/Directory/Entry.h>
 #include <Theron/Detail/Handlers/DefaultFallbackHandler.h>
-#include <Theron/Detail/Handlers/FallbackHandler.h>
-#include <Theron/Detail/Handlers/IFallbackHandler.h>
-#include <Theron/Detail/Messages/IMessage.h>
+#include <Theron/Detail/Handlers/FallbackHandlerCollection.h>
+#include <Theron/Detail/Legacy/ActorRegistry.h>
+#include <Theron/Detail/Mailboxes/Mailbox.h>
+#include <Theron/Detail/Mailboxes/Queue.h>
+#include <Theron/Detail/Messages/MessageCreator.h>
 #include <Theron/Detail/Messages/MessageSender.h>
-#include <Theron/Detail/Threading/Mutex.h>
-#include <Theron/Detail/ThreadPool/ThreadPool.h>
+#include <Theron/Detail/MailboxProcessor/ProcessorContext.h>
+#include <Theron/Detail/MailboxProcessor/ThreadPool.h>
+#include <Theron/Detail/MailboxProcessor/WorkerThreadStore.h>
+#include <Theron/Detail/MailboxProcessor/WorkItem.h>
 
 
 namespace Theron
 {
 
 
+class Actor;
+
+
 /**
 \brief Manager class that hosts, manages, and executes actors.
 
 Users should construct an instance of the Framework in non-actor application
-code before creating any actors. \ref Actor "Actors" can then be created by calling
-the \ref CreateActor method of the instantiated framework. For example:
+code before creating any actors. Actor objects can then be created by passing
+the framework as a parameter to the constructor of the derived actor class:
 
 \code
 class MyActor : public Theron::Actor
 {
+public:
+
+    explicit MyActor(Theron::Framework &framework) : Theron::Actor(framework)
+    {
+    }
 };
 
 Theron::Framework framework;
-Theron::ActorRef myActor(framework.CreateActor<MyActor>());
+MyActor myActor(framework);
 \endcode
 
 Internally, each framework contains a pool of worker threads which are used
@@ -63,101 +74,102 @@ framework by means of an explicit parameter to the Framework::Framework construc
 Additionally, the number of threads can be increased or decreased at runtime
 by calling \ref SetMinThreads or \ref SetMaxThreads. The utilization of the currently
 enabled threads is measured by performance metrics, queried by \ref GetCounterValue
-and enumerated by \ref Counter. The maximum number of threads allowed in any single
-framework is limited by \ref THERON_MAX_THREADS_PER_FRAMEWORK.
+and enumerated by \ref Counter.
 
 The worker threads are created and synchronized using underlying threading
 objects. Different implementations of these threading objects are possible,
 allowing Theron to be used in environments with different threading primitives.
 Currently, implementations based on Win32 threads, Boost threads and std::thread
-are provided. Users can use the \ref THERON_USE_BOOST_THREADS and \ref THERON_USE_STD_THREADS
-defines to enable or disable the use of Boost threads and std::thread, respectively.
+are provided. Users can define \ref THERON_BOOST or \ref THERON_CPP11
+to enable or disable the use of boost::thread and std::thread, respectively.
 
-It's possible to create more than one Framework in an application. Actors created
-within each Framework are executed only by the worker threads in the threadpool
-of that framework, allowing the threads of a Framework to be effectively dedicated
-to particular actors. See the \ref Framework::Framework "constructor" for more
-information.
+It's possible to construct multiple Framework objects within a single
+application. The actors created within each Framework are processed
+by separate pools of worker threads. Actor addresses are globally unique
+across all frameworks. Actors in one framework can send messages to actors
+in other frameworks.
 
-The maximum number of actors that can be created in an application is limited
-by the \ref THERON_MAX_ACTORS define, which defines the number of unique
-actor addresses. This limit is per-application, rather than per-framework.
+Actors created within each Framework are executed only by the worker threads
+in the threadpool of that framework, allowing the threads of a Framework to
+be effectively dedicated to particular actors. See the \ref Framework::Framework
+"constructor" for more information.
 
 \note An important point about Framework objects is that they must always
-outlive the actors created within them. See the destructor documentation
-for more information.
-
-\see <a href="http://www.theron-library.com/index.php?t=page&p=CreatingAnActor">Creating an Actor</a>
-\see <a href="http://www.theron-library.com/index.php?t=page&p=InitializingTheFramework">Initializing the Framework</a>
-\see <a href="http://www.theron-library.com/index.php?t=page&p=TerminatingTheFramework">Terminating the Framework</a>
-\see <a href="http://www.theron-library.com/index.php?t=page&p=MultipleFrameworks">Using multiple frameworks</a>
+outlive the actors created within them. See the \ref Framework::~Framework
+"destructor" documentation for more information.
 */
-class Framework
+class Framework : public Detail::Entry::Entity
 {
 public:
 
     friend class Actor;
     friend class ActorRef;
-    friend class Detail::ActorCore;
     friend class Detail::MessageSender;
 
     /**
-    \brief Enumerated type that lists event counters available for querying.
-
-    The counters measure threadpool activity levels, so are useful for
-    managing the size of the Framework's internal threadpool.
-    
-    The \ref COUNTER_THREADS_PULSED counter counts the number of times the threadpool was pulsed
-    to wake a worker thread. The pool is pulsed when a message arrives at an actor that is neither
-    already being processed nor already scheduled for processing (for another message). Additionally,
-    the pool is pulsed when an actor becomes unreferenced and so needs to be garbage collected.
-    An important subtlety of \ref COUNTER_THREADS_PULSED is that not all message arrivals are
-    counted: only those where the arrived message could be processed immediately if a sleeping
-    thread could be woken. Messages that arrive at actors which are already scheduled for processing
-    for earlier messages can't be processed immediately anyway, since messages are processed one at a
-    time (serially) within each actor.
-
-    The effect of pulsing the pool is to wake a single worker thread, if one or more sleeping threads
-    are available. If all worker threads are already awake, then the pulse has no effect. The
-    \ref COUNTER_THREADS_WOKEN counter counts the number of times a sleeping thread was actually
-    woken by a pulse event. Therefore, the value of the \ref COUNTER_THREADS_WOKEN is strictly
-    less than, or equal to, the value of the \ref COUNTER_THREADS_PULSED counter.
-
-    By comparing the values of \ref COUNTER_THREADS_WOKEN and \ref COUNTER_THREADS_PULSED, we
-    can get a feeling for whether adding more threads would speed up message handling throughput
-    and reduce latency. Conversely, it tells us whether reducing the size of the threadpool would
-    have a negative effect on message processing.
-    
-    If the values of \ref COUNTER_THREADS_WOKEN and \ref COUNTER_THREADS_PULSED are equal, we deduce
-    that the current number of worker threads is sufficient to allow every message to be processed
-    as quickly as message arrival order allows. To the degree that \ref COUNTER_THREADS_WOKEN is
-    less than \ref COUNTER_THREADS_PULSED, we know that adding more worker threads would allow
-    more messages to be processed in parallel in software, reducing message response times. (Absolute
-    throughput is of course still limited by the number of physical cores).
-
-    Finally, the \ref COUNTER_MESSAGES_PROCESSED counter counts the number of messages that
-    were processed by all threads in the threadpool. This gives a rough indication of workload.
-
-    \note All the counters are local to each Framework instance, and count events in
-    the queried Framework only.
-
-    \see GetCounterValue
+    \brief Parameters structure that can be passed to the Framework constructor.
+    One of the several different \ref Framework::Framework "Framework constructors"
+    takes as a parameter an instance of this parameter class.
     */
-    enum Counter
+    struct Parameters
     {
-        COUNTER_MESSAGES_PROCESSED = 0,     ///< Number of arrived actor messages processed by the framework.
-        COUNTER_THREADS_PULSED,             ///< Number of times the framework pulsed its threadpool to wake a thread.
-        COUNTER_THREADS_WOKEN,              ///< Number of threads actually woken by pulse events.
-        MAX_COUNTERS                        ///< Number of counters available for querying.
+        /**
+        Default constructor.
+        Constructs a parameters object with a default initial thread count of 16.
+        */
+        inline Parameters() :
+          mThreadCount(16),
+          mNodeMask(1),
+          mProcessorMask(0xFFFFFFFF)
+        {
+        }
+
+        /**
+        Explicit constructor.
+        Constructs a parameters object with a specified initial thread count.
+        */
+        inline explicit Parameters(const uint32_t threadCount) :
+          mThreadCount(threadCount),
+          mNodeMask(1),
+          mProcessorMask(0xFFFFFFFF)
+        {
+        }
+
+        /**
+        Constructor.
+        Constructs a parameters object with a specified initial thread count, running on a specified set of NUMA processor nodes.
+        */
+        inline explicit Parameters(const uint32_t threadCount, const uint32_t nodeMask) :
+          mThreadCount(threadCount),
+          mNodeMask(nodeMask),
+          mProcessorMask(0xFFFFFFFF)
+        {
+        }
+
+        /**
+        Constructor.
+        Constructs a parameters object with a specified initial thread count, running on a specified
+        subset of the processors of each of a specified set of NUMA processor nodes.
+        */
+        inline explicit Parameters(const uint32_t threadCount, const uint32_t nodeMask, const uint32_t processorMask) :
+          mThreadCount(threadCount),
+          mNodeMask(nodeMask),
+          mProcessorMask(processorMask)
+        {
+        }
+
+        uint32_t mThreadCount;      ///< The initial number of worker threads to create within the framework.
+        uint32_t mNodeMask;         ///< Specifies the NUMA processor nodes upon which the framework may execute.
+        uint32_t mProcessorMask;    ///< Specifies the subset of the processors in each NUMA processor node upon which the framework may execute.
     };
 
     /**
     \brief Default constructor.
 
-    Constructs a framework object, with two worker threads by default.
+    Constructs a framework object with default parameters.
 
-    \note To create a Framework with a specific number of worker threads, use the
-    explicit constructor that takes a thread count as an argument.
+    \note To create a Framework with a specific number of worker threads, use the explicit
+    constructor that takes an instance of the \ref Parameters structure as an argument.
     */
     Framework();
 
@@ -166,326 +178,144 @@ public:
 
     Constructs a framework with the given number of worker threads.
 
-    It's possible to construct multiple Framework objects within a single
-    application. The actors created within each Framework are processed
-    by separate pools of worker threads. Actor addresses are globally unique
-    across all frameworks. Actors in one framework can send messages to actors
-    in other frameworks.
-
-    \code
-    class MyActor : public Theron::Actor
-    {
-    };
-
-    Theron::Framework frameworkOne;
-    Theron::ActorRef actorOne(frameworkOne.CreateActor<MyActor>());
-
-    Theron::Framework frameworkTwo;
-    Theron::ActorRef actorTwo(frameworkTwo.CreateActor<MyActor>());
-    \endcode
-    */
-    explicit Framework(const uint32_t numThreads);
-    
-    /**
-    \brief Destructor.
-
-    Destroys a Framework.
-
-    A Framework must always outlive (ie. be destructed after) any actors created within
-    it. Specifically, all \ref ActorRef objects referencing actors created within a Framework
-    must have been destructed before the Framework itself is allowed to be destructed.
-    The \ref ActorRef objects returned by \ref CreateActor reference the actors created within
-    the Framework. When the last ActorRef referencing an actor is destructed, the actor is
-    destroyed automatically by a garbage collection thread within the Framework. For this to
-    work correctly, the Framework must still when the actor becomes unreferenced. If the
-    Framework is allowed to be destructed before the ActorRefs referencing its created actors,
-    the referenced actors will not be correctly destroyed, leading to memory leaks.
-
-    See the documentation of \ref ActorRef for more details.
-    */
-    ~Framework();
-
-    /**
-    \brief Creates an \ref Actor within the framework.
-
-    \code
-    class MyActor : public Theron::Actor
-    {
-    };
-
-    Theron::Framework framework;
-    Theron::ActorRef myActor = framework.CreateActor<MyActor>();
-    \endcode
-
-    The maximum number of actors that can be created in an application (across all
-    frameworks) is limited by the \ref THERON_MAX_ACTORS define, whose default value
-    is defined in \ref Defines.h.
-
-    \note It is important that the framework in which an actor is created
-    must always outlive it. It is the caller's responsibility to not allow
-    the owning framework to be destructed (by being explicitly destructed
-    or by going out of scope) until all \ref ActorRef "actor references"
-    referencing actors created within the framework have been destructed.
-
-    \tparam ActorType The actor class to be instantiated.
-    \return An ActorRef referencing the new actor, returned by value.
-
-    \see <a href="http://www.theron-library.com/index.php?t=page&p=CreatingAnActor">Creating an Actor</a>
-    */
-    template <class ActorType>
-    ActorRef CreateActor();
-
-    /**
-    \brief Creates an actor with provided parameters.
-
-    Accepts an instance of the Parameters type exposed by the ActorType class,
-    which is in turn passed to the ActorType constructor. This provides a way for
-    user-defined actor classes to be provided with user-defined parameters on construction.
+    \note This constructor is deprecated. Use the \ref Parameters structure instead.
 
     \code
     class MyActor : public Theron::Actor
     {
     public:
 
-        typedef int Parameters;
-
-        MyActor(const Parameters &params) : mMember(params)
+        explicit MyActor(Theron::Framework &framework) : Theron::Actor(framework)
         {
         }
-
-    private:
-
-        int mMember;
     };
 
-    Theron::Framework framework;
-    MyActor::Parameters params(5);
-    Theron::ActorRef myActor = framework.CreateActor<MyActor>(params);
+    Theron::Framework frameworkOne(8);
+    MyActor actorOne(frameworkOne);
+
+    Theron::Framework frameworkTwo(12);
+    MyActor actorTwo(frameworkTwo);
     \endcode
-
-    The maximum number of actors that can be created in an application (across all
-    frameworks) is limited by the \ref THERON_MAX_ACTORS define, whose default value
-    is defined in \ref Defines.h.
-
-    \tparam ActorType The actor class to be instantiated.
-    \param params An instance of the Parameters type exposed by the ActorType class.
-    \return An ActorRef referencing the new actor, returned by value.
-
-    \note This method can only be used with derived actor classes that expose a
-    Parameters type and a constructor that takes an instance of the Parameters type as
-    a constructor parameter. The Parameters type is optional and derived actors are not
-    required to define it. However defining a Parameters type and a suitable constructor
-    allows the objects of the actor type to be initialized open creation, using this
-    method.
-
-    \see <a href="http://www.theron-library.com/index.php?t=page&p=InitializingAnActor">Initializing an Actor</a>
     */
-    template <class ActorType>
-    ActorRef CreateActor(const typename ActorType::Parameters &params);
+    explicit Framework(const uint32_t threadCount);
 
     /**
-    \brief Sends a message to the entity (typically an actor) at the given address.
+    \brief Constructor.
+
+    Constructs a framework with the given parameters. Use this constructor
+    to control the size and processor affinity of a framework's threadpool.
+
+    \code
+    class MyActor : public Theron::Actor
+    {
+    public:
+
+        explicit MyActor(Theron::Framework &framework) : Theron::Actor(framework)
+        {
+        }
+    };
+
+    const Theron::Framework::Parameters params(8);
+    Theron::Framework framework(params);
+
+    MyActor actorOne(framework);
+    MyActor actorTwo(framework);
+    \endcode
+    */
+    explicit Framework(const Parameters &params);
+
+    /**
+    \brief Destructor.
+
+    Destroys a Framework.
+
+    A Framework must always outlive (ie. be destructed after) any actors created within
+    it. Specifically, all actors created within a Framework must have been destructed
+    themselves before the Framework itself is allowed to be destructed.
 
     \code
     class Actor : public Theron::Actor
     {
+    public:
+
+        explicit MyActor(Theron::Framework &framework) : Theron::Actor(framework)
+        {
+        }
+    };
+
+    main()
+    {
+        Theron::Framework framework;
+        Actor *actor = new Actor(framework);
+
+        // Must delete (ie. destruct) the actor before the Framework hosting it!
+        delete actor;
+    }
+    \endcode
+
+    \note If a Framework instance is allowed to be destructed before actors created within
+    it, the actors will not be correctly destroyed, leading to errors or memory leaks.
+    */
+    ~Framework();
+
+    /**
+    \brief Sends a message to the entity (typically an actor, but potentially a Receiver) at the given address.
+
+    \code
+    class Actor : public Theron::Actor
+    {
+    public:
+
+        explicit MyActor(Theron::Framework &framework) : Theron::Actor(framework)
+        {
+        }
     };
 
     Theron::Framework framework;
     Theron::Receiver receiver;
-    Theron::ActorRef actor(framework.CreateActor<Actor>());
+    Actor actor(framework);
 
     framework.Send(std::string("Hello"), receiver.GetAddress(), actor.GetAddress());
     \endcode
 
-    If no actor or receiver exists with the given address, the
-    message will not be delivered, and \ref Send will return false.
+    If no actor or receiver exists with the given address, the message will not be
+    delivered, and Send will return false.
 
-    This can happen if the target entity is an actor and has been garbage collected,
-    due to becoming unreferenced. To ensure that actors are not prematurely garbage
-    collected, hold at least one \ref ActorRef referencing the actor.
+    This can happen if the target entity is an actor but has been destructed due to
+    going out of scope (if it was constructed as a local on the stack) or explicitly
+    deleted (if it was constructed on the heap via operator new).
 
     If the destination address exists, but the receiving entity has no handler
     registered for messages of the sent type, then the message will be ignored,
-    but this method will still return true.
+    but this method will still return true. Note that a true return value doesn't
+    necessarily imply that the message was actually handled by the actor.
 
-    \note This method is used mainly to send messages from non-actor code (eg. main),
-    where only the Framework instance is available. In such cases, the address of a receiver
+    In either event, if the message is not actually handled by an actor, the default
+    \ref Framework::SetFallbackHandler "fallback handler" will assert to alert the
+    user about the unhandled message.
+
+    \note This method is used mainly to send messages from non-actor code, eg. main(),
+    where only a Framework instance is available. In such cases, the address of a receiver
     is typically passed as the 'from' address. When sending messages from within an actor,
-    it is more natural to use \ref Actor::Send.
+    it is more natural to use \ref Actor::Send, where the address of the sending actor is
+    implicit.
 
     \tparam ValueType The message type.
     \param value The message value.
     \param from The address of the sending entity (typically a receiver).
-    \param to The address of the target entity (an actor or a receiver).
+    \param address The address of the target entity (an actor or a receiver).
     \return True, if the message was delivered to an entity, otherwise false.
-
-    \see <a href="http://www.theron-library.com/index.php?t=page&p=SendingMessages">Sending messages</a>
     */
-    template <class ValueType>
-    inline bool Send(const ValueType &value, const Address &from, const Address &to) const;
-
-    /**
-    \brief Specifies a maximum limit on the number of worker threads enabled in this framework.
-
-    This method allows an application to place an upper bound on the thread count.
-    Users can use this method, together with SetMinThreads, to implement a policy for
-    framework threadpool management.
-
-    This method will only decrease the actual number of worker threads, never increase it.
-    Calling this method is guaranteed to eventually result in the number of threads being
-    less than or equal to the specified limit, as long as messages continue to be sent and
-    unless a higher minimum limit is specified subsequently.
-
-    If two successive calls specify different maximums, the lower takes effect. If
-    conflicting minimum and maximums are specified by subsequent calls to this method
-    and SetMinThreads, then the later call wins.
-
-    The idea behind separate minimum and maximum limits, rather than a single method to
-    directly set the actual number of threads, is to allow negotiation between multiple
-    agents, each with a different interest in the thread count. One may require a certain
-    minimum number of threads for its processing, but not care if the actual number of
-    threads is higher, while another may wish to impose a maximum limit on the number of
-    threads in existence, but be satisfied if there are less.
-
-    \note If the number of threads before the call was higher than the requested maximum,
-    there may be an arbitrary delay after calling this method before the number of threads
-    drops to the requested value. The number of threads is managed over time, and is not
-    guaranteed to be less than or equal to the requested maximum immediately after the call.
-    Threads self-terminate on being woken, if they discover that the actual thread count
-    is higher than the limit. This means that until some threads are woken by the arrival
-    of new messages, the actual thread count will remain unchanged.
-
-    \param count A positive integer - behavior for zero is undefined.
-
-    \see SetMinThreads
-    \see <a href="http://www.theron-library.com/index.php?t=page&p=SettingTheThreadCount">Setting the thread count</a>
-    */
-    inline void SetMaxThreads(const uint32_t count);
-
-    /**
-    \brief Specifies a minimum limit on the number of worker threads enabled in this framework.
-
-    This method allows an application to place a lower bound on the thread count.
-    Users can use this method, together with SetMaxThreads, to implement a policy for
-    framework threadpool management.
-
-    This method will only increase the actual number of worker threads, never reduce it.
-    Calling this method is guaranteed to eventually result in the number of threads being
-    greater than or equal to the specified limit, unless a lower maximum limit is specified
-    subsequently.
-
-    If two successive calls specify different minimums, the higher takes effect. If
-    conflicting minimum and maximums are specified by subsequent calls to this method
-    and SetMaxThreads, then the later call wins.
-
-    \note If the number of threads before the call was lower than the requested minimum,
-    there may be an arbitrary delay after calling this method before the number of threads rises
-    to the requested value. Threads are spawned or re-enabled by a manager thread dedicated
-    to that task, which runs asynchronously from other threads as a background task.
-    It spends most of its time asleep, only being woken by calls to SetMinThreads.
-
-    \param count A positive integer - behavior for zero is undefined.
-
-    \see SetMaxThreads
-    \see <a href="http://www.theron-library.com/index.php?t=page&p=SettingTheThreadCount">Setting the thread count</a>
-    */
-    inline void SetMinThreads(const uint32_t count);
-
-    /**
-    \brief Returns the current maximum limit on the number of worker threads in this framework.
-
-    This method returns the current maximum limit on the size of the worker threadpool.
-    Setting a maximum thread limit with SetMaxThreads doesn't imply that that limit will be
-    returned by this function. The target thread count is negotiated over multiple calls,
-    and specifying a higher value than the current maximum may have no effect.
-
-    \note In the current implementation, GetMaxThreads and GetMinThreads return the same
-    value, which is the current target thread count. Note that this may be different from
-    the actual current number of threads, returned by GetNumThreads.
-
-    \see GetMinThreads
-    \see <a href="http://www.theron-library.com/index.php?t=page&p=SettingTheThreadCount">Setting the thread count</a>
-    */
-    inline uint32_t GetMaxThreads() const;
-
-    /**
-    \brief Returns the current minimum limit on the number of worker threads in this framework.
-
-    This method returns the current minimum limit on the size of the worker threadpool.
-    Setting a minimum thread limit with SetMinThreads doesn't imply that that limit will be
-    returned by this function. The target thread count is negotiated over multiple calls,
-    and specifying a lower value than the current minimum may have no effect.
-
-    \see GetMaxThreads
-    \see <a href="http://www.theron-library.com/index.php?t=page&p=SettingTheThreadCount">Setting the thread count</a>
-    */
-    inline uint32_t GetMinThreads() const;
-
-    /**
-    \brief Gets the actual number of worker threads currently in this framework.
-
-    The returned count reflects the actual number of enabled threads at the time of the
-    call, which is independent from any maximum or minimum limits specified with
-    SetMaxThreads or SetMinThreads. The count includes all enabled threads, including any
-    that are sleeping due to having no work to do, but not including ones which were
-    created earlier but subsequently terminated to reduce the thread count.
-
-    \note The value returned by this method is specific to this framework instance. If
-    multiple frameworks are created then each has its own threadpool with an independently
-    managed thread count.
-
-    \see GetPeakThreads
-    \see <a href="http://www.theron-library.com/index.php?t=page&p=SettingTheThreadCount">Setting the thread count</a>
-    */
-    inline uint32_t GetNumThreads() const;
-
-    /**
-    \brief Gets the peak number of worker threads ever active in the framework.
-
-    This call queries the highest number of simultaneously enabled threads seen since the
-    start of the framework. Note that this measures the highest actual number of threads,
-    as measured by GetNumThreads, rather than the highest values of the maximum or minimum
-    thread count limits.
-
-    \note The value returned by this method is specific to this framework instance. If
-    multiple frameworks are created then each has its own threadpool with an independently
-    managed thread count.
-
-    \see <a href="http://www.theron-library.com/index.php?t=page&p=SettingTheThreadCount">Setting the thread count</a>
-    */
-    inline uint32_t GetPeakThreads() const;
-
-    /**
-    \brief Resets the \ref Counter "internal event counters" that track reported events for threadpool management.
-
-    \see Counter
-    \see GetCounterValue
-    \see <a href="http://www.theron-library.com/index.php?t=page&p=MeasuringThreadUtilization">Measuring thread utilization</a>
-    */
-    inline void ResetCounters() const;
-
-    /**
-    \brief Gets the current integer value of a specified event counter.
-
-    Each Framework maintains a set of \ref Counter "internal event counters".
-    The event counters measure the utilization level of the threads in the Framework's
-    threadpool, and so are useful for implementing threadpool management policies.
-
-    \param counter One of several values of an \ref Counter "enumerated type" identifying the available counters.
-
-    \see ResetCounters
-    \see <a href="http://www.theron-library.com/index.php?t=page&p=MeasuringThreadUtilization">Measuring thread utilization</a>
-    */
-    inline uint32_t GetCounterValue(const Counter counter) const;
+    template <typename ValueType>
+    inline bool Send(const ValueType &value, const Address &from, const Address &address);
 
     /**
     \brief Sets the fallback message handler executed for unhandled messages.
 
     The fallback handler registered with the framework is run:
-    - when a message is sent to an address at which no entity is registered by an actor within this framework.
-    - when a message is sent to an address at which no entity is registered using the \ref Send method of this framework.
-    - when a message is delivered to an actor within this framework at which neither a handler for that message type nor a default handler are registered, so that the message is unhandled.
+    - when a message is sent by an actor within this framework to an address at which no entity is currently registered.
+    - when a message is sent using the \ref Send method of this framework to an address at which no entity is currently registered.
+    - when a message is delivered to an actor within this framework in which neither a handler for that message type nor a default handler are registered, with the result that the message goes unhandled.
 
     The main purpose of the fallback handler is for error reporting, and the default
     fallback handler, which is used if no user-defined handler is explicitly set,
@@ -518,14 +348,22 @@ public:
 
     Users can call this method to replace the default fallback handler with their own
     implementation, for example for more sophisticated error reporting or logging.
+
     Passing 0 to this method clears any previously set fallback handler, or the
     default fallback handler if no user-defined handler has previously been set.
+
+    \note There are two variants of SetFallbackHandler, accepting fallback handlers
+    with different function signatures. Handlers set using this method accept only a
+    'from' address, whereas handlers set using the other method also accept the 
+    unhandled message as 'blind' data (ie. a void pointer and a size in bytes).
+    Registering either kind of fallback handler replaces any previously set handler
+    of the other kind.
 
     \tparam ObjectType The type of the handler object which owns the handler function.
     \param actor Pointer to the handler object on which the handler function is a member function.
     \param handler Member function pointer identifying the fallback handler function.
     */
-    template <class ObjectType>
+    template <typename ObjectType>
     inline bool SetFallbackHandler(
         ObjectType *const actor,
         void (ObjectType::*handler)(const Address from));
@@ -538,20 +376,19 @@ public:
     the message, identified by a void pointer and a size.
 
     The fallback handler registered with the framework is run:
-    - when a message is sent to an address at which no entity is registered by an actor within this framework.
-    - when a message is sent to an address at which no entity is registered using the \ref Send method of this framework.
-    - when a message is delivered to an actor within this framework at which neither a handler for that message type nor a default handler are registered, so that the message is unhandled.
+    - when a message is sent by an actor within this framework to an address at which no entity is currently registered.
+    - when a message is sent using the \ref Send method of this framework to an address at which no entity is currently registered.
+    - when a message is delivered to an actor within this framework in which neither a handler for that message type nor a default handler are registered, with the result that the message goes unhandled.
 
-    The handler, being user-defined, may be able to inspect the contents of the message and
+    The handler function registered by this method overload is passed the unhandled message
+    as 'blind' data represented by a void pointer and a message size in bytes. Handlers
+    registered using this method must expose a handler method that accepts a void pointer
+    identifying the message contents, a size indicating the size of the message data, and a
+    'from' address.
+
+    A user-defined handler may be able to inspect the contents of the message and
     take appropriate action, such as reporting the contents of an unexpected message to help
     with debugging.
-
-    The handler function registered by this method overload is represented by a pointer to
-    a user-defined handler object, and a member function pointer identifying a handler
-    function that is a member function of the handler object. Handlers registered using
-    this method must expose a handler method that accepts a void pointer identifying the
-    message contents, a size indicating the size of the message data, and a 'from' address,
-    as shown by the following example:
 
     \code
     class Handler
@@ -571,70 +408,304 @@ public:
 
     Users can call this method to replace the default fallback handler with their own
     implementation, for example for more sophisticated error reporting or logging.
+
     Passing 0 to this method clears any previously set fallback handler, or the
     default fallback handler if no user-defined handler has previously been set.
+
+    \note There are two variants of SetFallbackHandler, accepting fallback handlers
+    with different function signatures. Handlers set using this method accept the 
+    unhandled message as 'blind' data (ie. a void pointer and a size in bytes),
+    whereas handlers set using the other method accept only the 'from' address.
+    Registering either kind of fallback handler replaces any previously set handler
+    of the other kind.
 
     \tparam ObjectType The type of the handler object which owns the handler function.
     \param actor Pointer to the handler object on which the handler function is a member function.
     \param handler Member function pointer identifying the fallback handler function.
     */
-    template <class ObjectType>
+    template <typename ObjectType>
     inline bool SetFallbackHandler(
         ObjectType *const actor,
         void (ObjectType::*handler)(const void *const data, const uint32_t size, const Address from));
 
+    /**
+    \brief Deprecated method provided for backwards compatibility.
+
+    \note In versions of Theron from 4.0 onwards, there is no need to use this method.
+    It is provided only for backwards compatibility.
+
+    In versions of Theron prior to 4.0, actors couldn't be constructed directly
+    in user code. Instead you had to ask a Framework to create one for you, using
+    the CreateActor method template. Instead of returning the actor itself,
+    CreateActor returned a <i>reference</i> to the actor in the form of an \ref ActorRef
+    object.
+
+    \code
+    // LEGACY CODE!
+    class MyActor : public Theron::Actor
+    {
+    };
+
+    int main()
+    {
+        Theron::Framework framework;
+        Theron::ActorRef actorRef(framework.CreateActor<MyActor>());
+    }
+    \endcode
+
+    In versions of Theron starting with 4.0, Actors are first-class citizens and
+    behave like vanilla C++ objects. They can be constructed directly with no
+    call to Framework::CreateActor. Once constructed they are referenced directly
+    by user code with no need for ActorRef proxy objects.
+
+    When writing new code, follow the new, simpler construction pattern where actors
+    are constructed directly and not referenced by ActorRefs:
+
+    \code
+    // New code
+    class MyActor : public Theron::Actor
+    {
+    public:
+
+        MyActor(Theron::Framework &framework) : Theron::Actor(framework)
+        {
+        }
+    };
+
+    int main()
+    {
+        Theron::Framework framework;
+        MyActor actor(framework);
+    }
+    \endcode
+    */
+    template <class ActorType>
+    ActorRef CreateActor();
+
+    /**
+    \brief Deprecated method provided for backwards compatibility.
+
+    \note In versions of Theron from 4.0 onwards, there is no need to use this method.
+    It is provided only for backwards compatibility.
+
+    In versions of Theron prior to 4.0, actors couldn't be constructed directly
+    in user code. Instead you had to ask a Framework to create one for you, using
+    the CreateActor method template. Instead of returning the actor itself,
+    CreateActor returned a <i>reference</i> to the actor in the form of an \ref ActorRef
+    object.
+
+    \code
+    // LEGACY CODE!
+    class MyActor : public Theron::Actor
+    {
+    public:
+
+        struct Parameters
+        {
+            int mSomeParameter;
+        }
+
+        MyActor(const Parameters &params)
+        {
+        }
+    };
+
+    int main()
+    {
+        Theron::Framework framework;
+        MyActor::Parameters params;
+        params.mSomeParameter = 0;
+        Theron::ActorRef actorRef(framework.CreateActor<MyActor>(params));
+    }
+    \endcode
+
+    When writing new code, follow the new, simpler construction pattern where actors
+    are constructed directly and not referenced by ActorRefs:
+
+    \code
+    // New code
+    class MyActor : public Theron::Actor
+    {
+    public:
+
+        MyActor(Theron::Framework &framework, const int someParameter) : Theron::Actor(framework)
+        {
+        }
+    };
+
+    int main()
+    {
+        Theron::Framework framework;
+        MyActor actor(framework, 0);
+    }
+    \endcode
+    */
+    template <class ActorType>
+    ActorRef CreateActor(const typename ActorType::Parameters &params);
+
 private:
+
+    typedef Detail::Queue<Detail::Mailbox> WorkQueue;
+    typedef Detail::ThreadPool<WorkQueue, Detail::WorkItem, Detail::WorkerThreadStore> MailboxProcessor;
+    typedef Detail::IntrusiveList<Detail::WorkerThreadStore> WorkerThreadStoreList;
+    typedef Detail::PoolAllocator<Detail::WorkerThreadStore, THERON_CACHELINE_ALIGNMENT> StoreAllocator;
+    typedef Detail::CachingAllocator<32> MessageCache;
 
     Framework(const Framework &other);
     Framework &operator=(const Framework &other);
 
-    /// Initializes a Framework object on construction.
-    inline void Initialize(const uint32_t numThreads);
+    /**
+    Initializes a framework object at start of day.
+    This function is called by the various constructor flavors and avoids repeating the code.
+    */
+    void Initialize(const Parameters &params);
 
-    /// Gets a reference to the core message processing mutex.
-    inline Detail::Mutex &GetMutex() const;
+    /**
+    Gets the non-zero index of this framework, unique within the local process.
+    */
+    inline uint32_t GetIndex() const;
 
-    /// Schedules an actor for processing by the framework's threadpool.
-    /// \return True, if the threadpool was pulsed to wake a worker thread.
-    inline bool Schedule(Detail::ActorCore *const actor) const;
+    /**
+    Registers a new actor in the directory and allocates a mailbox.
+    */
+    void RegisterActor(Actor *const actor);
 
-    /// Schedules an actor for processing by the framework's threadpool, without waking a worker thread.
-    inline void TailSchedule(Detail::ActorCore *const actor) const;
+    /**
+    Deregisters a previously registered actor.
+    */
+    void DeregisterActor(Actor *const actor);
 
-    /// Executes the fallback message handler for a message which was unhandled by an actor.
-    inline bool ExecuteFallbackHandler(const Detail::IMessage *const message) const;
+    /**
+    Receives a message from another framework.
+    */
+    inline bool FrameworkReceive(
+        Detail::IMessage *const message,
+        const Address &address);
 
-    /// Gets the fallback handler registered with this framework, if any.
-    inline const Detail::IFallbackHandler *GetFallbackHandler() const;
-
-    /// Gets a pointer to the pulse counter owned by the framework.
-    inline uint32_t *GetPulseCounterAddress() const;
-
-    mutable Detail::ThreadPool mThreadPool;                 ///< Pool of worker threads used to run actor message handlers.
-    Detail::IFallbackHandler *mFallbackMessageHandler;      ///< Registered message handler run for unhandled messages.
+    uint32_t mIndex;                                        ///< Non-zero index of this framework, unique within the local process.
+    Detail::Directory<Detail::Entry> mActorDirectory;       ///< Per-framework map of actor address indices to actors.
+    Detail::Directory<Detail::Mailbox> mMailboxes;          ///< Per-framework mailbox array.
+    WorkQueue mWorkQueue;                                   ///< Queue of mailboxes for processing.
+    mutable MailboxProcessor mMailboxProcessor;             ///< Pool of worker threads used to process mailboxes with received messages.
+    WorkerThreadStoreList mWorkerThreadStores;              ///< List of owned worker thread storage structures.
+    StoreAllocator mStoreAllocator;                         ///< Caching pool allocator for worker thread store objects.
+    Detail::FallbackHandlerCollection mFallbackHandlers;    ///< Registered message handlers run for unhandled messages.
     Detail::DefaultFallbackHandler mDefaultFallbackHandler; ///< Default handler for unhandled messages.
+    MessageCache mMessageCache;                             ///< Per-framework cache of message memory blocks.
+    Detail::ThreadsafeAllocator mMessageAllocator;          ///< Thread-safe caching message block allocator.
+    Detail::ProcessorContext mProcessorContext;             ///< Per-framework processor context data.
 };
 
 
-THERON_FORCEINLINE void Framework::Initialize(const uint32_t numThreads)
+template <typename ValueType>
+THERON_FORCEINLINE bool Framework::Send(const ValueType &value, const Address &from, const Address &address)
 {
-    THERON_ASSERT_MSG(numThreads > 0, "numThreads must be greater than zero");
-    mThreadPool.Start(numThreads);
+    // We use a per-framework message cache to allocate messages sent from non-actor code.
+    IAllocator *const messageAllocator(&mMessageAllocator);
 
-    // Register the default fallback handler initially.
-    SetFallbackHandler(&mDefaultFallbackHandler, &Detail::DefaultFallbackHandler::Handle);
+    // Allocate a message. It'll be deleted by the worker thread that handles it.
+    Detail::IMessage *const message(Detail::MessageCreator::Create(messageAllocator, value, from));
+    if (message == 0)
+    {
+        return false;
+    }
+
+    // Call the message sending implementation using the processor context of the framework.
+    // When messages are sent using Framework::Send there's no obvious worker thread.
+    return Detail::MessageSender::Send(
+        &mProcessorContext,
+        mIndex,
+        message,
+        address);
+}
+
+
+THERON_FORCEINLINE bool Framework::FrameworkReceive(
+    Detail::IMessage *const message,
+    const Address &address)
+{
+    // Call the generic message sending function.
+    // We use our own local context here because we're receiving the message.
+    return Detail::MessageSender::Send(
+        &mProcessorContext,
+        mIndex,
+        message,
+        address);
+}
+
+
+template <typename ObjectType>
+inline bool Framework::SetFallbackHandler(
+    ObjectType *const handlerObject,
+    void (ObjectType::*handler)(const Address from))
+{
+    return mFallbackHandlers.Set(handlerObject, handler);
+}
+
+
+template <typename ObjectType>
+inline bool Framework::SetFallbackHandler(
+    ObjectType *const handlerObject,
+    void (ObjectType::*handler)(const void *const data, const uint32_t size, const Address from))
+{
+    return mFallbackHandlers.Set(handlerObject, handler);
+}
+
+
+THERON_FORCEINLINE uint32_t Framework::GetIndex() const
+{
+    return mIndex;
 }
 
 
 template <class ActorType>
 inline ActorRef Framework::CreateActor()
 {
-    typedef Detail::ActorConstructor<ActorType, false> ConstructorType;
+    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
 
-    const ConstructorType constructor;
-    ActorType *const actor = Detail::ActorCreator::CreateActor(constructor, this);
+    // The actor type may need to be allocated with non-default alignment.
+    const uint32_t actorSize(static_cast<uint32_t>(sizeof(ActorType)));
+    const uint32_t actorAlignment(Detail::ActorAlignment<ActorType>::ALIGNMENT);
 
-    // If the actor pointer is zero the constructed ActorRef is null.
+    void *const actorMemory(allocator->AllocateAligned(actorSize, actorAlignment));
+    if (actorMemory == 0)
+    {
+        return ActorRef();
+    }
+
+    // Get the address of the Actor baseclass using some cast trickery.
+    // Note that the Actor may not always be the first baseclass, so the address may differ!
+    // The static_cast takes the offset of the Actor baseclass within ActorType into account.
+    ActorType *const pretendActor(reinterpret_cast<ActorType *>(actorMemory));
+    Actor *const actorBase(static_cast<Actor *>(pretendActor));
+
+    // Register the actor in the registry while we construct it.
+    // This stores an entry passing the actor pointers to its memory block and owning framework.
+    void *const entryMemory(allocator->Allocate(sizeof(typename Detail::ActorRegistry::Entry)));
+    if (entryMemory == 0)
+    {
+        allocator->Free(actorMemory, actorSize);
+        return ActorRef();
+    }
+
+    typename Detail::ActorRegistry::Entry *const entry = new (entryMemory) typename Detail::ActorRegistry::Entry;
+
+    entry->mActor = actorBase;
+    entry->mFramework = this;
+    entry->mMemory = actorMemory;
+
+    Detail::ActorRegistry::Register(entry);
+    
+    // Construct the actor for real in the allocated memory.
+    // The Actor picks up the registered framework pointer in its default constructor.
+    // This relies on the user not incorrectly calling the non-default Actor constructor!
+    ActorType *const actor = new (actorMemory) ActorType();
+
+    // Deregister and free the entry.
+    Detail::ActorRegistry::Deregister(entry);
+
+    allocator->Free(entryMemory, sizeof(typename Detail::ActorRegistry::Entry));
+
     return ActorRef(actor);
 }
 
@@ -642,206 +713,52 @@ inline ActorRef Framework::CreateActor()
 template <class ActorType>
 inline ActorRef Framework::CreateActor(const typename ActorType::Parameters &params)
 {
-    typedef Detail::ActorConstructor<ActorType, true> ConstructorType;
+    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
 
-    const ConstructorType constructor(params);
-    ActorType *const actor = Detail::ActorCreator::CreateActor(constructor, this);
+    // The actor type may need to be allocated with non-default alignment.
+    const uint32_t actorSize(static_cast<uint32_t>(sizeof(ActorType)));
+    const uint32_t actorAlignment(Detail::ActorAlignment<ActorType>::ALIGNMENT);
 
-    // If the actor pointer is zero the constructed ActorRef is null.
+    void *const actorMemory(allocator->AllocateAligned(actorSize, actorAlignment));
+    if (actorMemory == 0)
+    {
+        return ActorRef();
+    }
+
+    // Get the address of the Actor baseclass using some cast trickery.
+    // Note that the Actor may not always be the first baseclass, so the address may differ!
+    // The static_cast takes the offset of the Actor baseclass within ActorType into account.
+    ActorType *const pretendActor(reinterpret_cast<ActorType *>(actorMemory));
+    Actor *const actorBase(static_cast<Actor *>(pretendActor));
+
+    // Register the actor in the registry while we construct it.
+    // This stores an entry passing the actor pointers to its memory block and owning framework.
+    void *const entryMemory(allocator->Allocate(sizeof(typename Detail::ActorRegistry::Entry)));
+    if (entryMemory == 0)
+    {
+        allocator->Free(actorMemory, actorSize);
+        return ActorRef();
+    }
+
+    typename Detail::ActorRegistry::Entry *const entry = new (entryMemory) typename Detail::ActorRegistry::Entry;
+
+    entry->mActor = actorBase;
+    entry->mFramework = this;
+    entry->mMemory = actorMemory;
+
+    Detail::ActorRegistry::Register(entry);
+    
+    // Construct the actor for real in the allocated memory.
+    // The Actor picks up the registered framework pointer in its default constructor.
+    // This relies on the user not incorrectly calling the non-default Actor constructor!
+    ActorType *const actor = new (actorMemory) ActorType(params);
+
+    // Deregister and free the entry.
+    Detail::ActorRegistry::Deregister(entry);
+
+    allocator->Free(entryMemory, sizeof(typename Detail::ActorRegistry::Entry));
+
     return ActorRef(actor);
-}
-
-
-template <class ValueType>
-THERON_FORCEINLINE bool Framework::Send(const ValueType &value, const Address &from, const Address &to) const
-{
-    IAllocator *const messageAllocator(AllocatorManager::Instance().GetAllocator());
-    uint32_t *const pulseCounterAddress(GetPulseCounterAddress());
-
-    return Detail::MessageSender::Send(
-        messageAllocator,
-        pulseCounterAddress,
-        this,
-        value,
-        from,
-        to);
-}
-
-
-template <class ObjectType>
-inline bool Framework::SetFallbackHandler(
-    ObjectType *const handlerObject,
-    void (ObjectType::*handler)(const Address from))
-{
-    typedef Detail::FallbackHandler<ObjectType> HandlerType;
-
-    // Destroy any previously set handler.
-    // We don't need to lock this because only one thread can access it at a time.
-    if (mFallbackMessageHandler)
-    {
-        AllocatorManager::Instance().GetAllocator()->Free(mFallbackMessageHandler);
-        mFallbackMessageHandler = 0;
-    }
-
-    if (handlerObject && handler)
-    {
-        // Construct the object to remember the function pointer.
-        void *const memory = AllocatorManager::Instance().GetAllocator()->Allocate(sizeof(HandlerType));
-        if (memory == 0)
-        {
-            return false;
-        }
-
-        mFallbackMessageHandler = new (memory) HandlerType(handlerObject, handler);
-    }
-
-    return true;
-}
-
-
-template <class ObjectType>
-inline bool Framework::SetFallbackHandler(
-    ObjectType *const handlerObject,
-    void (ObjectType::*handler)(const void *const data, const uint32_t size, const Address from))
-{
-    typedef Detail::BlindFallbackHandler<ObjectType> HandlerType;
-
-    // Destroy any previously set handler.
-    // We don't need to lock this because only one thread can access it at a time.
-    if (mFallbackMessageHandler)
-    {
-        AllocatorManager::Instance().GetAllocator()->Free(mFallbackMessageHandler);
-        mFallbackMessageHandler = 0;
-    }
-
-    if (handlerObject && handler)
-    {
-        // Construct the object to remember the function pointer.
-        void *const memory = AllocatorManager::Instance().GetAllocator()->Allocate(sizeof(HandlerType));
-        if (memory == 0)
-        {
-            return false;
-        }
-
-        mFallbackMessageHandler = new (memory) HandlerType(handlerObject, handler);
-    }
-
-    return true;
-}
-
-
-THERON_FORCEINLINE void Framework::SetMaxThreads(const uint32_t count)
-{
-    mThreadPool.SetMaxThreads(count);
-}
-
-
-THERON_FORCEINLINE void Framework::SetMinThreads(const uint32_t count)
-{
-    mThreadPool.SetMinThreads(count);
-}
-
-
-THERON_FORCEINLINE uint32_t Framework::GetMaxThreads() const
-{
-    return mThreadPool.GetMaxThreads();
-}
-
-
-THERON_FORCEINLINE uint32_t Framework::GetMinThreads() const
-{
-    return mThreadPool.GetMinThreads();
-}
-
-
-THERON_FORCEINLINE uint32_t Framework::GetNumThreads() const
-{
-    return mThreadPool.GetNumThreads();
-}
-
-
-THERON_FORCEINLINE uint32_t Framework::GetPeakThreads() const
-{
-    return mThreadPool.GetPeakThreads();
-}
-
-
-THERON_FORCEINLINE void Framework::ResetCounters() const
-{
-    mThreadPool.ResetCounters();
-}
-
-
-THERON_FORCEINLINE uint32_t Framework::GetCounterValue(const Counter counter) const
-{
-    uint32_t count(0);
-
-    switch (counter)
-    {
-        case COUNTER_MESSAGES_PROCESSED:
-        {
-            count = mThreadPool.GetNumMessagesProcessed();
-            break;
-        }
-
-        case COUNTER_THREADS_PULSED:
-        {
-            count = mThreadPool.GetNumThreadsPulsed();
-            break;
-        }
-
-        case COUNTER_THREADS_WOKEN:
-        {
-            count = mThreadPool.GetNumThreadsWoken();
-            break;
-        }
-
-        default: break;
-    }
-
-    return count;
-}
-
-
-THERON_FORCEINLINE Detail::Mutex &Framework::GetMutex() const
-{
-    return mThreadPool.GetMutex();
-}
-
-
-THERON_FORCEINLINE bool Framework::Schedule(Detail::ActorCore *const actor) const
-{
-    return mThreadPool.Push(actor);
-}
-
-
-THERON_FORCEINLINE void Framework::TailSchedule(Detail::ActorCore *const actor) const
-{
-    mThreadPool.TailPush(actor);
-}
-
-
-THERON_FORCEINLINE bool Framework::ExecuteFallbackHandler(const Detail::IMessage *const message) const
-{
-    if (mFallbackMessageHandler)
-    {
-        mFallbackMessageHandler->Handle(message);
-        return true;
-    }
-
-    return false;
-}
-
-
-THERON_FORCEINLINE const Detail::IFallbackHandler *Framework::GetFallbackHandler() const
-{
-    return mFallbackMessageHandler;
-}
-
-
-THERON_FORCEINLINE uint32_t *Framework::GetPulseCounterAddress() const
-{
-    return mThreadPool.GetPulseCounterAddress();
 }
 
 
@@ -849,4 +766,3 @@ THERON_FORCEINLINE uint32_t *Framework::GetPulseCounterAddress() const
 
 
 #endif // THERON_FRAMEWORK_H
-

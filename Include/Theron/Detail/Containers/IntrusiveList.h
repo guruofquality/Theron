@@ -1,14 +1,11 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_DETAIL_CONTAINERS_INTRUSIVELIST_H
 #define THERON_DETAIL_CONTAINERS_INTRUSIVELIST_H
 
 
+#include <Theron/Assert.h>
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
-
-#include <Theron/Detail/Debug/Assert.h>
 
 
 namespace Theron
@@ -17,72 +14,102 @@ namespace Detail
 {
 
 
-/// Class template implementing a generic unsorted list.
-/// \note The item type is the node type and is expected to expose SetNext and GetNext methods.
+/**
+Class template implementing a generic unsorted list.
+\note The item type is the node type and is expected to derive from Node.
+*/
 template <class ItemType>
 class IntrusiveList
 {
 public:
 
-    /// Iterator type.
+    /**
+    Baseclass that adds link members to node types that derive from it.
+    */
+    class Node
+    {
+    public:
+
+        Node *mNext;                ///< Pointer to the next item in the queue.
+    };
+
+    /**
+    Iterator type.
+    */
     class Iterator
     {
     public:
 
-        /// Default constructor
-        /// Constructs an invalid iterator which must be assigned before being used.
+        /**
+        Default constructor
+        Constructs an invalid iterator which must be assigned before being used.
+        */
         THERON_FORCEINLINE Iterator() : mNode(0)
         {
         }
 
-        /// Constructor
-        /// \param node The list node that the iterator initially references.
-        THERON_FORCEINLINE explicit Iterator(ItemType *const node) : mNode(node)
+        /**
+        Constructor
+        \param node The list node that the iterator initially references.
+        */
+        THERON_FORCEINLINE explicit Iterator(Node *const node) : mNode(node)
         {
         }
 
-        /// Copy constructor.
+        /**
+        Copy constructor.
+        */
         THERON_FORCEINLINE Iterator(const Iterator &other) : mNode(other.mNode)
         {
         }
 
-        /// Assignment operator.
+        /**
+        Assignment operator.
+        */
         THERON_FORCEINLINE Iterator &operator=(const Iterator &other)
         {
             mNode = other.mNode;
             return *this;
         }
 
-        /// Dereference operator. Returns a pointer to the list item that the iterator currently references.
-        /// \return A pointer to the list item referenced by the iterator.
-        /// \note If the iterator doesn't reference a valid item then the result is zero.
+        /**
+        Dereference operator. Returns a pointer to the list item that the iterator currently references.
+        \return A pointer to the list item referenced by the iterator.
+        \note If the iterator doesn't reference a valid item then the result is zero.
+        */
         THERON_FORCEINLINE ItemType *operator*() const
         {
-            return mNode;
+            return static_cast<ItemType *>(mNode);
         }
 
-        /// Pre-increment operator.
-        /// Moves the iterator to reference the next node in the list.
-        /// If the iterator currently references the last item in the list then the iterator
-        /// beomes equal to End after incrementation.
-        /// \note If the iterator is already equal to End then the result is undefined.
+        /**
+        Pre-increment operator.
+        Moves the iterator to reference the next node in the list.
+        If the iterator currently references the last item in the list then the iterator
+        becomes equal to End after incrementation.
+        \note If the iterator is already equal to End then the result is undefined.
+        */
         THERON_FORCEINLINE void operator++()
         {
             THERON_ASSERT(mNode);
-            mNode = mNode->GetNext();
+            mNode = mNode->mNext;
         }
 
-        /// Equality operator. Compares two iterators for equality.
-        /// \param other Another iterator whose value is to be compared to this one.
-        /// \return True if the iterators reference the same item in the same list, otherwise false.
+        /**
+        Equality operator. Compares two iterators for equality.
+        \param other Another iterator whose value is to be compared to this one.
+        \return True if the iterators reference the same item in the same list, otherwise false.
+        */
         THERON_FORCEINLINE bool operator==(const Iterator &other) const
         {
             return (mNode == other.mNode);
         }
 
-        /// Inequality operator. Compares two iterators for inequality.
-        /// \param other Another iterator whose value is to be compared to this one.
-        /// \return True if the iterators reference different items or different lists, otherwise false.
+        /**
+        Inequality operator. Compares two iterators for inequality.
+        \param other Another iterator whose value is to be compared to this one.
+        \return True if the iterators reference different items or different lists, otherwise false.
+        */
         THERON_FORCEINLINE bool operator!=(const Iterator &other) const
         {
             return (mNode != other.mNode);
@@ -90,46 +117,66 @@ public:
 
     protected:
 
-        ItemType *mNode;        ///< Pointer to the list node that the iterator references.
+        Node *mNode;        ///< Pointer to the list node that the iterator references.
     };
 
-    /// Constructor
+    /**
+    Constructor
+    */
     inline IntrusiveList();
     
-    /// Destructor
+    /**
+    Destructor
+    */
     inline ~IntrusiveList();
 
-    /// Returns an iterator referencing the first item in the list.
-    /// \return An iterator referencing the first item in the list, or End if the list is empty.
+    /**
+    Returns an iterator referencing the first item in the list.
+    \return An iterator referencing the first item in the list, or End if the list is empty.
+    */
     inline Iterator Begin() const;
 
-    /// Returns an iterator referencing the end of the list.
-    /// Incrementing an iterator that references the last item in the list results in the
-    /// iterator being equal to the iterator returned by End.
-    /// \return An iterator referencing the end of the list.
+    /**
+    Returns an iterator referencing the end of the list.
+    Incrementing an iterator that references the last item in the list results in the
+    iterator being equal to the iterator returned by End.
+    \return An iterator referencing the end of the list.
+    */
     inline Iterator End() const;
 
-    /// Returns the number of items currently in the list.
-    /// \return The number of items in the list.
+    /**
+    Returns the number of items currently in the list.
+    \return The number of items in the list.
+    */
     inline uint32_t Size() const;
 
-    /// Returns true if there are no items currently in the list.
+    /**
+    Returns true if there are no items currently in the list.
+    */
     inline bool Empty() const;
 
-    /// Empties the list, removing all previously inserted items.
+    /**
+    Empties the list, removing all previously inserted items.
+    */
     inline void Clear();
 
-    /// Adds an item to the list. The new item is referenced by pointer and is not copied.
-    /// No checking for duplicates is performed.
-    /// \param item A pointer to the item to be added to the list.
+    /**
+    Adds an item to the list. The new item is referenced by pointer and is not copied.
+    No checking for duplicates is performed.
+    \param item A pointer to the item to be added to the list.
+    */
     inline void Insert(ItemType *const item);
 
-    /// Removes the given item from the list.
-    /// \param item A pointer to the item to be removed, which is expected to be present a list node.
-    /// \return True if the item was successfully removed, otherwise false.
+    /**
+    Removes the given item from the list.
+    \param item A pointer to the item to be removed, which is expected to be present a list node.
+    \return True if the item was successfully removed, otherwise false.
+    */
     inline bool Remove(ItemType *const item);
 
-    /// Returns a pointer to the first item in the list.
+    /**
+    Returns a pointer to the first item in the list.
+    */
     inline ItemType *Front() const;
 
 private:
@@ -137,7 +184,7 @@ private:
     IntrusiveList(const IntrusiveList &other);
     IntrusiveList &operator=(const IntrusiveList &other);
 
-    ItemType *mHead;                ///< Pointer to the node at the head of the list.
+    Node *mHead;                ///< Pointer to the node at the head of the list.
 };
 
 
@@ -174,12 +221,12 @@ template <class ItemType>
 THERON_FORCEINLINE uint32_t IntrusiveList<ItemType>::Size() const
 {
     uint32_t count(0);
-    ItemType *node(mHead);
+    Node *node(mHead);
 
     while (node)
     {
         ++count;
-        node = node->GetNext();
+        node = node->mNext;
     }
 
     return count;
@@ -204,7 +251,7 @@ THERON_FORCEINLINE void IntrusiveList<ItemType>::Clear()
 template <class ItemType>
 THERON_FORCEINLINE void IntrusiveList<ItemType>::Insert(ItemType *const item)
 {
-    item->SetNext(mHead);
+    item->mNext = mHead;
     mHead = item;
 }
 
@@ -213,8 +260,8 @@ template <class ItemType>
 inline bool IntrusiveList<ItemType>::Remove(ItemType *const item)
 {
     // Find the node and the one before it, if any.
-    ItemType *previous(0);
-    ItemType *node(mHead);
+    Node *previous(0);
+    Node *node(mHead);
 
     while (node)
     {
@@ -225,7 +272,7 @@ inline bool IntrusiveList<ItemType>::Remove(ItemType *const item)
         }
 
         previous = node;
-        node = node->GetNext();
+        node = node->mNext;
     }
 
     // Node in list?
@@ -234,11 +281,11 @@ inline bool IntrusiveList<ItemType>::Remove(ItemType *const item)
         // Node at head?
         if (previous == 0)
         {
-            mHead = node->GetNext();
+            mHead = node->mNext;
         }
         else
         {
-            previous->SetNext(node->GetNext());
+            previous->mNext = node->mNext;
         }
 
         return true;
@@ -251,7 +298,7 @@ inline bool IntrusiveList<ItemType>::Remove(ItemType *const item)
 template <class ItemType>
 THERON_FORCEINLINE ItemType *IntrusiveList<ItemType>::Front() const
 {
-    return mHead;
+    return static_cast<ItemType *>(mHead);
 }
 
 
@@ -260,4 +307,3 @@ THERON_FORCEINLINE ItemType *IntrusiveList<ItemType>::Front() const
 
 
 #endif // THERON_DETAIL_CONTAINERS_INTRUSIVELIST_H
-

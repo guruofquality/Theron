@@ -1,56 +1,38 @@
 
 
 #
-# This is the makefile for Theron, for use in building Theron with gcc.
-# The other way is to use the provided VisualStudio solution Theron.sln to
-# build Theron using VisualStudio under Windows. See the Getting Started
-# page on the Theron website for help with using either build system.
+# This makefile is intended as a starting point for building Theron with GCC, typically
+# under a flavor of Linux. The comments here are intentionally brief; see the Getting
+# Started section of the Theron website for more detailed information:
 # http://www.theron-library.com/index.php?t=page&p=getting%20started
 #
-# Like the solution, this makefile builds everything that there is to build in
-# the Theron distribution: the theron library itself, plus the unit test and
-# sample exectuables. It's set up to build with gcc. Note that the makefile has
-# mainly been tested with MinGW, but usually works with minimal changes under Linux.
+# Example command line:
+#  make clean all mode=release boost=on
 #
-# See below for details of command line options supported by this makefile.
-# In brief you can pass these command line options to make:
+# Syntax: make <targets> <options>
 #
-# "mode=[debug|release]". Default is debug.
-# "threads=[windows|boost|std|just]". Default is boost.
-# "metrics=[true|false]". Default is false.
+# targets:
+#   clean            deletes previous build output
+#   library          builds the Theron library
+#   tests            builds the test executable
+#   benchmarks       builds the benchmark executables
+#   tutorial         builds the sample executables
 #
-# Example command line: make mode=debug threads=boost
+# options:
+#   mode=debug       checked build (defines _DEBUG)
+#   mode=release     optimized build (defines NDEBUG)
+#   windows=[on|off] Force-enables or disables use of Windows functionality (via THERON_WINDOWS).
+#   boost=[on|off]   Force-enables or disables use of Boost (via THERON_BOOST)
+#   c++11=[on|off]   Force-enables or disables use of C++11 features (via THERON_CPP11)
+#   posix=[on|off]   Force-enables or disables use of POSIX OS features (via THERON_POSIX)
+#   numa=[on|off]    Force-enables or disables use of NUMA features (via THERON_NUMA)
+#   shared=[on|off]  generates shared code (adds -fPIC to GCC command line)
 #
-# Theron can be built using four different threading implementations:
-# - Windows threads (depends on windows.h)
-# - Boost.Thread (depends on the Boost library)
-# - standard C++ threads (requires a compliant C++11 compiler)
-# - Just Thread (third-party implementation of C++ standard threads)
-#
-# By default, the code uses the Windows threads. However this makefile overrides
-# the default, using the THERON_USE_BOOST_THREADS define to specify the use of
-# Boost.Thread instead. The rationale is that if you're using the makefile you're
-# likely to be on a non-Windows platform. If you'd rather use a different thread
-# library then you can override the default with the threads makefile option
-# on the make command line (see below).
-#
-# In order to build with Boost.Thread you'll need an installation of Boost.
-# You can download Boost for free from http://www.boost.org - the official
-# Boost website. You'll also need to build boost. The Getting Started Guide
-# at http://www.boost.org/doc/libs/release/more/getting_started/index.html
-# is quite useful. Note that you only need the thread and date_time components so
-# if it helps you can probably build just those, using the Boost build instructions.
-#
-# Lastly, I should say that I'm no expert in writing makefiles, so view this
-# one as a starting point! There are doubtless better ways, but hopefully it
-# will be helpful in getting Theron into builds of your own projects.
-# I'm kind of assuming that if you're thinking of using the makefile at all you
-# already have a pretty good idea how to use it.
-#
+
 
 #
 # Boost and just::thread paths and library names. Change these if you need to.
-# These settings are intended to match a 'typical' linux-style environment.
+# These settings are intended to match a 'typical' linux environment.
 # If your environment differs, you may need to change these settings to match.
 # Alternatively you may wish to copy your built or downloaded libraries to these paths.
 #
@@ -58,26 +40,25 @@
 BOOST_INCLUDE_PATH = /usr/include/
 BOOST_RELEASE_LIB_PATH = /usr/lib/
 BOOST_DEBUG_LIB_PATH = /usr/lib/debug/usr/lib/
-BOOST_RELEASE_LIB = boost_thread
-BOOST_DEBUG_LIB = boost_thread
+BOOST_LIB = boost_thread
 
-JUSTTHREAD_INCLUDE_PATH = /usr/include/justthread/
-JUSTTHREAD_RELEASE_LIB_PATH = /usr/lib/
-JUSTTHREAD_DEBUG_LIB_PATH = /usr/lib/
-JUSTTHREAD_RELEASE_LIB = justthread3246
-JUSTTHREAD_DEBUG_LIB = justthread3246
 
 #
 # Tools
-# Note that this assumes you have rm installed, if you're using MinGW with no rm then use del instead.
+# Note that this assumes you have 'rm' available, if you're using MinGW with no rm then use del instead.
 #
 
 CC = g++
 AR = ar
 RM = rm -f
 
-CFLAGS = -c -Wall
-LDFLAGS =
+CFLAGS = -c -Wall -pthread -D_GLIBCXX_USE_NANOSLEEP -D_GLIBCXX_USE_SCHED_YIELD
+LDFLAGS = -Wl,--allow-multiple-definition -pthread
+INCLUDE_FLAGS = -IInclude -IInclude/External
+BUILD = Build
+BIN = Bin
+LIB = Lib
+LIB_FLAGS =
 ARFLAGS = r
 
 #
@@ -87,51 +68,70 @@ ARFLAGS = r
 ifeq ($(mode),release)
 	CFLAGS += -O3 -fno-strict-aliasing -DNDEBUG
 	LDFLAGS += -O3 -DNDEBUG
-	BUILD = Build
-	BIN = Bin
-	LIB = Lib
 	LIBNAME = theron
 	BOOST_LIB_PATH = ${BOOST_RELEASE_LIB_PATH}
-	BOOST_LIB = ${BOOST_RELEASE_LIB}
-	JUSTTHREAD_LIB_PATH = ${JUSTTHREAD_RELEASE_LIB_PATH}
-	JUSTTHREAD_LIB = ${JUSTTHREAD_RELEASE_LIB}
 else
 	CFLAGS += -g -D_DEBUG
 	LDFLAGS += -g -D_DEBUG
-	BUILD = Build
-	BIN = Bin
-	LIB = Lib
 	LIBNAME = therond
 	BOOST_LIB_PATH = ${BOOST_DEBUG_LIB_PATH}
-	BOOST_LIB = ${BOOST_DEBUG_LIB}
-	JUSTTHREAD_LIB_PATH = ${JUSTTHREAD_DEBUG_LIB_PATH}
-	JUSTTHREAD_LIB = ${JUSTTHREAD_DEBUG_LIB}
 endif
 
 #
-# Use "threads=windows" to select Windows threads.
-# Use "threads=boost" to select Boost.Thread (default).
-# Use "threads=std" to select std::thread.
-# Use "threads=just" to select just::thread.
+# Use "windows=off" to disable use of Windows features, in particular Windows threads.
+# By default Windows features are auto-detected and used only if available.
 #
 
-ifeq ($(threads),windows)
-	CFLAGS += -DTHERON_USE_BOOST_THREADS=0 -DTHERON_USE_STD_THREADS=0
-	THREAD_INCLUDE_FLAGS =
-	THREAD_LIB_FLAGS =
-else ifeq ($(threads),std)
-	CFLAGS += -DTHERON_USE_BOOST_THREADS=0 -DTHERON_USE_STD_THREADS=1 -mthreads -std=c++0x
-	THREAD_INCLUDE_FLAGS =
-	THREAD_LIB_FLAGS =
-else ifeq ($(threads),just)
-	CFLAGS += -DTHERON_USE_BOOST_THREADS=0 -DTHERON_USE_STD_THREADS=1 -mthreads -std=c++0x
-	THREAD_INCLUDE_FLAGS = -I${JUSTTHREAD_INCLUDE_PATH}
-	THREAD_LIB_FLAGS = -L${JUSTTHREAD_LIB_PATH} -l${JUSTTHREAD_LIB} -lwinmm
-else
-	CFLAGS += -DTHERON_USE_BOOST_THREADS=1 -DTHERON_USE_STD_THREADS=0 -DBOOST_THREAD_BUILD_LIB=1
-	LDFLAGS += -Wl,--allow-multiple-definition -pthread
-	THREAD_INCLUDE_FLAGS = -I${BOOST_INCLUDE_PATH}
-	THREAD_LIB_FLAGS = -L${BOOST_LIB_PATH} -l${BOOST_LIB}
+ifeq ($(windows),off)
+	CFLAGS += -DTHERON_WINDOWS=0
+else ifeq ($(windows),on)
+	CFLAGS += -DTHERON_WINDOWS=1
+endif
+
+#
+# Use "posix=off" to disable use of POSIX features, in particular pthread.
+#
+
+ifeq ($(posix),off)
+	CFLAGS += -DTHERON_POSIX=0
+else ifeq ($(posix),on)
+	CFLAGS += -DTHERON_POSIX=1
+endif
+
+#
+# Use "boost=on" to enable use of Boost features, in particular boost::thread and Boost atomics.
+# By default Boost features are assumed to be unavailable.
+#
+
+ifeq ($(boost),off)
+	CFLAGS += -DTHERON_BOOST=0
+else ifeq ($(boost),on)
+	CFLAGS += -DTHERON_BOOST=1
+	INCLUDE_FLAGS += -I${BOOST_INCLUDE_PATH} -I${BOOST_INCLUDE_PATH}
+	LIB_FLAGS += -L${BOOST_LIB_PATH} -l${BOOST_LIB}
+endif
+
+#
+# Use "c++11=on" to enable use of C++11 features, in particular std::thread.
+# By default C++11 features are assumed to be unavailable.
+#
+
+ifeq ($(c++11),off)
+	CFLAGS += -DTHERON_CPP11=0
+else ifeq ($(c++11),on)
+	CFLAGS += -DTHERON_CPP11=1 -std=c++11
+endif
+
+#
+# Use "numa=on" to enable use of NUMA features.
+# By default NUMA features are assumed to be unavailable on platforms other than Windows.
+#
+
+ifeq ($(numa),off)
+	CFLAGS += -DTHERON_NUMA=0
+else ifeq ($(numa),on)
+	CFLAGS += -DTHERON_NUMA=1
+	LIB_FLAGS += -lnuma
 endif
 
 #
@@ -143,55 +143,34 @@ ifeq ($(shared),on)
 	CFLAGS += -fPIC
 endif
 
+
 #
-# End of user-defined configuration settings.
+# End of user-configurable settings.
 #
 
 
-THERON_INCLUDE_FLAGS = -IInclude
 THERON_LIB = ${LIB}/lib${LIBNAME}.a
 
-UNITTESTS = ${BIN}/UnitTests
-
-ACTORREFERENCES = ${BIN}/ActorReferences
-CREATINGANACTOR = ${BIN}/CreatingAnActor
-CUSTOMALLOCATOR = ${BIN}/CustomAllocator
-DEFAULTMESSAGEHANDLER = ${BIN}/DefaultMessageHandler
-DERIVEDMESSAGETYPES = ${BIN}/DerivedMessageTypes
-DYNAMICHANDLERREGISTRATION = ${BIN}/DynamicHandlerRegistration
-HANDLINGMESSAGES = ${BIN}/HandlingMessages
-INITIALIZINGANACTOR = ${BIN}/InitializingAnActor
-INITIALIZINGTHEFRAMEWORK = ${BIN}/InitializingTheFramework
-REGISTERINGMESSAGES = ${BIN}/RegisteringMessages
-ALIGNINGACTORS = ${BIN}/AligningActors
-ALIGNINGMESSAGES = ${BIN}/AligningMessages
-SENDINGMESSAGES = ${BIN}/SendingMessages
-TERMINATINGTHEFRAMEWORK = ${BIN}/TerminatingTheFramework
-RECEIVER = ${BIN}/Receiver
-MULTIPLEFRAMEWORKS = ${BIN}/MultipleFrameworks
-MEASURINGTHREADUTILIZATION = ${BIN}/MeasuringThreadUtilization
-SETTINGTHETHREADCOUNT = ${BIN}/SettingTheThreadCount
-NONTRIVIALMESSAGES = ${BIN}/NonTrivialMessages
-ENVELOPEMESSAGES = ${BIN}/EnvelopeMessages
-FILEREADER = ${BIN}/FileReader
-MANAGINGTHETHREADPOOL = ${BIN}/ManagingTheThreadpool
-FALLBACKHANDLER = ${BIN}/FallbackHandler
-NESTEDACTORS = ${BIN}/NestedActors
+TESTS = ${BIN}/Tests
 
 THREADRING = ${BIN}/ThreadRing
 PARALLELTHREADRING = ${BIN}/ParallelThreadRing
-COUNTINGACTOR = ${BIN}/CountingActor
-PRODUCERCONSUMER = ${BIN}/ProducerConsumer
-ACTOROVERHEAD = ${BIN}/ActorOverhead
 PINGPONG = ${BIN}/PingPong
-MIXEDSCENARIO = ${BIN}/MixedScenario
+
+ALIGNMENT = ${BIN}/Alignment
+CUSTOMALLOCATORS = ${BIN}/CustomAllocators
+FILEREADER = ${BIN}/FileReader
+HELLOWORLD = ${BIN}/HelloWorld
+MESSAGEREGISTRATION = ${BIN}/MessageRegistration
+UNHANDLEDMESSAGES = ${BIN}/UnhandledMessages
 
 
 #
 # Targets
 #
 
-all: library tests samples benchmarks
+
+all: library tests benchmarks tutorial
 
 library: summary $(THERON_LIB)
 
@@ -200,45 +179,23 @@ summary:
 	@echo     CFLAGS = ${CFLAGS}
 	@echo     LDFLAGS = ${LDFLAGS}
 	@echo     LIBNAME = ${LIBNAME}
-	@echo     THREAD_INCLUDE_FLAGS = ${THREAD_INCLUDE_FLAGS}
-	@echo     THREAD_LIB_FLAGS = ${THREAD_LIB_FLAGS}
+	@echo     INCLUDE_FLAGS = ${INCLUDE_FLAGS}
+	@echo     LIB_FLAGS = ${LIB_FLAGS}
 
-tests: library ${UNITTESTS}
-
-samples: library \
-	${CREATINGANACTOR} \
-	${DEFAULTMESSAGEHANDLER} \
-	${DYNAMICHANDLERREGISTRATION} \
-	${HANDLINGMESSAGES} \
-	${RECEIVER} \
-	${INITIALIZINGANACTOR} \
-	${INITIALIZINGTHEFRAMEWORK} \
-	${DERIVEDMESSAGETYPES} \
-	${REGISTERINGMESSAGES} \
-	${ALIGNINGACTORS} \
-	${ALIGNINGMESSAGES} \
-	${SENDINGMESSAGES} \
-	${TERMINATINGTHEFRAMEWORK} \
-	${ACTORREFERENCES} \
-	${CUSTOMALLOCATOR} \
-	${MULTIPLEFRAMEWORKS} \
-	${MEASURINGTHREADUTILIZATION} \
-	${SETTINGTHETHREADCOUNT} \
-	${NONTRIVIALMESSAGES} \
-	${ENVELOPEMESSAGES} \
-	${FILEREADER} \
-	${MANAGINGTHETHREADPOOL} \
-	${FALLBACKHANDLER} \
-	${NESTEDACTORS}
+tests: library ${TESTS}
 
 benchmarks: library \
 	${THREADRING} \
 	${PARALLELTHREADRING} \
-	${COUNTINGACTOR} \
-	${PRODUCERCONSUMER} \
-	${ACTOROVERHEAD} \
-	${PINGPONG} \
-	${MIXEDSCENARIO}
+	${PINGPONG}
+
+tutorial: library \
+	${ALIGNMENT} \
+	${CUSTOMALLOCATORS} \
+	${FILEREADER} \
+	${HELLOWORLD} \
+	${MESSAGEREGISTRATION} \
+	${UNHANDLEDMESSAGES}
 
 clean:
 	${RM} ${BUILD}/*.o
@@ -252,163 +209,140 @@ clean:
 
 
 #
-# Theron library
+# Library
 #
 
 
 THERON_HEADERS = \
+	Include/Theron/Detail/Alignment/ActorAlignment.h \
+	Include/Theron/Detail/Alignment/MessageAlignment.h \
+	Include/Theron/Detail/Allocators/CachingAllocator.h \
+	Include/Theron/Detail/Allocators/Pool.h \
+	Include/Theron/Detail/Allocators/PoolAllocator.h \
+	Include/Theron/Detail/Allocators/TrivialAllocator.h \
+	Include/Theron/Detail/Allocators/ThreadsafeAllocator.h \
+	Include/Theron/Detail/Containers/IntrusiveList.h \
+	Include/Theron/Detail/Containers/IntrusiveQueue.h \
+	Include/Theron/Detail/Containers/List.h \
+	Include/Theron/Detail/Directory/Entry.h \
+	Include/Theron/Detail/Directory/Directory.h \
+	Include/Theron/Detail/Directory/StaticDirectory.h \
+	Include/Theron/Detail/Handlers/BlindDefaultHandler.h \
+	Include/Theron/Detail/Handlers/BlindFallbackHandler.h \
+	Include/Theron/Detail/Handlers/DefaultFallbackHandler.h \
+	Include/Theron/Detail/Handlers/DefaultHandler.h \
+	Include/Theron/Detail/Handlers/DefaultHandlerCollection.h \
+	Include/Theron/Detail/Handlers/FallbackHandler.h \
+	Include/Theron/Detail/Handlers/FallbackHandlerCollection.h \
+	Include/Theron/Detail/Handlers/HandlerCollection.h \
+	Include/Theron/Detail/Handlers/IDefaultHandler.h \
+	Include/Theron/Detail/Handlers/IFallbackHandler.h \
+	Include/Theron/Detail/Handlers/IMessageHandler.h \
+	Include/Theron/Detail/Handlers/IReceiverHandler.h \
+	Include/Theron/Detail/Handlers/MessageHandler.h \
+	Include/Theron/Detail/Handlers/MessageHandlerCast.h \
+	Include/Theron/Detail/Handlers/ReceiverHandler.h \
+    Include/Theron/Detail/Handlers/ReceiverHandlerCast.h \
+	Include/Theron/Detail/Legacy/ActorRegistry.h \
+	Include/Theron/Detail/Mailboxes/Mailbox.h \
+	Include/Theron/Detail/Mailboxes/Queue.h \
+	Include/Theron/Detail/Messages/IMessage.h \
+	Include/Theron/Detail/Messages/Message.h \
+	Include/Theron/Detail/Messages/MessageCast.h \
+	Include/Theron/Detail/Messages/MessageCreator.h \
+	Include/Theron/Detail/Messages/MessageSender.h \
+	Include/Theron/Detail/Messages/MessageTraits.h \
+	Include/Theron/Detail/Threading/Atomic.h \
+	Include/Theron/Detail/Threading/SpinLock.h \
+	Include/Theron/Detail/Threading/Thread.h \
+	Include/Theron/Detail/Threading/Utils.h \
+	Include/Theron/Detail/MailboxProcessor/ProcessorContext.h \
+	Include/Theron/Detail/MailboxProcessor/ThreadCollection.h \
+	Include/Theron/Detail/MailboxProcessor/ThreadPool.h \
+	Include/Theron/Detail/MailboxProcessor/WorkerThreadStore.h \
+	Include/Theron/Detail/MailboxProcessor/WorkItem.h \
 	Include/Theron/Actor.h \
 	Include/Theron/ActorRef.h \
 	Include/Theron/Address.h \
 	Include/Theron/Align.h \
 	Include/Theron/AllocatorManager.h \
+	Include/Theron/Assert.h \
 	Include/Theron/BasicTypes.h \
+	Include/Theron/Catcher.h \
 	Include/Theron/DefaultAllocator.h \
 	Include/Theron/Defines.h \
 	Include/Theron/Framework.h \
 	Include/Theron/IAllocator.h \
 	Include/Theron/Receiver.h \
 	Include/Theron/Register.h \
-	Include/Theron/Detail/Allocators/CachingAllocator.h \
-	Include/Theron/Detail/Allocators/TrivialAllocator.h \
-	Include/Theron/Detail/Allocators/Pool.h \
-	Include/Theron/Detail/Containers/IntrusiveList.h \
-	Include/Theron/Detail/Containers/IntrusiveQueue.h \
-	Include/Theron/Detail/Containers/List.h \
-	Include/Theron/Detail/Handlers/BlindDefaultHandler.h \
-	Include/Theron/Detail/Handlers/DefaultHandler.h \
-	Include/Theron/Detail/Handlers/IDefaultHandler.h \
-	Include/Theron/Detail/Handlers/BlindFallbackHandler.h \
-	Include/Theron/Detail/Handlers/DefaultFallbackHandler.h \
-	Include/Theron/Detail/Handlers/FallbackHandler.h \
-	Include/Theron/Detail/Handlers/IFallbackHandler.h \
-	Include/Theron/Detail/Handlers/MessageHandler.h \
-	Include/Theron/Detail/Handlers/IMessageHandler.h \
-	Include/Theron/Detail/Handlers/MessageHandlerCast.h \
-	Include/Theron/Detail/Handlers/ReceiverHandler.h \
-	Include/Theron/Detail/Handlers/IReceiverHandler.h \
-	Include/Theron/Detail/Handlers/ReceiverHandlerCast.h \
-	Include/Theron/Detail/PagedPool/FreeList.h \
-	Include/Theron/Detail/PagedPool/Page.h \
-	Include/Theron/Detail/PagedPool/PagedPool.h \
-	Include/Theron/Detail/Directory/ActorDirectory.h \
-	Include/Theron/Detail/Directory/Directory.h \
-	Include/Theron/Detail/Directory/ReceiverDirectory.h \
-	Include/Theron/Detail/Messages/IMessage.h \
-	Include/Theron/Detail/Messages/Message.h \
-	Include/Theron/Detail/Messages/MessageAlignment.h \
-	Include/Theron/Detail/Messages/MessageCast.h \
-	Include/Theron/Detail/Messages/MessageCreator.h \
-	Include/Theron/Detail/Messages/MessageSender.h \
-	Include/Theron/Detail/Messages/MessageTraits.h \
-	Include/Theron/Detail/Debug/Assert.h \
-	Include/Theron/Detail/Core/ActorAlignment.h \
-	Include/Theron/Detail/Core/ActorCore.h \
-	Include/Theron/Detail/Core/ActorDestroyer.h \
-	Include/Theron/Detail/Core/ActorCreator.h \
-	Include/Theron/Detail/Core/ActorConstructor.h \
-	Include/Theron/Detail/ThreadPool/ActorProcessor.h \
-	Include/Theron/Detail/ThreadPool/ThreadCollection.h \
-	Include/Theron/Detail/ThreadPool/ThreadPool.h \
-	Include/Theron/Detail/ThreadPool/WorkerContext.h \
-	Include/Theron/Detail/Threading/Lock.h \
-	Include/Theron/Detail/Threading/Monitor.h \
-	Include/Theron/Detail/Threading/Mutex.h \
-	Include/Theron/Detail/Threading/Thread.h \
-	Include/Theron/Detail/Threading/Boost/Lock.h \
-	Include/Theron/Detail/Threading/Boost/Monitor.h \
-	Include/Theron/Detail/Threading/Boost/Mutex.h \
-	Include/Theron/Detail/Threading/Boost/Thread.h \
-	Include/Theron/Detail/Threading/Std/Lock.h \
-	Include/Theron/Detail/Threading/Std/Monitor.h \
-	Include/Theron/Detail/Threading/Std/Mutex.h \
-	Include/Theron/Detail/Threading/Std/Thread.h \
-	Include/Theron/Detail/Threading/Win32/Lock.h \
-	Include/Theron/Detail/Threading/Win32/Monitor.h \
-	Include/Theron/Detail/Threading/Win32/Mutex.h \
-	Include/Theron/Detail/Threading/Win32/Thread.h
+	Include/Theron/Theron.h
 
 THERON_SOURCES = \
-	Source/Actor.cpp \
-	Source/ActorCore.cpp \
-	Source/ActorCreator.cpp \
-	Source/ActorDestroyer.cpp \
-	Source/ActorDirectory.cpp \
-	Source/ActorRef.cpp \
-	Source/Address.cpp \
-	Source/AllocatorManager.cpp \
-	Source/Directory.cpp \
-	Source/Framework.cpp \
-	Source/MessageSender.cpp \
-	Source/Receiver.cpp \
-	Source/ReceiverDirectory.cpp \
-	Source/ThreadCollection.cpp \
-	Source/ThreadPool.cpp
+	Theron/Actor.cpp \
+	Theron/ActorRef.cpp \
+	Theron/ActorRegistry.cpp \
+	Theron/AllocatorManager.cpp \
+	Theron/DefaultHandlerCollection.cpp \
+	Theron/FallbackHandlerCollection.cpp \
+	Theron/Framework.cpp \
+	Theron/HandlerCollection.cpp \
+	Theron/MessageSender.cpp \
+	Theron/Receiver.cpp \
+	Theron/ThreadCollection.cpp \
+	Theron/WorkItem.cpp
 
 THERON_OBJECTS = \
 	${BUILD}/Actor.o \
-	${BUILD}/ActorCore.o \
-	${BUILD}/ActorCreator.o \
-	${BUILD}/ActorDestroyer.o \
-	${BUILD}/ActorDirectory.o \
 	${BUILD}/ActorRef.o \
-	${BUILD}/Address.o \
+	${BUILD}/ActorRegistry.o \
 	${BUILD}/AllocatorManager.o \
-	${BUILD}/Directory.o \
+	${BUILD}/DefaultHandlerCollection.o \
+	${BUILD}/FallbackHandlerCollection.o \
 	${BUILD}/Framework.o \
+	${BUILD}/HandlerCollection.o \
 	${BUILD}/MessageSender.o \
 	${BUILD}/Receiver.o \
-	${BUILD}/ReceiverDirectory.o \
 	${BUILD}/ThreadCollection.o \
-	${BUILD}/ThreadPool.o
+	${BUILD}/WorkItem.o
 
 $(THERON_LIB): $(THERON_OBJECTS)
 	${AR} ${ARFLAGS} ${THERON_LIB} $(THERON_OBJECTS)
 
-${BUILD}/Actor.o: Source/Actor.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Source/Actor.cpp -o ${BUILD}/Actor.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
+${BUILD}/Actor.o: Theron/Actor.cpp ${THERON_HEADERS}
+	$(CC) $(CFLAGS) Theron/Actor.cpp -o ${BUILD}/Actor.o ${INCLUDE_FLAGS}
 
-${BUILD}/ActorCore.o: Source/ActorCore.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Source/ActorCore.cpp -o ${BUILD}/ActorCore.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
+${BUILD}/ActorRef.o: Theron/ActorRef.cpp ${THERON_HEADERS}
+	$(CC) $(CFLAGS) Theron/ActorRef.cpp -o ${BUILD}/ActorRef.o ${INCLUDE_FLAGS}
 
-${BUILD}/Address.o: Source/Address.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Source/Address.cpp -o ${BUILD}/Address.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
+${BUILD}/ActorRegistry.o: Theron/ActorRegistry.cpp ${THERON_HEADERS}
+	$(CC) $(CFLAGS) Theron/ActorRegistry.cpp -o ${BUILD}/ActorRegistry.o ${INCLUDE_FLAGS}
 
-${BUILD}/AllocatorManager.o: Source/AllocatorManager.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Source/AllocatorManager.cpp -o ${BUILD}/AllocatorManager.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
+${BUILD}/AllocatorManager.o: Theron/AllocatorManager.cpp ${THERON_HEADERS}
+	$(CC) $(CFLAGS) Theron/AllocatorManager.cpp -o ${BUILD}/AllocatorManager.o ${INCLUDE_FLAGS}
 
-${BUILD}/ActorDirectory.o: Source/ActorDirectory.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Source/ActorDirectory.cpp -o ${BUILD}/ActorDirectory.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
+${BUILD}/DefaultHandlerCollection.o: Theron/DefaultHandlerCollection.cpp ${THERON_HEADERS}
+	$(CC) $(CFLAGS) Theron/DefaultHandlerCollection.cpp -o ${BUILD}/DefaultHandlerCollection.o ${INCLUDE_FLAGS}
 
-${BUILD}/ActorRef.o: Source/ActorRef.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Source/ActorRef.cpp -o ${BUILD}/ActorRef.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
+${BUILD}/FallbackHandlerCollection.o: Theron/FallbackHandlerCollection.cpp ${THERON_HEADERS}
+	$(CC) $(CFLAGS) Theron/FallbackHandlerCollection.cpp -o ${BUILD}/FallbackHandlerCollection.o ${INCLUDE_FLAGS}
 
-${BUILD}/Directory.o: Source/Directory.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Source/Directory.cpp -o ${BUILD}/Directory.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
+${BUILD}/Framework.o: Theron/Framework.cpp ${THERON_HEADERS}
+	$(CC) $(CFLAGS) Theron/Framework.cpp -o ${BUILD}/Framework.o ${INCLUDE_FLAGS}
 
-${BUILD}/Framework.o: Source/Framework.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Source/Framework.cpp -o ${BUILD}/Framework.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
+${BUILD}/HandlerCollection.o: Theron/HandlerCollection.cpp ${THERON_HEADERS}
+	$(CC) $(CFLAGS) Theron/HandlerCollection.cpp -o ${BUILD}/HandlerCollection.o ${INCLUDE_FLAGS}
 
-${BUILD}/ActorCreator.o: Source/ActorCreator.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Source/ActorCreator.cpp -o ${BUILD}/ActorCreator.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
+${BUILD}/MessageSender.o: Theron/MessageSender.cpp ${THERON_HEADERS}
+	$(CC) $(CFLAGS) Theron/MessageSender.cpp -o ${BUILD}/MessageSender.o ${INCLUDE_FLAGS}
 
-${BUILD}/ActorDestroyer.o: Source/ActorDestroyer.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Source/ActorDestroyer.cpp -o ${BUILD}/ActorDestroyer.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
+${BUILD}/Receiver.o: Theron/Receiver.cpp ${THERON_HEADERS}
+	$(CC) $(CFLAGS) Theron/Receiver.cpp -o ${BUILD}/Receiver.o ${INCLUDE_FLAGS}
 
-${BUILD}/MessageSender.o: Source/MessageSender.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Source/MessageSender.cpp -o ${BUILD}/MessageSender.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
+${BUILD}/ThreadCollection.o: Theron/ThreadCollection.cpp ${THERON_HEADERS}
+	$(CC) $(CFLAGS) Theron/ThreadCollection.cpp -o ${BUILD}/ThreadCollection.o ${INCLUDE_FLAGS}
 
-${BUILD}/Receiver.o: Source/Receiver.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Source/Receiver.cpp -o ${BUILD}/Receiver.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
-
-${BUILD}/ReceiverDirectory.o: Source/ReceiverDirectory.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Source/ReceiverDirectory.cpp -o ${BUILD}/ReceiverDirectory.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
-
-${BUILD}/ThreadCollection.o: Source/ThreadCollection.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Source/ThreadCollection.cpp -o ${BUILD}/ThreadCollection.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
-
-${BUILD}/ThreadPool.o: Source/ThreadPool.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Source/ThreadPool.cpp -o ${BUILD}/ThreadPool.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
+${BUILD}/WorkItem.o: Theron/WorkItem.cpp ${THERON_HEADERS}
+	$(CC) $(CFLAGS) Theron/WorkItem.cpp -o ${BUILD}/WorkItem.o ${INCLUDE_FLAGS}
 
 
 #
@@ -416,317 +350,26 @@ ${BUILD}/ThreadPool.o: Source/ThreadPool.cpp ${THERON_HEADERS}
 #
 
 
-UNITTESTS_INCLUDE_FLAGS = -IUnitTests/
+TESTS_INCLUDE_FLAGS = -ITests/
 
-UNITTESTS_HEADERS = \
-	UnitTests/TestFramework/ITestSuite.h \
-	UnitTests/TestFramework/TestException.h \
-	UnitTests/TestFramework/TestManager.h \
-	UnitTests/TestFramework/TestSuite.h \
-	UnitTests/TestSuites/ActorRefTestSuite.h \
-	UnitTests/TestSuites/ActorTestSuite.h \
-	UnitTests/TestSuites/DefaultAllocatorTestSuite.h \
-	UnitTests/TestSuites/FrameworkTestSuite.h \
-	UnitTests/TestSuites/CachingAllocatorTestSuite.h \
-	UnitTests/TestSuites/ListTestSuite.h \
-	UnitTests/TestSuites/MessageTestSuite.h \
-	UnitTests/TestSuites/PoolTestSuite.h \
-	UnitTests/TestSuites/ReceiverTestSuite.h \
-	UnitTests/TestSuites/FeatureTestSuite.h \
-	UnitTests/TestSuites/ThreadCollectionTestSuite.h
+TESTS_HEADERS = \
+	Tests/TestFramework/ITestSuite.h \
+	Tests/TestFramework/TestException.h \
+	Tests/TestFramework/TestManager.h \
+	Tests/TestFramework/TestSuite.h \
+	Tests/TestSuites/FeatureTestSuite.h
 
-UNITTESTS_SOURCES = \
-	UnitTests/Main.cpp \
-	UnitTests/Tests.cpp
+TESTS_SOURCES = \
+	Tests/Tests.cpp
 	
-UNITTESTS_OBJECTS = \
-	${BUILD}/UnitTests_Main.o \
-	${BUILD}/UnitTests_Tests.o
+TESTS_OBJECTS = \
+	${BUILD}/Tests.o
 
-${UNITTESTS}: $(THERON_LIB) ${UNITTESTS_OBJECTS}
-	$(CC) $(LDFLAGS) ${UNITTESTS_OBJECTS} $(THERON_LIB) -o ${UNITTESTS} ${THREAD_LIB_FLAGS}
+${TESTS}: $(THERON_LIB) ${TESTS_OBJECTS}
+	$(CC) $(LDFLAGS) ${TESTS_OBJECTS} $(THERON_LIB) -o ${TESTS} ${LIB_FLAGS}
 
-${BUILD}/UnitTests_Main.o: UnitTests/Main.cpp ${THERON_HEADERS} ${UNITTESTS_HEADERS}
-	$(CC) $(CFLAGS) UnitTests/Main.cpp -o ${BUILD}/UnitTests_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${UNITTESTS_INCLUDE_FLAGS}
-
-${BUILD}/UnitTests_Tests.o: UnitTests/Tests.cpp ${THERON_HEADERS} ${UNITTESTS_HEADERS}
-	$(CC) $(CFLAGS) UnitTests/Tests.cpp -o ${BUILD}/UnitTests_Tests.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${UNITTESTS_INCLUDE_FLAGS}
-
-
-
-#
-# Samples
-#
-
-
-SAMPLES_INCLUDE_FLAGS = -ISamples
-
-
-# CreatingAnActor sample
-CREATINGANACTOR_SOURCES = Samples/CreatingAnActor/Main.cpp
-CREATINGANACTOR_OBJECTS = ${BUILD}/CreatingAnActor_Main.o
-
-${CREATINGANACTOR}: $(THERON_LIB) ${CREATINGANACTOR_OBJECTS}
-	$(CC) $(LDFLAGS) ${CREATINGANACTOR_OBJECTS} $(THERON_LIB) -o ${CREATINGANACTOR} ${THREAD_LIB_FLAGS}
-
-${BUILD}/CreatingAnActor_Main.o: Samples/CreatingAnActor/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/CreatingAnActor/Main.cpp -o ${BUILD}/CreatingAnActor_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-	
-
-# DefaultMessageHandler sample
-DEFAULTMESSAGEHANDLER_SOURCES = Samples/DefaultMessageHandler/Main.cpp
-DEFAULTMESSAGEHANDLER_OBJECTS = ${BUILD}/DefaultMessageHandler_Main.o
-
-${DEFAULTMESSAGEHANDLER}: $(THERON_LIB) ${DEFAULTMESSAGEHANDLER_OBJECTS}
-	$(CC) $(LDFLAGS) ${DEFAULTMESSAGEHANDLER_OBJECTS} $(THERON_LIB) -o ${DEFAULTMESSAGEHANDLER} ${THREAD_LIB_FLAGS}
-
-${BUILD}/DefaultMessageHandler_Main.o: Samples/DefaultMessageHandler/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/DefaultMessageHandler/Main.cpp -o ${BUILD}/DefaultMessageHandler_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-	
-
-# DynamicHandlerRegistration sample
-DYNAMICHANDLERREGISTRATION_SOURCES = Samples/DynamicHandlerRegistration/Main.cpp
-DYNAMICHANDLERREGISTRATION_OBJECTS = ${BUILD}/DynamicHandlerRegistration_Main.o
-
-${DYNAMICHANDLERREGISTRATION}: $(THERON_LIB) ${DYNAMICHANDLERREGISTRATION_OBJECTS}
-	$(CC) $(LDFLAGS) ${DYNAMICHANDLERREGISTRATION_OBJECTS} $(THERON_LIB) -o ${DYNAMICHANDLERREGISTRATION} ${THREAD_LIB_FLAGS}
-
-${BUILD}/DynamicHandlerRegistration_Main.o: Samples/DynamicHandlerRegistration/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/DynamicHandlerRegistration/Main.cpp -o ${BUILD}/DynamicHandlerRegistration_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-
-
-# HandlingMessages sample
-HANDLINGMESSAGES_SOURCES = Samples/HandlingMessages/Main.cpp
-HANDLINGMESSAGES_OBJECTS = ${BUILD}/HandlingMessages_Main.o
-
-${HANDLINGMESSAGES}: $(THERON_LIB) ${HANDLINGMESSAGES_OBJECTS}
-	$(CC) $(LDFLAGS) ${HANDLINGMESSAGES_OBJECTS} $(THERON_LIB) -o ${HANDLINGMESSAGES} ${THREAD_LIB_FLAGS}
-
-${BUILD}/HandlingMessages_Main.o: Samples/HandlingMessages/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/HandlingMessages/Main.cpp -o ${BUILD}/HandlingMessages_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-	
-
-# Receiver sample
-RECEIVER_SOURCES = Samples/Receiver/Main.cpp
-RECEIVER_OBJECTS = ${BUILD}/Receiver_Main.o
-
-${RECEIVER}: $(THERON_LIB) ${RECEIVER_OBJECTS}
-	$(CC) $(LDFLAGS) ${RECEIVER_OBJECTS} $(THERON_LIB) -o ${RECEIVER} ${THREAD_LIB_FLAGS}
-
-${BUILD}/Receiver_Main.o: Samples/Receiver/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/Receiver/Main.cpp -o ${BUILD}/Receiver_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-	
-
-# InitializingAnActor sample
-INITIALIZINGANACTOR_SOURCES = Samples/InitializingAnActor/Main.cpp
-INITIALIZINGANACTOR_OBJECTS = ${BUILD}/InitializingAnActor_Main.o
-
-${INITIALIZINGANACTOR}: $(THERON_LIB) ${INITIALIZINGANACTOR_OBJECTS}
-	$(CC) $(LDFLAGS) ${INITIALIZINGANACTOR_OBJECTS} $(THERON_LIB) -o ${INITIALIZINGANACTOR} ${THREAD_LIB_FLAGS}
-
-${BUILD}/InitializingAnActor_Main.o: Samples/InitializingAnActor/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/InitializingAnActor/Main.cpp -o ${BUILD}/InitializingAnActor_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-	
-
-# InitializingTheFramework sample
-INITIALIZINGTHEFRAMEWORK_SOURCES = Samples/InitializingTheFramework/Main.cpp
-INITIALIZINGTHEFRAMEWORK_OBJECTS = ${BUILD}/InitializingTheFramework_Main.o
-
-${INITIALIZINGTHEFRAMEWORK}: $(THERON_LIB) ${INITIALIZINGTHEFRAMEWORK_OBJECTS}
-	$(CC) $(LDFLAGS) ${INITIALIZINGTHEFRAMEWORK_OBJECTS} $(THERON_LIB) -o ${INITIALIZINGTHEFRAMEWORK} ${THREAD_LIB_FLAGS}
-
-${BUILD}/InitializingTheFramework_Main.o: Samples/InitializingTheFramework/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/InitializingTheFramework/Main.cpp -o ${BUILD}/InitializingTheFramework_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-	
-
-# DerivedMessageTypes sample
-DERIVEDMESSAGETYPES_SOURCES = Samples/DerivedMessageTypes/Main.cpp
-DERIVEDMESSAGETYPES_OBJECTS = ${BUILD}/DerivedMessageTypes_Main.o
-
-${DERIVEDMESSAGETYPES}: $(THERON_LIB) ${DERIVEDMESSAGETYPES_OBJECTS}
-	$(CC) $(LDFLAGS) ${DERIVEDMESSAGETYPES_OBJECTS} $(THERON_LIB) -o ${DERIVEDMESSAGETYPES} ${THREAD_LIB_FLAGS}
-
-${BUILD}/DerivedMessageTypes_Main.o: Samples/DerivedMessageTypes/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/DerivedMessageTypes/Main.cpp -o ${BUILD}/DerivedMessageTypes_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-	
-
-# RegisteringMessages sample
-REGISTERINGMESSAGES_SOURCES = Samples/RegisteringMessages/Main.cpp
-REGISTERINGMESSAGES_OBJECTS = ${BUILD}/RegisteringMessages_Main.o
-
-${REGISTERINGMESSAGES}: $(THERON_LIB) ${REGISTERINGMESSAGES_OBJECTS}
-	$(CC) $(LDFLAGS) ${REGISTERINGMESSAGES_OBJECTS} $(THERON_LIB) -o ${REGISTERINGMESSAGES} ${THREAD_LIB_FLAGS} -fno-rtti
-
-${BUILD}/RegisteringMessages_Main.o: Samples/RegisteringMessages/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/RegisteringMessages/Main.cpp -o ${BUILD}/RegisteringMessages_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-
-
-# AligningActors sample
-ALIGNINGACTORS_HEADERS = Samples/Common/LinearAllocator.h
-ALIGNINGACTORS_SOURCES = Samples/AligningActors/Main.cpp
-ALIGNINGACTORS_OBJECTS = ${BUILD}/AligningActors_Main.o
-
-${ALIGNINGACTORS}: $(THERON_LIB) ${ALIGNINGACTORS_OBJECTS}
-	$(CC) $(LDFLAGS) ${ALIGNINGACTORS_OBJECTS} $(THERON_LIB) -o ${ALIGNINGACTORS} ${THREAD_LIB_FLAGS}
-
-${BUILD}/AligningActors_Main.o: Samples/AligningActors/Main.cpp ${THERON_HEADERS} ${ALIGNINGACTORS_HEADERS}
-	$(CC) $(CFLAGS) Samples/AligningActors/Main.cpp -o ${BUILD}/AligningActors_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-
-
-# AligningMessages sample
-ALIGNINGMESSAGES_HEADERS = Samples/Common/LinearAllocator.h
-ALIGNINGMESSAGES_SOURCES = Samples/AligningMessages/Main.cpp
-ALIGNINGMESSAGES_OBJECTS = ${BUILD}/AligningMessages_Main.o
-
-${ALIGNINGMESSAGES}: $(THERON_LIB) ${ALIGNINGMESSAGES_OBJECTS}
-	$(CC) $(LDFLAGS) ${ALIGNINGMESSAGES_OBJECTS} $(THERON_LIB) -o ${ALIGNINGMESSAGES} ${THREAD_LIB_FLAGS}
-
-${BUILD}/AligningMessages_Main.o: Samples/AligningMessages/Main.cpp ${THERON_HEADERS} ${ALIGNINGMESSAGES_HEADERS}
-	$(CC) $(CFLAGS) Samples/AligningMessages/Main.cpp -o ${BUILD}/AligningMessages_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-
-
-# SendingMessages sample
-SENDINGMESSAGES_SOURCES = Samples/SendingMessages/Main.cpp
-SENDINGMESSAGES_OBJECTS = ${BUILD}/SendingMessages_Main.o
-
-${SENDINGMESSAGES}: $(THERON_LIB) ${SENDINGMESSAGES_OBJECTS}
-	$(CC) $(LDFLAGS) ${SENDINGMESSAGES_OBJECTS} $(THERON_LIB) -o ${SENDINGMESSAGES} ${THREAD_LIB_FLAGS}
-
-${BUILD}/SendingMessages_Main.o: Samples/SendingMessages/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/SendingMessages/Main.cpp -o ${BUILD}/SendingMessages_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-
-
-# TerminatingTheFramework sample
-TERMINATINGTHEFRAMEWORK_SOURCES = Samples/TerminatingTheFramework/Main.cpp
-TERMINATINGTHEFRAMEWORK_OBJECTS = ${BUILD}/TerminatingTheFramework_Main.o
-
-${TERMINATINGTHEFRAMEWORK}: $(THERON_LIB) ${TERMINATINGTHEFRAMEWORK_OBJECTS}
-	$(CC) $(LDFLAGS) ${TERMINATINGTHEFRAMEWORK_OBJECTS} $(THERON_LIB) -o ${TERMINATINGTHEFRAMEWORK} ${THREAD_LIB_FLAGS}
-
-${BUILD}/TerminatingTheFramework_Main.o: Samples/TerminatingTheFramework/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/TerminatingTheFramework/Main.cpp -o ${BUILD}/TerminatingTheFramework_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-	
-
-# ActorReferences sample
-ACTORREFERENCES_SOURCES = Samples/ActorReferences/Main.cpp
-ACTORREFERENCES_OBJECTS = ${BUILD}/ActorReferences_Main.o
-
-${ACTORREFERENCES}: $(THERON_LIB) ${ACTORREFERENCES_OBJECTS}
-	$(CC) $(LDFLAGS) ${ACTORREFERENCES_OBJECTS} $(THERON_LIB) -o ${ACTORREFERENCES} ${THREAD_LIB_FLAGS}
-
-${BUILD}/ActorReferences_Main.o: Samples/ActorReferences/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/ActorReferences/Main.cpp -o ${BUILD}/ActorReferences_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-	
-
-# CustomAllocator sample
-CUSTOMALLOCATOR_HEADERS = Samples/Common/LinearAllocator.h
-CUSTOMALLOCATOR_SOURCES = Samples/CustomAllocator/Main.cpp
-CUSTOMALLOCATOR_OBJECTS = ${BUILD}/CustomAllocator_Main.o
-
-${CUSTOMALLOCATOR}: $(THERON_LIB) ${CUSTOMALLOCATOR_OBJECTS}
-	$(CC) $(LDFLAGS) ${CUSTOMALLOCATOR_OBJECTS} $(THERON_LIB) -o ${CUSTOMALLOCATOR} ${THREAD_LIB_FLAGS}
-
-${BUILD}/CustomAllocator_Main.o: Samples/CustomAllocator/Main.cpp ${THERON_HEADERS} ${CUSTOMALLOCATOR_HEADERS}
-	$(CC) $(CFLAGS) Samples/CustomAllocator/Main.cpp -o ${BUILD}/CustomAllocator_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-
-
-# MultipleFrameworks sample
-MULTIPLEFRAMEWORKS_SOURCES = Samples/MultipleFrameworks/Main.cpp
-MULTIPLEFRAMEWORKS_OBJECTS = ${BUILD}/MultipleFrameworks_Main.o
-
-${MULTIPLEFRAMEWORKS}: $(THERON_LIB) ${MULTIPLEFRAMEWORKS_OBJECTS}
-	$(CC) $(LDFLAGS) ${MULTIPLEFRAMEWORKS_OBJECTS} $(THERON_LIB) -o ${MULTIPLEFRAMEWORKS} ${THREAD_LIB_FLAGS}
-
-${BUILD}/MultipleFrameworks_Main.o: Samples/MultipleFrameworks/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/MultipleFrameworks/Main.cpp -o ${BUILD}/MultipleFrameworks_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-
-
-# MeasuringThreadUtilization sample
-MEASURINGTHREADUTILIZATION_SOURCES = Samples/MeasuringThreadUtilization/Main.cpp
-MEASURINGTHREADUTILIZATION_OBJECTS = ${BUILD}/MeasuringThreadUtilization_Main.o
-
-${MEASURINGTHREADUTILIZATION}: $(THERON_LIB) ${MEASURINGTHREADUTILIZATION_OBJECTS}
-	$(CC) $(LDFLAGS) ${MEASURINGTHREADUTILIZATION_OBJECTS} $(THERON_LIB) -o ${MEASURINGTHREADUTILIZATION} ${THREAD_LIB_FLAGS}
-
-${BUILD}/MeasuringThreadUtilization_Main.o: Samples/MeasuringThreadUtilization/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/MeasuringThreadUtilization/Main.cpp -o ${BUILD}/MeasuringThreadUtilization_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-
-
-# SettingTheThreadCount sample
-SETTINGTHETHREADCOUNT_SOURCES = Samples/SettingTheThreadCount/Main.cpp
-SETTINGTHETHREADCOUNT_OBJECTS = ${BUILD}/SettingTheThreadCount_Main.o
-
-${SETTINGTHETHREADCOUNT}: $(THERON_LIB) ${SETTINGTHETHREADCOUNT_OBJECTS}
-	$(CC) $(LDFLAGS) ${SETTINGTHETHREADCOUNT_OBJECTS} $(THERON_LIB) -o ${SETTINGTHETHREADCOUNT} ${THREAD_LIB_FLAGS}
-
-${BUILD}/SettingTheThreadCount_Main.o: Samples/SettingTheThreadCount/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/SettingTheThreadCount/Main.cpp -o ${BUILD}/SettingTheThreadCount_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-
-
-# NonTrivialMessages sample
-NONTRIVIALMESSAGES_SOURCES = Samples/NonTrivialMessages/Main.cpp
-NONTRIVIALMESSAGES_OBJECTS = ${BUILD}/NonTrivialMessages_Main.o
-
-${NONTRIVIALMESSAGES}: $(THERON_LIB) ${NONTRIVIALMESSAGES_OBJECTS}
-	$(CC) $(LDFLAGS) ${NONTRIVIALMESSAGES_OBJECTS} $(THERON_LIB) -o ${NONTRIVIALMESSAGES} ${THREAD_LIB_FLAGS}
-
-${BUILD}/NonTrivialMessages_Main.o: Samples/NonTrivialMessages/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/NonTrivialMessages/Main.cpp -o ${BUILD}/NonTrivialMessages_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-
-
-# EnvelopeMessages sample
-ENVELOPEMESSAGES_SOURCES = Samples/EnvelopeMessages/Main.cpp
-ENVELOPEMESSAGES_OBJECTS = ${BUILD}/EnvelopeMessages_Main.o
-
-${ENVELOPEMESSAGES}: $(THERON_LIB) ${ENVELOPEMESSAGES_OBJECTS}
-	$(CC) $(LDFLAGS) ${ENVELOPEMESSAGES_OBJECTS} $(THERON_LIB) -o ${ENVELOPEMESSAGES} ${THREAD_LIB_FLAGS}
-
-${BUILD}/EnvelopeMessages_Main.o: Samples/EnvelopeMessages/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/EnvelopeMessages/Main.cpp -o ${BUILD}/EnvelopeMessages_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-
-
-# FileReader sample
-FILEREADER_SOURCES = Samples/FileReader/Main.cpp
-FILEREADER_OBJECTS = ${BUILD}/FileReader_Main.o
-
-${FILEREADER}: $(THERON_LIB) ${FILEREADER_OBJECTS}
-	$(CC) $(LDFLAGS) ${FILEREADER_OBJECTS} $(THERON_LIB) -o ${FILEREADER} ${THREAD_LIB_FLAGS}
-
-${BUILD}/FileReader_Main.o: Samples/FileReader/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/FileReader/Main.cpp -o ${BUILD}/FileReader_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-	
-
-# ManagingTheThreadpool sample
-MANAGINGTHETHREADPOOL_SOURCES = Samples/ManagingTheThreadpool/Main.cpp
-MANAGINGTHETHREADPOOL_OBJECTS = ${BUILD}/ManagingTheThreadpool_Main.o
-
-${MANAGINGTHETHREADPOOL}: $(THERON_LIB) ${MANAGINGTHETHREADPOOL_OBJECTS}
-	$(CC) $(LDFLAGS) ${MANAGINGTHETHREADPOOL_OBJECTS} $(THERON_LIB) -o ${MANAGINGTHETHREADPOOL} ${THREAD_LIB_FLAGS}
-
-${BUILD}/ManagingTheThreadpool_Main.o: Samples/ManagingTheThreadpool/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/ManagingTheThreadpool/Main.cpp -o ${BUILD}/ManagingTheThreadpool_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-
-
-# FallbackHandler sample
-FALLBACKHANDLER_SOURCES = Samples/FallbackHandler/Main.cpp
-FALLBACKHANDLER_OBJECTS = ${BUILD}/FallbackHandler_Main.o
-
-${FALLBACKHANDLER}: $(THERON_LIB) ${FALLBACKHANDLER_OBJECTS}
-	$(CC) $(LDFLAGS) ${FALLBACKHANDLER_OBJECTS} $(THERON_LIB) -o ${FALLBACKHANDLER} ${THREAD_LIB_FLAGS}
-
-${BUILD}/FallbackHandler_Main.o: Samples/FallbackHandler/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/FallbackHandler/Main.cpp -o ${BUILD}/FallbackHandler_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
-
-
-# NestedActors sample
-NESTEDACTORS_SOURCES = Samples/NestedActors/Main.cpp
-NESTEDACTORS_OBJECTS = ${BUILD}/NestedActors_Main.o
-
-${NESTEDACTORS}: $(THERON_LIB) ${NESTEDACTORS_OBJECTS}
-	$(CC) $(LDFLAGS) ${NESTEDACTORS_OBJECTS} $(THERON_LIB) -o ${NESTEDACTORS} ${THREAD_LIB_FLAGS}
-
-${BUILD}/NestedActors_Main.o: Samples/NestedActors/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Samples/NestedActors/Main.cpp -o ${BUILD}/NestedActors_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS} ${SAMPLES_INCLUDE_FLAGS}
+${BUILD}/Tests.o: Tests/Tests.cpp ${THERON_HEADERS} ${TESTS_HEADERS}
+	$(CC) $(CFLAGS) Tests/Tests.cpp -o ${BUILD}/Tests.o ${INCLUDE_FLAGS} ${TESTS_INCLUDE_FLAGS}
 
 
 #
@@ -737,85 +380,119 @@ ${BUILD}/NestedActors_Main.o: Samples/NestedActors/Main.cpp ${THERON_HEADERS}
 # ThreadRing benchmark
 THREADRING_HEADERS = Benchmarks/Common/Timer.h
 
-THREADRING_SOURCES = Benchmarks/ThreadRing/Main.cpp
-THREADRING_OBJECTS = ${BUILD}/ThreadRing_Main.o
+THREADRING_SOURCES = Benchmarks/ThreadRing/ThreadRing.cpp
+THREADRING_OBJECTS = ${BUILD}/ThreadRing.o
 
 ${THREADRING}: $(THERON_LIB) ${THREADRING_OBJECTS}
-	$(CC) $(LDFLAGS) ${THREADRING_OBJECTS} $(THERON_LIB) -o ${THREADRING} ${THREAD_LIB_FLAGS}
+	$(CC) $(LDFLAGS) ${THREADRING_OBJECTS} $(THERON_LIB) -o ${THREADRING} ${LIB_FLAGS}
 
-${BUILD}/ThreadRing_Main.o: Benchmarks/ThreadRing/Main.cpp ${THERON_HEADERS} ${THREADRING_HEADERS}
-	$(CC) $(CFLAGS) Benchmarks/ThreadRing/Main.cpp -o ${BUILD}/ThreadRing_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
+${BUILD}/ThreadRing.o: Benchmarks/ThreadRing/ThreadRing.cpp ${THERON_HEADERS} ${THREADRING_HEADERS}
+	$(CC) $(CFLAGS) Benchmarks/ThreadRing/ThreadRing.cpp -o ${BUILD}/ThreadRing.o ${INCLUDE_FLAGS}
 
 
 # ParallelThreadRing benchmark
 PARALLELTHREADRING_HEADERS = Benchmarks/Common/Timer.h
 
-PARALLELTHREADRING_SOURCES = Benchmarks/ParallelThreadRing/Main.cpp
-PARALLELTHREADRING_OBJECTS = ${BUILD}/ParallelThreadRing_Main.o
+PARALLELTHREADRING_SOURCES = Benchmarks/ParallelThreadRing/ParallelThreadRing.cpp
+PARALLELTHREADRING_OBJECTS = ${BUILD}/ParallelThreadRing.o
 
 ${PARALLELTHREADRING}: $(THERON_LIB) ${PARALLELTHREADRING_OBJECTS}
-	$(CC) $(LDFLAGS) ${PARALLELTHREADRING_OBJECTS} $(THERON_LIB) -o ${PARALLELTHREADRING} ${THREAD_LIB_FLAGS}
+	$(CC) $(LDFLAGS) ${PARALLELTHREADRING_OBJECTS} $(THERON_LIB) -o ${PARALLELTHREADRING} ${LIB_FLAGS}
 
-${BUILD}/ParallelThreadRing_Main.o: Benchmarks/ParallelThreadRing/Main.cpp ${THERON_HEADERS} ${PARALLELTHREADRING_HEADERS}
-	$(CC) $(CFLAGS) Benchmarks/ParallelThreadRing/Main.cpp -o ${BUILD}/ParallelThreadRing_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
-
-
-# CountingActor benchmark
-COUNTINGACTOR_HEADERS = Benchmarks/Common/Timer.h
-
-COUNTINGACTOR_SOURCES = Benchmarks/CountingActor/Main.cpp
-COUNTINGACTOR_OBJECTS = ${BUILD}/CountingActor_Main.o
-
-${COUNTINGACTOR}: $(THERON_LIB) ${COUNTINGACTOR_OBJECTS}
-	$(CC) $(LDFLAGS) ${COUNTINGACTOR_OBJECTS} $(THERON_LIB) -o ${COUNTINGACTOR} ${THREAD_LIB_FLAGS}
-
-${BUILD}/CountingActor_Main.o: Benchmarks/CountingActor/Main.cpp ${THERON_HEADERS} ${COUNTINGACTOR_HEADERS}
-	$(CC) $(CFLAGS) Benchmarks/CountingActor/Main.cpp -o ${BUILD}/CountingActor_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
-
-
-# ProducerConsumer benchmark
-PRODUCERCONSUMER_HEADERS = Benchmarks/Common/Timer.h
-
-PRODUCERCONSUMER_SOURCES = Benchmarks/ProducerConsumer/Main.cpp
-PRODUCERCONSUMER_OBJECTS = ${BUILD}/ProducerConsumer_Main.o
-
-${PRODUCERCONSUMER}: $(THERON_LIB) ${PRODUCERCONSUMER_OBJECTS}
-	$(CC) $(LDFLAGS) ${PRODUCERCONSUMER_OBJECTS} $(THERON_LIB) -o ${PRODUCERCONSUMER} ${THREAD_LIB_FLAGS}
-
-${BUILD}/ProducerConsumer_Main.o: Benchmarks/ProducerConsumer/Main.cpp ${THERON_HEADERS} ${PRODUCERCONSUMER_HEADERS}
-	$(CC) $(CFLAGS) Benchmarks/ProducerConsumer/Main.cpp -o ${BUILD}/ProducerConsumer_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
-
-
-# ActorOverhead benchmark
-ACTOROVERHEAD_SOURCES = Benchmarks/ActorOverhead/Main.cpp
-ACTOROVERHEAD_OBJECTS = ${BUILD}/ActorOverhead_Main.o
-
-${ACTOROVERHEAD}: $(THERON_LIB) ${ACTOROVERHEAD_OBJECTS}
-	$(CC) $(LDFLAGS) ${ACTOROVERHEAD_OBJECTS} $(THERON_LIB) -o ${ACTOROVERHEAD} ${THREAD_LIB_FLAGS}
-
-${BUILD}/ActorOverhead_Main.o: Benchmarks/ActorOverhead/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Benchmarks/ActorOverhead/Main.cpp -o ${BUILD}/ActorOverhead_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
+${BUILD}/ParallelThreadRing.o: Benchmarks/ParallelThreadRing/ParallelThreadRing.cpp ${THERON_HEADERS} ${PARALLELTHREADRING_HEADERS}
+	$(CC) $(CFLAGS) Benchmarks/ParallelThreadRing/ParallelThreadRing.cpp -o ${BUILD}/ParallelThreadRing.o ${INCLUDE_FLAGS}
 
 
 # PingPong benchmark
-PINGPONG_SOURCES = Benchmarks/PingPong/Main.cpp
-PINGPONG_OBJECTS = ${BUILD}/PingPong_Main.o
+PINGPONG_SOURCES = Benchmarks/PingPong/PingPong.cpp
+PINGPONG_OBJECTS = ${BUILD}/PingPong.o
 
 ${PINGPONG}: $(THERON_LIB) ${PINGPONG_OBJECTS}
-	$(CC) $(LDFLAGS) ${PINGPONG_OBJECTS} $(THERON_LIB) -o ${PINGPONG} ${THREAD_LIB_FLAGS}
+	$(CC) $(LDFLAGS) ${PINGPONG_OBJECTS} $(THERON_LIB) -o ${PINGPONG} ${LIB_FLAGS}
 
-${BUILD}/PingPong_Main.o: Benchmarks/PingPong/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Benchmarks/PingPong/Main.cpp -o ${BUILD}/PingPong_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
+${BUILD}/PingPong.o: Benchmarks/PingPong/PingPong.cpp ${THERON_HEADERS}
+	$(CC) $(CFLAGS) Benchmarks/PingPong/PingPong.cpp -o ${BUILD}/PingPong.o ${INCLUDE_FLAGS}
 
 
-# MixedScenario benchmark
-MIXEDSCENARIO_SOURCES = Benchmarks/MixedScenario/Main.cpp
-MIXEDSCENARIO_OBJECTS = ${BUILD}/MixedScenario_Main.o
+#
+# Tutorial
+#
 
-${MIXEDSCENARIO}: $(THERON_LIB) ${MIXEDSCENARIO_OBJECTS}
-	$(CC) $(LDFLAGS) ${MIXEDSCENARIO_OBJECTS} $(THERON_LIB) -o ${MIXEDSCENARIO} ${THREAD_LIB_FLAGS}
 
-${BUILD}/MixedScenario_Main.o: Benchmarks/MixedScenario/Main.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Benchmarks/MixedScenario/Main.cpp -o ${BUILD}/MixedScenario_Main.o ${THERON_INCLUDE_FLAGS} ${THREAD_INCLUDE_FLAGS}
+# Alignment sample
+ALIGNMENT_HEADERS =
 
+ALIGNMENT_SOURCES = Tutorial/Alignment/Alignment.cpp
+ALIGNMENT_OBJECTS = ${BUILD}/Alignment.o
+
+${ALIGNMENT}: $(THERON_LIB) ${ALIGNMENT_OBJECTS}
+	$(CC) $(LDFLAGS) ${ALIGNMENT_OBJECTS} $(THERON_LIB) -o ${ALIGNMENT} ${LIB_FLAGS}
+
+${BUILD}/Alignment.o: Tutorial/Alignment/Alignment.cpp ${THERON_HEADERS} ${ALIGNMENT_HEADERS}
+	$(CC) $(CFLAGS) Tutorial/Alignment/Alignment.cpp -o ${BUILD}/Alignment.o ${INCLUDE_FLAGS}
+
+
+# CustomAllocators sample
+CUSTOMALLOCATORS_HEADERS =
+
+CUSTOMALLOCATORS_SOURCES = Tutorial/CustomAllocators/CustomAllocators.cpp
+CUSTOMALLOCATORS_OBJECTS = ${BUILD}/CustomAllocators.o
+
+${CUSTOMALLOCATORS}: $(THERON_LIB) ${CUSTOMALLOCATORS_OBJECTS}
+	$(CC) $(LDFLAGS) ${CUSTOMALLOCATORS_OBJECTS} $(THERON_LIB) -o ${CUSTOMALLOCATORS} ${LIB_FLAGS}
+
+${BUILD}/CustomAllocators.o: Tutorial/CustomAllocators/CustomAllocators.cpp ${THERON_HEADERS} ${CUSTOMALLOCATORS_HEADERS}
+	$(CC) $(CFLAGS) Tutorial/CustomAllocators/CustomAllocators.cpp -o ${BUILD}/CustomAllocators.o ${INCLUDE_FLAGS}
+
+
+# FileReader sample
+FILEREADER_HEADERS =
+
+FILEREADER_SOURCES = Tutorial/FileReader/FileReader.cpp
+FILEREADER_OBJECTS = ${BUILD}/FileReader.o
+
+${FILEREADER}: $(THERON_LIB) ${FILEREADER_OBJECTS}
+	$(CC) $(LDFLAGS) ${FILEREADER_OBJECTS} $(THERON_LIB) -o ${FILEREADER} ${LIB_FLAGS}
+
+${BUILD}/FileReader.o: Tutorial/FileReader/FileReader.cpp ${THERON_HEADERS} ${FILEREADER_HEADERS}
+	$(CC) $(CFLAGS) Tutorial/FileReader/FileReader.cpp -o ${BUILD}/FileReader.o ${INCLUDE_FLAGS}
+
+
+# HelloWorld sample
+HELLOWORLD_HEADERS =
+
+HELLOWORLD_SOURCES = Tutorial/HelloWorld/HelloWorld.cpp
+HELLOWORLD_OBJECTS = ${BUILD}/HelloWorld.o
+
+${HELLOWORLD}: $(THERON_LIB) ${HELLOWORLD_OBJECTS}
+	$(CC) $(LDFLAGS) ${HELLOWORLD_OBJECTS} $(THERON_LIB) -o ${HELLOWORLD} ${LIB_FLAGS}
+
+${BUILD}/HelloWorld.o: Tutorial/HelloWorld/HelloWorld.cpp ${THERON_HEADERS} ${HELLOWORLD_HEADERS}
+	$(CC) $(CFLAGS) Tutorial/HelloWorld/HelloWorld.cpp -o ${BUILD}/HelloWorld.o ${INCLUDE_FLAGS}
+
+
+# MessageRegistration sample
+MESSAGEREGISTRATION_HEADERS =
+
+MESSAGEREGISTRATION_SOURCES = Tutorial/MessageRegistration/MessageRegistration.cpp
+MESSAGEREGISTRATION_OBJECTS = ${BUILD}/MessageRegistration.o
+
+${MESSAGEREGISTRATION}: $(THERON_LIB) ${MESSAGEREGISTRATION_OBJECTS}
+	$(CC) $(LDFLAGS) ${MESSAGEREGISTRATION_OBJECTS} $(THERON_LIB) -o ${MESSAGEREGISTRATION} ${LIB_FLAGS}
+
+${BUILD}/MessageRegistration.o: Tutorial/MessageRegistration/MessageRegistration.cpp ${THERON_HEADERS} ${MESSAGEREGISTRATION_HEADERS}
+	$(CC) $(CFLAGS) Tutorial/MessageRegistration/MessageRegistration.cpp -o ${BUILD}/MessageRegistration.o ${INCLUDE_FLAGS}
+
+
+# UnhandledMessages sample
+UNHANDLEDMESSAGES_HEADERS =
+
+UNHANDLEDMESSAGES_SOURCES = Tutorial/UnhandledMessages/UnhandledMessages.cpp
+UNHANDLEDMESSAGES_OBJECTS = ${BUILD}/UnhandledMessages.o
+
+${UNHANDLEDMESSAGES}: $(THERON_LIB) ${UNHANDLEDMESSAGES_OBJECTS}
+	$(CC) $(LDFLAGS) ${UNHANDLEDMESSAGES_OBJECTS} $(THERON_LIB) -o ${UNHANDLEDMESSAGES} ${LIB_FLAGS}
+
+${BUILD}/UnhandledMessages.o: Tutorial/UnhandledMessages/UnhandledMessages.cpp ${THERON_HEADERS} ${UNHANDLEDMESSAGES_HEADERS}
+	$(CC) $(CFLAGS) Tutorial/UnhandledMessages/UnhandledMessages.cpp -o ${BUILD}/UnhandledMessages.o ${INCLUDE_FLAGS}
 

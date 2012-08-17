@@ -1,15 +1,13 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_DETAIL_HANDLERS_DEFAULTHANDLER_H
 #define THERON_DETAIL_HANDLERS_DEFAULTHANDLER_H
 
 
-#include <Theron/Detail/Debug/Assert.h>
 #include <Theron/Detail/Messages/IMessage.h>
 #include <Theron/Detail/Handlers/IDefaultHandler.h>
 
 #include <Theron/Address.h>
+#include <Theron/Assert.h>
 #include <Theron/Defines.h>
 
 
@@ -24,28 +22,38 @@ namespace Detail
 {
 
 
-/// Instantiable class template that remembers a default handler function.
+/**
+Instantiable class template that remembers a default handler function.
+*/
 template <class ActorType>
 class DefaultHandler : public IDefaultHandler
 {
 public:
 
-    /// Pointer to a member function of the actor type, which is the handler.
+    /**
+    Pointer to a member function of the actor type, which is the handler.
+    */
     typedef void (ActorType::*HandlerFunction)(const Address from);
 
-    /// Constructor.
+    /**
+    Constructor.
+    */
     THERON_FORCEINLINE explicit DefaultHandler(HandlerFunction function) : mHandlerFunction(function)
     {
     }
 
-    /// Virtual destructor.
+    /**
+    Virtual destructor.
+    */
     inline virtual ~DefaultHandler()
     {
     }
 
-    /// Handles the given message.
-    /// \note The message is not consumed by the handler; just acted on or ignored.
-    /// The message will be automatically destroyed when all handlers have seen it.
+    /**
+    Handles the given message.
+    \note The message is not consumed by the handler; just acted on or ignored.
+    The message will be automatically destroyed when all handlers have seen it.
+    */
     inline virtual void Handle(Actor *const actor, const IMessage *const message) const;
 
 private:
@@ -76,4 +84,3 @@ inline void DefaultHandler<ActorType>::Handle(Actor *const actor, const IMessage
 
 
 #endif // THERON_DETAIL_HANDLERS_DEFAULTHANDLER_H
-

@@ -1,6 +1,4 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_ACTOR_H
 #define THERON_ACTOR_H
 
@@ -11,40 +9,45 @@ Actor baseclass.
 */
 
 
-#include <new>
-
-#include <Theron/BasicTypes.h>
 #include <Theron/Address.h>
 #include <Theron/AllocatorManager.h>
+#include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
+#include <Theron/Framework.h>
 #include <Theron/IAllocator.h>
 
-#include <Theron/Detail/Containers/IntrusiveList.h>
-#include <Theron/Detail/Core/ActorCore.h>
-#include <Theron/Detail/Core/ActorCreator.h>
-#include <Theron/Detail/Debug/Assert.h>
-#include <Theron/Detail/Handlers/BlindDefaultHandler.h>
-#include <Theron/Detail/Handlers/DefaultHandler.h>
-#include <Theron/Detail/Handlers/IDefaultHandler.h>
-#include <Theron/Detail/Handlers/MessageHandler.h>
-#include <Theron/Detail/Handlers/IMessageHandler.h>
-#include <Theron/Detail/Handlers/MessageHandlerCast.h>
+#include <Theron/Detail/Directory/Directory.h>
+#include <Theron/Detail/Directory/Entry.h>
+#include <Theron/Detail/Handlers/DefaultHandlerCollection.h>
+#include <Theron/Detail/Handlers/FallbackHandlerCollection.h>
+#include <Theron/Detail/Handlers/HandlerCollection.h>
+#include <Theron/Detail/Messages/IMessage.h>
+#include <Theron/Detail/Messages/MessageCreator.h>
 #include <Theron/Detail/Messages/MessageSender.h>
-#include <Theron/Detail/Messages/MessageTraits.h>
-#include <Theron/Detail/Threading/Lock.h>
-#include <Theron/Detail/ThreadPool/WorkerContext.h>
+#include <Theron/Detail/MailboxProcessor/ProcessorContext.h>
+#include <Theron/Detail/Threading/Atomic.h>
+
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning (disable:4324)  // structure was padded due to __declspec(align())
+#endif //_MSC_VER
 
 
 /**
-Main namespace, containing all public API components.
+Main namespace containing all public API components.
 */
 namespace Theron
 {
 
 
+class ActorRef;
+class Framework;
+
+
 namespace Detail
 {
-class ActorDestroyer;
+class WorkItem;
 }
 
 
@@ -59,76 +62,123 @@ actors derived from this baseclass, users can call the various protected methods
 of the baseclass to perform actions like registering message handlers and sending
 messages.
 
-Actors classes, derived from the Actor baseclass, can't be constructed directly
-in user code. Instead, they are created within an owning \ref Framework, which
-is responsible for allocating, constructing, executing and destroying the actor.
+Although derived actors classes can be constructed directly in user code, they are
+always associated with an owning \ref Framework that hosts and executes them.
+The owning Framework is provided to the Actor baseclass on construction.
 
-Actor objects are reference counted, and are automatically destroyed when they become
-unreferenced. An actor becomes unreferenced when the last reference to it
-is destructed. See \ref ActorRef for more information on actor garbage collection.
-
-The maximum number of actors that can be created in an application is limited
-by the \ref THERON_MAX_ACTORS define, which defines the number of unique
-actor addresses.
-
-\see <a href="http://www.theron-library.com/index.php?t=page&p=CreatingAnActor">Creating an Actor</a>
-\see <a href="http://www.theron-library.com/index.php?t=page&p=InitializingAnActor">Initializing an Actor</a>
-\see <a href="http://www.theron-library.com/index.php?t=page&p=UsingActorReferences">Using actor references</a>
-\see <a href="http://www.theron-library.com/index.php?t=page&p=AligningActors">Aligning actors</a>
+\note A fundamental principle of the Actor Model is that actors should communicate
+only by means of messages, both \ref Send "sent by themselves" and \ref RegisterHandler
+"handled by their message handlers". Since Actors in Theron are just vanilla C++
+classes that derive from the Actor baseclass, it's possible in practice to add
+conventional member functions to derived actor classes, breaking the Actor Model
+abstraction. However this should be avoided, since it results in ugly code and
+shared memory issues, reintroducing the need for traditional thread synchronization.
+Resist the temptation to add a method to an actor class and add a message instead.
 */
-class Actor
+class Actor : public Detail::Entry::Entity
 {
-
 public:
 
-    friend class Detail::ActorCore;
-    friend class Detail::ActorCreator;
-    friend class Detail::ActorDestroyer;
     friend class ActorRef;
+    friend class Framework;
+    friend class Detail::WorkItem;
 
     /**
     \brief Default constructor.
 
-    Actor classes can be instantiated using the \ref CreateActor methods of
-    a \ref Framework object, which returns an \ref ActorRef object referencing the
-    created actor. The created actor can't be accessed directly. Instead it is
-    referenced in user code by \ref ActorRef objects, which are copyable, lightweight
-    references to the actor. ActorRef objects are like conventional references and
-    can be copied, assigned, passed by value or reference, and returned by value from
-    functions.
+    \note Direct default-construction of Actor baseclasses is forbidden. This
+    public default constructor is provided for backwards compatibility with the
+    legacy actor creation pattern used by versions of Theron prior to version 4.0.
+    
+    Always use one of the two supported actor creation patterns: the version 4 syntax or
+    (if necessary) the deprecated version 3.x syntax, which is still supported for backwards
+    compatibility. When writing new code, always use the new, simpler, version 4 syntax.
+
+    In versions of Theron prior to 4.0, actors couldn't be constructed directly
+    in user code. Instead you had to ask a Framework to create one for you, using
+    the CreateActor method template. Instead of returning the actor itself,
+    CreateActor returned a <i>reference</i> to the actor in the form of an \ref ActorRef
+    object.
 
     \code
+    // LEGACY CODE!
     class MyActor : public Theron::Actor
     {
     };
 
+    int main()
+    {
+        Theron::Framework framework;
+        Theron::ActorRef actorRef(framework.CreateActor<MyActor>());
+    }
+    \endcode
+
+    In versions of Theron starting with 4.0, Actors are first-class citizens and
+    behave like vanilla C++ objects. They can be constructed directly with no
+    call to Framework::CreateActor. Once constructed they are referenced directly
+    by user code with no need for ActorRef proxy objects.
+
+    When writing new code, follow the new, simpler construction pattern where actors
+    are constructed directly and not referenced by ActorRefs:
+
+    \code
+    // New code
+    class MyActor : public Theron::Actor
+    {
+    public:
+
+        MyActor(Theron::Framework &framework) : Theron::Actor(framework)
+        {
+        }
+    };
+
+    int main()
+    {
+        Theron::Framework framework;
+        MyActor actor(framework);
+    }
+    \endcode
+    */
+    Actor();
+
+    /**
+    \brief Explicit constructor.
+
+    The Actor baseclass constructor expects an instance of the \ref Framework class,
+    which becomes the owning Framework for the actor, hosting it and executing its
+    message handlers.
+
+    When defining their own derived actor classes, users must arrange to pass a
+    Framework object to the baseclass constructor. The typical way to arrange this
+    is to just expose the same parameter on the constructor of the derived actor,
+    and pass it through to the baseclass constructor in the initializer list:
+
+    \code
+    class MyActor : public Theron::Actor
+    {
+    public:
+
+        explicit MyActor(Theron::Framework &framework) : Theron::Actor(framework)
+        {
+        }
+    };
+
     Theron::Framework framework;
-    Theron::ActorRef myActor = framework.CreateActor<MyActor>();
+    MyActor myActor(framework);
     \endcode
 
     A powerful feature of actors is that they can create other actors, allowing
     the building of complex subsystems of actors using object-like abstraction.
     See the documentation of the \ref GetFramework method for more information.
 
-    \note Only the \ref Framework can construct actors.
+    \param framework Reference to a framework within which the actor will be hosted.
     */
-    inline Actor();
+    explicit Actor(Framework &framework);
 
     /**
     \brief Baseclass virtual destructor.
-
-    Just as actors can't be instantiated directly in user code, but instead are
-    instantiated within an owning \ref Framework, they also aren't destructed
-    directly in user code. Instead they are reference counted and destroyed
-    automatically by a process called garbage collection. See the documentation
-    of the \ref ActorRef class for more information.
-
-    When an actor is garbage collected, the destructor of the derived actor class
-    is called, allowing the actor to perform whatever cleanup it needs to do.
     */
-    inline virtual ~Actor();
-
-protected:
+    virtual ~Actor();
 
     /**
     \brief Returns the unique address of the actor.
@@ -146,7 +196,7 @@ protected:
         {
         };
 
-        Actor()
+        explicit Actor(Theron::Framework &framework) : Theron::Actor(framework)
         {
             RegisterHandler(this, &Actor::Identify);
         }
@@ -161,9 +211,10 @@ protected:
     \endcode
 
     \note This method can safely be called inside an actor message handler,
-    constructor, or destructor.
+    constructor, or destructor. As a public method, it can also be accessed from
+    outside the actor to query the actor's address.
     */
-    inline const Address &GetAddress() const;
+    inline Address GetAddress() const;
 
     /**
     \brief Returns a reference to the framework that owns the actor.
@@ -174,38 +225,45 @@ protected:
     it's possible to build complex subsystems, abstracted away behind the
     message interface of a single actor.
 
-    To create actors that are 'children' of another actor, the parent actor uses the
-    protected \ref GetFramework method to retrieve a pointer to the Framework within
-    which it itself was created, then creates the child actors using the Framework's
-    \ref Framework::CreateActor "CreateActor" methods.
+    To create actors that are 'children' of another actor, the parent actor
+    passes its owning Framework as a parameter to the child actor constructor.
 
-    By holding on to the \ref ActorRef objects returned by \ref Framework::CreateActor
-    "CreateActor" as member variables, actors can ensure their child actors are kept
-    alive, and not garbage collected. Conversely, when the parent actor becomes
-    unreferenced and is destroyed by garbage collection, the ActorRef objects it
-    holds as members are destructed with it, causing the children to be cleanly garbage
-    collected too.
+    A typical pattern is the allocate the children dynamically on the heap
+    using \em "operator new" in the parent constructor, hold pointers to the
+    created children in a container, and then destroy them using \em "operator
+    delete" in the parent destructor.
 
     \code
     class Wheel : public Theron::Actor
     {
+        explicit Wheel(Theron::Framework &framework) : Theron::Actor(framework)
+        {
+        }
     };
 
     class Car : public Theron::Actor
     {
     public:
 
+        explicit Car(Theron::Framework &framework) : Theron::Actor(framework)
+        {
+            mWheels[0] = new Wheel(GetFramework());
+            mWheels[1] = new Wheel(GetFramework());
+            mWheels[2] = new Wheel(GetFramework());
+            mWheels[3] = new Wheel(GetFramework());
+        }
+
         Car()
         {
-            mWheels[0] = GetFramework().CreateActor<Wheel>();
-            mWheels[1] = GetFramework().CreateActor<Wheel>();
-            mWheels[2] = GetFramework().CreateActor<Wheel>();
-            mWheels[3] = GetFramework().CreateActor<Wheel>();
+            delete mWheels[0];
+            delete mWheels[1];
+            delete mWheels[2];
+            delete mWheels[3];
         }
 
     private:
 
-        Theron::ActorRef mWheels[4];
+        Wheel *mWheels[4];
     };
     \endcode
 
@@ -214,18 +272,7 @@ protected:
     */
     inline Framework &GetFramework() const;
 
-    /**
-    \brief Gets the number of messages queued at this actor, awaiting processing.
-
-    Returns the number of messages currently in the message queue of the actor.
-    The messages in the queue are those that have been received by the actor but
-    for which registered message handlers have not yet been executed, and so are
-    still awaiting processing.
-    
-    \note If called from a message handler function, the returned count doesn't
-    include the message whose receipt triggered the execution of the handler.
-    */
-    inline uint32_t GetNumQueuedMessages() const;
+protected:
 
     /**
     \brief Registers a handler for a specific message type.
@@ -246,7 +293,7 @@ protected:
 
         struct HelloMessage { };
 
-        HelloWorld()
+        explicit HelloWorld(Theron::Framework &framework) : Theron::Actor(framework)
         {
             RegisterHandler(this, &HelloWorld::Hello);
         }
@@ -266,7 +313,8 @@ protected:
     registered and then executed in response to received messages).
 
     If a message handler is registered multiple times, it will be executed multiple times
-    in response to received messages of its expected type.
+    in response to received messages of its expected type. Each subsequent de-registration
+    then removes just one of the multiple registrations.
 
     One subtlety to be aware of is that message handlers aren't executed on receipt of
     messages of types \em derived from the message types expected by the handler. In order to
@@ -281,7 +329,7 @@ protected:
         struct HelloMessage { };
         struct HowdyMessage : public HelloMessage { };
 
-        HelloWorld()
+        explicit HelloWorld(Theron::Framework &framework) : Theron::Actor(framework)
         {
             RegisterHandler(this, &HelloWorld::Hello);
             RegisterHandler(this, &HelloWorld::Howdy);
@@ -289,12 +337,12 @@ protected:
 
     private:
 
-        inline void Hello(const HelloMessage &message, const Theron::Address from)
+        void Hello(const HelloMessage &message, const Theron::Address from)
         {
             printf("Hello world!\n");
         }
 
-        inline void Howdy(const HowdyMessage &message, const Theron::Address from)
+        void Howdy(const HowdyMessage &message, const Theron::Address from)
         {
             Hello(message, from);
             printf("How y'all doin?\n");
@@ -302,9 +350,9 @@ protected:
     };
     \endcode
 
-    Another tricky subtlety is that \em identical handlers are sometimes treated as the same
-    function, by the compiler, in optimized builds. The following example shows this
-    confusing effect:
+    Another tricky subtlety is that the compiler may treat handlers that are exactly
+    identical as the same function, in optimized builds. The following example shows
+    this confusing effect:
 
     \code
     class HelloWorld : public Theron::Actor
@@ -313,20 +361,20 @@ protected:
 
         struct HelloMessage { };
 
-        HelloWorld()
+        explicit HelloWorld(Theron::Framework &framework) : Theron::Actor(framework)
         {
             RegisterHandler(this, &HelloWorld::HelloOne);
-            IsHandlerRegistered(this, &HelloWorld::HelloTwo);   // Returns true, if some optimized builds.
+            IsHandlerRegistered(this, &HelloWorld::HelloTwo);   // May returns true, in some optimized builds.
         }
 
     private:
 
-        inline void HelloOne(const HelloMessage &message, const Theron::Address from)
+        void HelloOne(const HelloMessage &message, const Theron::Address from)
         {
             printf("Hello world!\n");
         }
 
-        inline void HelloTwo(const HelloMessage &message, const Theron::Address from)
+        void HelloTwo(const HelloMessage &message, const Theron::Address from)
         {
             printf("Hello world!\n");
         }
@@ -338,9 +386,6 @@ protected:
     \param actor Pointer to the derived actor instance.
     \param handler Member function pointer identifying the message handler function.
     \return True, if the registration was successful. Failure may indicate out-of-memory.
-
-    \see <a href="http://www.theron-library.com/index.php?t=page&p=HandlingMessages">Handling messages</a>
-    \see <a href="http://www.theron-library.com/index.php?t=page&p=DynamicHandlerRegistration">Dynamic handler registration</a>
     */
     template <class ActorType, class ValueType>
     inline bool RegisterHandler(
@@ -360,7 +405,7 @@ protected:
     The ability to register and deregister message handlers from \em within message handlers means
     we can dynamically alter the message interface of an actor at runtime, in response to the
     messages we receive. In this example, a HelloWorld actor can be woken and put to sleep
-    using messages. It only responds to \em hello messages when awake:
+    using messages. It only responds to \em HelloMessage messages when awake:
 
     \code
     class HelloWorld : public Theron::Actor
@@ -371,14 +416,14 @@ protected:
         struct SleepMessage { };
         struct HelloMessage { };
 
-        HelloWorld()
+        explicit HelloWorld(Theron::Framework &framework) : Theron::Actor(framework)
         {
             RegisterHandler(this, &HelloWorld::Wake);
         }
 
     private:
 
-        inline void Wake(const WakeMessage &message, const Theron::Address from)
+        void Wake(const WakeMessage &message, const Theron::Address from)
         {
             RegisterHandler(this, &HelloWorld::Hello);
 
@@ -386,7 +431,7 @@ protected:
             RegisterHandler(this, &HelloWorld::Sleep);
         }
 
-        inline void Sleep(const SleepMessage &message, const Theron::Address from)
+        void Sleep(const SleepMessage &message, const Theron::Address from)
         {
             DeregisterHandler(this, &HelloWorld::Hello);
 
@@ -394,7 +439,7 @@ protected:
             RegisterHandler(this, &HelloWorld::Wake);
         }
 
-        inline void Hello(const HelloMessage &message, const Theron::Address from)
+        void Hello(const HelloMessage &message, const Theron::Address from)
         {
             printf("Hello world!\n");
         }
@@ -412,12 +457,10 @@ protected:
     \param handler Member function pointer identifying the message handler function.
     \return True, if the message handler was deregistered.
 
-    \note It's not neccessary to deregister handlers that an actor registers before the
-    actor is destructed. Doing so is optional and of course completely safe, but if any handlers
-    are left registered they will simply be automatically deregistered on destruction of the
-    actor.
-
-    \see <a href="http://www.theron-library.com/index.php?t=page&p=DynamicHandlerRegistration">Dynamic handler registration</a>
+    \note It's not necessary to deregister handlers that an actor registers before the
+    actor is destructed. Doing so is optional, though of course completely safe. Any handlers
+    left registered prior to destruction of the actor will simply be automatically deregistered
+    on destruction.
     */
     template <class ActorType, class ValueType>
     inline bool DeregisterHandler(
@@ -448,31 +491,31 @@ protected:
     {
     public:
 
-        Actor()
+        explicit Actor(Theron::Framework &framework) : Theron::Actor(framework)
         {
             SetDefaultHandler(this, &Actor::DefaultHandler);
         }
 
     private:
 
-        inline void DefaultHandler(const Theron::Address from)
+        void DefaultHandler(const Theron::Address from)
         {
             printf("Actor received unknown message from address '%d'\n", from.AsInteger());
         }
     };
     \endcode
 
-    Passing 0 to this method clears any previously set default handler. If no default handler
-    is set, then unhandled messages are passed to the
-    \ref Framework::SetFallbackHandler "fallback handler" registered with the owning \ref Framework.
-    The default fallback handler reports unhandled messages by means of asserts, and can be enabled or
-    disabled by the \ref THERON_ENABLE_UNHANDLED_MESSAGE_CHECKS define.
+    Passing 0 to this method clears any previously set default handler.
+    
+    If no default handler is set, then unhandled messages are passed to the
+    \ref Framework::SetFallbackHandler "fallback handler" registered with the owning
+    \ref Framework. The default fallback handler reports unhandled messages by means
+    of asserts, which can be enabled or disabled using the
+    \ref THERON_ENABLE_UNHANDLED_MESSAGE_CHECKS define.
 
     \tparam ActorType The derived actor class.
     \param actor Pointer to the derived actor instance.
     \param handler Member function pointer identifying the message handler function.
-
-    \see <a href="http://www.theron-library.com/index.php?t=page&p=DefaultMessageHandler">Default message handlers</a>
     */
     template <class ActorType>
     inline bool SetDefaultHandler(
@@ -496,14 +539,14 @@ protected:
     {
     public:
 
-        Actor()
+        explicit Actor(Theron::Framework &framework) : Theron::Actor(framework)
         {
             SetDefaultHandler(this, &Actor::DefaultHandler);
         }
 
     private:
 
-        inline void DefaultHandler(const void *const data, const Theron::uint32_t size, const Theron::Address from)
+        void DefaultHandler(const void *const data, const Theron::uint32_t size, const Theron::Address from)
         {
             printf("Actor received unknown message of size %d from address '%d'\n", size, from.AsInteger());
         }
@@ -511,6 +554,12 @@ protected:
     \endcode
 
     Passing 0 to this method clears any previously set default handler.
+
+    If no default handler is set, then unhandled messages are passed to the
+    \ref Framework::SetFallbackHandler "fallback handler" registered with the owning
+    \ref Framework. The default fallback handler reports unhandled messages by means
+    of asserts, which can be enabled or disabled using the
+    \ref THERON_ENABLE_UNHANDLED_MESSAGE_CHECKS define.
 
     \tparam ActorType The derived actor class.
     \param actor Pointer to the derived actor instance.
@@ -522,7 +571,7 @@ protected:
         void (ActorType::*handler)(const void *const data, const uint32_t size, const Address from));
 
     /**
-    \brief Sends a message to the entity (actor or receiver) at the given address.
+    \brief Sends a message to the entity (actor or Receiver) at the given address.
 
     \code
     class Responder : public Theron::Actor
@@ -533,14 +582,14 @@ protected:
         {
         };
 
-        Responder()
+        explicit Responder(Theron::Framework &framework) : Theron::Actor(framework)
         {
             RegisterHandler(this, &Responder::Respond);
         }
 
     private:
 
-        inline void Respond(const Message &message, const Theron::Address from)
+        void Respond(const Message &message, const Theron::Address from)
         {
             // Send the message back to the sender.
             Send(message, from);
@@ -548,34 +597,51 @@ protected:
     };
     \endcode
 
-    Any copyable class or Plain Old Datatype can be sent in a message. Messages
+    Any copyable class or Plain-Old-Data type can be sent in a message. Messages
     are copied when they are sent, so that the recipient sees a different piece of
     memory with the same value. The copying is performed with the copy-constructor
     of the message class.
+    
+    Typically non-POD message classes should be provided with
+    a meaningful default constructor, copy constructor, assignment operator and
+    destructor. If the message type is derived from a base type (in an inheritance
+    hierarchy of message types) then the base class should typically have a virtual
+    destructor.
 
     In general it is unsafe to pass pointers in messages, since doing so re-introduces
     shared memory, where multiple actors can access the same memory at the same time.
     The exception is where steps are taken to ensure that the sender is prevented from
     accessing the referenced memory after the send (for example using an auto-pointer).
-    Effectively ownership is transferred to the recipient.
+    In such cases ownership is effectively transferred to the recipient by the message.
 
-    Note that C arrays can't be sent as messages, since they aren't copyable. For example
-    the first call to Send in the following code won't compile, because the literal string
-    message is an array. The second, where the array is sent as a pointer instead, works fine.
-    Of course, a safer approach is to send a std::string, as shown as the third call:
+    Note that immediate C arrays can't be sent as messages, since they aren't copyable.
+    For example the first call to Send in the following code won't compile, because the
+    literal string message is an array. The second, where the array is sent as a pointer
+    instead, works fine. Arrays can safely be sent as members of message classes.
+    Of course, a safer approach is to send a std::string, as shown as the final call:
 
     \code
     class Actor : public Theron::Actor
     {
     public:
-        Actor()
+
+        struct Message
         {
-            Send("hello", someAddress);                 // C array; won't compile!
+            char mBuffer[32];
+        }
 
-            const char *const message("hello");
-            Send(message, someAddress);                 // Works and fast but use with care.
+        explicit Actor(Theron::Framework &framework) : Theron::Actor(framework)
+        {
+            Send("hello", someAddress);                 // Immediate C array; won't compile!
 
-            Send(std::string("hello"), someAddress);    // Safest but involves a copy.
+            char *const message("hello");
+            Send(message, someAddress);                 // Fastest, but use with care!
+
+            Message message2;
+            strcpy(message2.mBuffer, "hello");
+            Send(message2, someAddress);                // Safe but involves a shallow copy.
+
+            Send(std::string("hello"), someAddress);    // Safest but involves a deep copy.
         }
     }
     \endcode
@@ -583,11 +649,10 @@ protected:
     If no actor or receiver exists with the given address, the
     message will not be delivered, and \ref Send will return false.
 
-    This can happen if the target entity is an actor and has been garbage collected,
-    due to becoming unreferenced. To ensure that actors are not prematurely garbage
-    collected, simply hold at least one \ref ActorRef referencing the actor.
+    This can happen if the target entity is an actor and has been destructed,
+    due to going out of scope or explicitly deleted.
 
-    If the destination address exists, but the receiving entity has no handler
+    If an actor is still registered at the destination address, but it has no handler
     registered for messages of the sent type, then the message will be ignored,
     but this method will still return true.
 
@@ -596,9 +661,9 @@ protected:
     \ref Framework::SetFallbackHandler.
 
     This method can safely be called within the constructor or destructor of a derived
-    actor object, as well as more typically within its message handler functions.
+    actor object, as well as (more typically) within its message handler functions.
 
-    \tparam ValueType The message type (any copyable class or Plain Old Datatype).
+    \tparam ValueType The message type (any copyable class or Plain-Old-Data type).
     \param value The message value to be sent.
     \return True, if the message was delivered to the target entity, otherwise false.
 
@@ -610,12 +675,12 @@ protected:
     control. If Theron is ever extended to support actors across multiple processes, or
     multiple hosts, then this guarantee may have to be relaxed; nevertheless the arrival
     order of messages sent between actors in the same process will still be guaranteed.
+    Moreover, messages will still be \em handled by an actor in the order they arrived.
     Of course the guarantee doesn't apply to messages sent by different actors: If two
     actors A and B send messages m1 and m2 to a third actor C, there is explicitly no
     guarantee on the arrival order of m1 and m2 at C.
 
     \see TailSend
-    \see <a href="http://www.theron-library.com/index.php?t=page&p=SendingMessages">Sending messages</a>
     */
     template <class ValueType>
     inline bool Send(const ValueType &value, const Address &address) const;
@@ -641,14 +706,14 @@ protected:
     {
     public:
 
-        Processor()
+        explicit Processor(Theron::Framework &framework) : Theron::Actor(framework)
         {
             RegisterHandler(this, &Processor::Process);
         }
 
     private:
 
-        inline void Process(const int &message, const Theron::Address from)
+        void Process(const int &message, const Theron::Address from)
         {
             // Do some compute-intensive processing using the message value
             // ...
@@ -662,9 +727,9 @@ protected:
     Notionally, TailSend causes the sending and receiving actors to be executed synchronously,
     in series, rather than overlapping the execution of the receiving actor with the execution
     of the remainder of the sending message handler (and any subsequent handlers executed for the
-    same message) in the sending actor. When called from the end ('tail') of a message handler,
-    the potential overlap is marginal at best so it's faster to not bother waking a thread, and so
-    avoid the thread synchronization overheads that waking a thread entails.
+    same message) in the sending actor. When sending a message at the end ('tail') of a message handler,
+    the potential for useful overlap is marginal at best anyway, so it's faster to not bother waking
+    a thread, and so avoid the thread synchronization overheads that waking a thread entails.
     
     \tparam ValueType The message type (any copyable class or Plain Old Datatype).
     \return True, if the message was delivered to the target entity, otherwise false.
@@ -680,78 +745,41 @@ protected:
 
 private:
 
-    typedef Detail::IntrusiveList<Detail::IMessageHandler> MessageHandlerList;
-
+    // Actors are non-copyable.
     Actor(const Actor &other);
     Actor &operator=(const Actor &other);
 
-    /// Returns a reference to the core of the actor.
-    inline Detail::ActorCore &Core();
-    
-    /// Returns a const-reference to the core of the actor.
-    inline const Detail::ActorCore &Core() const;
+    /**
+    Legacy ActorRef support.
+    */
+    inline Detail::Atomic::UInt32 &ReferenceCount();
 
-    /// Increments the reference count of the actor.
-    inline void Reference();
+    /**
+    Processes the given message, passing it to handlers registered for its type.
+    */
+    inline void ProcessMessage(
+        Detail::FallbackHandlerCollection *const fallbackHandlers,
+        Detail::IMessage *const message);
 
-    /// Decrements the reference count of the actor.
-    inline void Dereference();
-
-    /// Returns the default message handler, if one is set for this actor.
-    inline Detail::IDefaultHandler *GetDefaultHandler() const;
-
-    /// Returns a reference to the list of handlers added since the actor was last processed.
-    inline MessageHandlerList &GetNewHandlerList();
-
-    /// Gets a pointer to the pulse counter of the framework that owns the actor.
-    uint32_t *GetPulseCounterAddress() const;
+    /**
+    Handle an unhandled message.
+    */
+    void Fallback(
+        Detail::FallbackHandlerCollection *const fallbackHandlers,
+        const Detail::IMessage *const message);
 
     Address mAddress;                                   ///< Unique address of this actor.
-    Detail::ActorCore *mCore;                           ///< Pointer to the core implementation of the actor.
-    uint32_t mReferenceCount;                           ///< Counts how many ActorRef instances reference this actor.
-    Detail::IDefaultHandler *mDefaultMessageHandler;    ///< Handler executed for unhandled messages.
-    MessageHandlerList mNewHandlerList;                 ///< Holds new message handlers until they're added the real handler list.
+    Framework *mFramework;                              ///< Pointer to the framework within which the actor runs.
+    Detail::HandlerCollection mMessageHandlers;         ///< The message handlers registered by this actor.
+    Detail::DefaultHandlerCollection mDefaultHandlers;  ///< Default message handlers registered by this actor.
+    Detail::ProcessorContext *mProcessorContext;        ///< Remembers the context of the worker thread processing the actor.
+
+    Detail::Atomic::UInt32 mReferenceCount;             ///< Reference count to support legacy ActorRef API.
+    void *mMemory;                                      ///< Pointer to memory block containing final actor type.
 };
 
 
-THERON_FORCEINLINE Actor::Actor() :
-  mAddress(),
-  mCore(0),
-  mReferenceCount(0),
-  mDefaultMessageHandler(0),
-  mNewHandlerList()
-{
-    // Look up the registered member data for this instance in the list.
-    Detail::ActorCreator::Entry *const entry(Detail::ActorCreator::Get(this));
-
-    THERON_ASSERT(entry);
-    THERON_ASSERT(entry->mLocation == this);
-    THERON_ASSERT(entry->mActorCore);
-    THERON_ASSERT(entry->mAddress != Address::Null());
-
-    mAddress = entry->mAddress;
-    mCore = entry->mActorCore;
-}
-
-
-inline Actor::~Actor()
-{
-    // Free all allocated handler objects in the new handler list.
-    while (Detail::IMessageHandler *const handler = mNewHandlerList.Front())
-    {
-        mNewHandlerList.Remove(handler);
-        AllocatorManager::Instance().GetAllocator()->Free(handler);
-    }
-
-    // Free the default handler object, if one is set.
-    if (mDefaultMessageHandler)
-    {
-        AllocatorManager::Instance().GetAllocator()->Free(mDefaultMessageHandler);
-    }
-}
-
-
-THERON_FORCEINLINE const Address &Actor::GetAddress() const
+THERON_FORCEINLINE Address Actor::GetAddress() const
 {
     return mAddress;
 }
@@ -759,16 +787,7 @@ THERON_FORCEINLINE const Address &Actor::GetAddress() const
 
 THERON_FORCEINLINE Framework &Actor::GetFramework() const
 {
-    return *mCore->GetFramework();
-}
-
-
-THERON_FORCEINLINE uint32_t Actor::GetNumQueuedMessages() const
-{
-    // We lock the core mutex to protect access to the message count.
-    // Messages may be received during the execution of a handler, changing the count.
-    Detail::Lock lock(mCore->GetMutex());
-    return mCore->GetNumQueuedMessages();
+    return *mFramework;
 }
 
 
@@ -777,124 +796,25 @@ inline bool Actor::RegisterHandler(
     ActorType *const /*actor*/,
     void (ActorType::*handler)(const ValueType &message, const Address from))
 {
-    typedef Detail::MessageHandler<ActorType, ValueType> MessageHandlerType;
-
-    // Allocate memory for a message handler object.
-    void *const memory = AllocatorManager::Instance().GetAllocator()->Allocate(sizeof(MessageHandlerType));
-    if (memory == 0)
-    {
-        return false;
-    }
-
-    // Construct a handler object to remember the function pointer and message value type.
-    MessageHandlerType *const messageHandler = new (memory) MessageHandlerType(handler);
-    THERON_ASSERT(messageHandler);
-
-    // Add the handler to a list for adding later when we're sure no handlers are running.
-    // We don't need to lock this because only one thread can access it at a time.
-    mNewHandlerList.Insert(messageHandler);
-
-    // Tell the core to update its handler list before processing the actor.
-    mCore->DirtyHandlers();
-
-    return true;
+    return mMessageHandlers.Add(handler);
 }
 
 
 template <class ActorType, class ValueType>
 inline bool Actor::DeregisterHandler(
-    ActorType *const actor,
+    ActorType *const /*actor*/,
     void (ActorType::*handler)(const ValueType &message, const Address from))
 {
-    // If the message value type has a valid (non-zero) type name defined for it,
-    // then we use explicit type names to match messages to handlers.
-    // The default value of zero indicates that no type name has been defined,
-    // in which case we rely on compiler-generated RTTI to identify message types.
-    typedef Detail::MessageHandler<ActorType, ValueType> MessageHandlerType;
-    typedef Detail::MessageHandlerCast<ActorType, Detail::MessageTraits<ValueType>::HAS_TYPE_NAME> HandlerCaster;
-
-    // Remove the handler from the main handler list, if it's there.
-    if (mCore->DeregisterHandler<ActorType, ValueType>(actor, handler))
-    {
-        return true;
-    }
-
-    // The handler wasn't in the registered list, maybe it's in the new handlers list.
-    // That can happen if the handler was only just registered prior to this in the same function.
-    // It's a bit weird to register a handler and the immediately deregister it, but legal.
-    typename MessageHandlerList::Iterator newHandlers(mNewHandlerList.Begin());
-    const typename MessageHandlerList::Iterator newHandlersEnd(mNewHandlerList.End());
-
-    while (newHandlers != newHandlersEnd)
-    {
-        Detail::IMessageHandler *const messageHandler(*newHandlers);
-
-        // Try to convert this handler, of unknown type, to the target type.
-        const MessageHandlerType *const typedHandler = HandlerCaster:: template CastHandler<ValueType>(messageHandler);
-        if (typedHandler)
-        {
-            // Don't count the handler if it's already marked for deregistration.
-            if (typedHandler->GetHandlerFunction() == handler && !typedHandler->IsMarked())
-            {
-                // Mark the handler for deregistration.
-                messageHandler->Mark();
-
-                // We don't need to tell the actor to update its handlers since the new handler list is non-empty.
-                THERON_ASSERT(mCore->AreHandlersDirty());
-
-                return true;
-            }
-        }
-
-        ++newHandlers;
-    }
-
-    return false;
+    return mMessageHandlers.Remove(handler);
 }
 
 
 template <class ActorType, class ValueType>
 inline bool Actor::IsHandlerRegistered(
-    ActorType *const actor,
+    ActorType *const /*actor*/,
     void (ActorType::*handler)(const ValueType &message, const Address from))
 {
-    // If the message value type has a valid (non-zero) type name defined for it,
-    // then we use explicit type names to match messages to handlers.
-    // The default value of zero indicates that no type name has been defined,
-    // in which case we rely on compiler-generated RTTI to identify message types.
-    typedef Detail::MessageHandler<ActorType, ValueType> MessageHandlerType;
-    typedef Detail::MessageHandlerCast<ActorType, Detail::MessageTraits<ValueType>::HAS_TYPE_NAME> HandlerCaster;
-
-    // Search the currently registered handlers first.
-    if (mCore->IsHandlerRegistered<ActorType, ValueType>(actor, handler))
-    {
-        return true;
-    }
-
-    // The handler wasn't in the registered list, maybe it's in the new handlers list.
-    typename MessageHandlerList::Iterator newHandlers(mNewHandlerList.Begin());
-    const typename MessageHandlerList::Iterator newHandlersEnd(mNewHandlerList.End());
-
-    while (newHandlers != newHandlersEnd)
-    {
-        Detail::IMessageHandler *const messageHandler(*newHandlers);
-
-        // Try to convert this handler, of unknown type, to the target type.
-        const MessageHandlerType *const typedHandler = HandlerCaster:: template CastHandler<ValueType>(messageHandler);
-        if (typedHandler)
-        {
-            // Count as not registered if it's marked for deregistration.
-            // But it may be registered more than once, so keep looking.
-            if (typedHandler->GetHandlerFunction() == handler && !typedHandler->IsMarked())
-            {
-                return true;
-            }
-        }
-
-        ++newHandlers;
-    }
-
-    return false;
+    return mMessageHandlers.Contains(handler);
 }
 
 
@@ -903,30 +823,7 @@ inline bool Actor::SetDefaultHandler(
     ActorType *const /*actor*/,
     void (ActorType::*handler)(const Address from))
 {
-    typedef Detail::DefaultHandler<ActorType> HandlerType;
-
-    // Destroy any previously set handler.
-    // We don't need to lock this because only one thread can access it at a time.
-    if (mDefaultMessageHandler)
-    {
-        AllocatorManager::Instance().GetAllocator()->Free(mDefaultMessageHandler);
-        mDefaultMessageHandler = 0;
-    }
-
-    if (handler)
-    {
-        // Allocate memory for the handler object.
-        void *const memory = AllocatorManager::Instance().GetAllocator()->Allocate(sizeof(HandlerType));
-        if (memory == 0)
-        {
-            return false;
-        }
-
-        // Construct the handler object to remember the function pointer.
-        mDefaultMessageHandler = new (memory) HandlerType(handler);
-    }
-
-    return true;
+    return mDefaultHandlers.Set(handler);
 }
 
 
@@ -935,67 +832,43 @@ inline bool Actor::SetDefaultHandler(
     ActorType *const /*actor*/,
     void (ActorType::*handler)(const void *const data, const uint32_t size, const Address from))
 {
-    typedef Detail::BlindDefaultHandler<ActorType> HandlerType;
-
-    // Destroy any previously set handler.
-    // We don't need to lock this because only one thread can access it at a time.
-    if (mDefaultMessageHandler)
-    {
-        AllocatorManager::Instance().GetAllocator()->Free(mDefaultMessageHandler);
-        mDefaultMessageHandler = 0;
-    }
-
-    if (handler)
-    {
-        // Allocate memory for the handler object.
-        void *const memory = AllocatorManager::Instance().GetAllocator()->Allocate(sizeof(HandlerType));
-        if (memory == 0)
-        {
-            return false;
-        }
-
-        // Construct the handler object to remember the function pointer.
-        mDefaultMessageHandler = new (memory) HandlerType(handler);
-    }
-
-    return true;
-}
-
-
-THERON_FORCEINLINE Detail::IDefaultHandler *Actor::GetDefaultHandler() const
-{
-    return mDefaultMessageHandler;
-}
-
-
-THERON_FORCEINLINE Actor::MessageHandlerList &Actor::GetNewHandlerList()
-{
-    return mNewHandlerList;
+    return mDefaultHandlers.Set(handler);
 }
 
 
 template <class ValueType>
 THERON_FORCEINLINE bool Actor::Send(const ValueType &value, const Address &address) const
 {
-    Framework *const framework(mCore->GetFramework());
-    IAllocator *messageAllocator(AllocatorManager::Instance().GetAllocator());
-    uint32_t *pulseCounter(GetPulseCounterAddress());
-
-    // Use the message cache owned by the thread currently executing the actor, if any.
-    // When an actor sends a message in its constructor the executing thread is not a worker thread.
-    Detail::WorkerContext *const workerContext(mCore->GetWorkerContext());
-    if (workerContext != 0)
+    // Try to use the processor context owned by a worker thread.
+    // The current thread will be a worker thread if this method has been called from a message
+    // handler. If it was called from an actor constructor or destructor then the current thread
+    // may be an application thread, in which case the stored context pointer will be null.
+    // If it is null we fall back to the per-framework context, which is shared between threads.
+    // The advantage of using a thread-specific context is that it is only accessed by that
+    // single thread so doesn't need to be thread-safe and isn't written by other threads
+    // so doesn't cause expensive cache coherency updates between cores.
+    Detail::ProcessorContext *processorContext(mProcessorContext);
+    if (mProcessorContext == 0)
     {
-        messageAllocator = &workerContext->mMessageCache;
-        pulseCounter = &workerContext->mPulseCount;
+        processorContext = &mFramework->mProcessorContext;
     }
 
-    return Detail::MessageSender::Send(
-        messageAllocator,
-        pulseCounter,
-        framework,
+    // Allocate a message. It'll be deleted by the worker thread that handles it.
+    Detail::IMessage *const message(Detail::MessageCreator::Create(
+        processorContext->mMessageAllocator,
         value,
-        mAddress,
+        mAddress));
+
+    if (message == 0)
+    {
+        return false;
+    }
+
+    // Call the message sending implementation using the acquired processor context.
+    return Detail::MessageSender::Send(
+        processorContext,
+        mFramework->GetIndex(),
+        message,
         address);
 }
 
@@ -1003,66 +876,38 @@ THERON_FORCEINLINE bool Actor::Send(const ValueType &value, const Address &addre
 template <class ValueType>
 THERON_FORCEINLINE bool Actor::TailSend(const ValueType &value, const Address &address) const
 {
-    Framework *const framework(mCore->GetFramework());
-    IAllocator *messageAllocator(AllocatorManager::Instance().GetAllocator());
+    // Currently TailSend is identical to Send.
+    return Send(value, address);
+}
 
-    // Use the message cache owned by the thread currently executing the actor, if any.
-    // When an actor sends a message in its constructor the executing thread is not a worker thread.
-    Detail::WorkerContext *const workerContext(mCore->GetWorkerContext());
-    if (workerContext != 0)
+
+THERON_FORCEINLINE Detail::Atomic::UInt32 &Actor::ReferenceCount()
+{
+    return mReferenceCount;
+}
+
+
+THERON_FORCEINLINE void Actor::ProcessMessage(
+    Detail::FallbackHandlerCollection *const fallbackHandlers,
+    Detail::IMessage *const message)
+{
+    if (mMessageHandlers.Handle(this, message))
     {
-        messageAllocator = &workerContext->mMessageCache;
+        return;
     }
 
-    return Detail::MessageSender::TailSend(
-        messageAllocator,
-        framework,
-        value,
-        mAddress,
-        address);
-}
-
-
-THERON_FORCEINLINE Detail::ActorCore &Actor::Core()
-{
-    return *mCore;
-}
-
-
-THERON_FORCEINLINE const Detail::ActorCore &Actor::Core() const
-{
-    return *mCore;
-}
-
-
-THERON_FORCEINLINE void Actor::Reference()
-{
-    Detail::Lock lock(mCore->GetMutex());
-    ++mReferenceCount;
-}
-
-
-THERON_FORCEINLINE void Actor::Dereference()
-{
-    // We lock the reference count partly to ensure threadsafe access
-    // to the actual count and partly to make sure the actor isn't destroyed
-    // while we're still accessing it, in the case where we decrement the count to zero.
-    Detail::Lock lock(mCore->GetMutex());
-
-    THERON_ASSERT(mReferenceCount > 0);
-    if (--mReferenceCount == 0)
-    {
-        // The framework eventually destroys actors that become unreferenced.
-        // However we have to tell the framework that the actor is dead.
-        // We call this method to wake a single worker thread.
-        // On finding that the actor is unreferenced, the worker thread will destroy it.
-        mCore->Unreference();
-    }
+    // If no registered handler handled the message, execute the default handlers instead.
+    // This call is intentionally not inlined to avoid polluting the generated code with the uncommon case.
+    Fallback(fallbackHandlers, message);
 }
 
 
 } // namespace Theron
 
 
-#endif // THERON_ACTOR_H
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif //_MSC_VER
 
+
+#endif // THERON_ACTOR_H

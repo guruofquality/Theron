@@ -1,16 +1,14 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_DETAIL_HANDLERS_RECEIVERHANDLERCAST_H
 #define THERON_DETAIL_HANDLERS_RECEIVERHANDLERCAST_H
 
 
-#include <Theron/Detail/Debug/Assert.h>
+#include <Theron/Assert.h>
+#include <Theron/Defines.h>
+
 #include <Theron/Detail/Handlers/IReceiverHandler.h>
 #include <Theron/Detail/Handlers/ReceiverHandler.h>
 #include <Theron/Detail/Messages/MessageTraits.h>
-
-#include <Theron/Defines.h>
 
 
 namespace Theron
@@ -19,13 +17,17 @@ namespace Detail
 {
 
 
-/// \brief Dynamic cast utility for message handler pointers.
+/**
+\brief Dynamic cast utility for message handler pointers.
+*/
 template <class ObjectType, bool HAS_TYPE_NAME>
 class ReceiverHandlerCast
 {
 public:
 
-    /// \brief Attempts to convert a given message handler, of unknown type, to one of a target type.
+    /**
+    \brief Attempts to convert a given message handler, of unknown type, to one of a target type.
+    */
     template <class ValueType>
     THERON_FORCEINLINE static const ReceiverHandler<ObjectType, ValueType> *CastHandler(const IReceiverHandler *const handler)
     {
@@ -54,8 +56,10 @@ class ReceiverHandlerCast<ObjectType, false>
 {
 public:
 
-    /// Attempts to convert the given message handler, of unknown message type, to a handler of the given type.
-    /// \note Returns a null pointer if the unknown handler is of the wrong type.
+    /**
+    Attempts to convert the given message handler, of unknown message type, to a handler of the given type.
+    \note Returns a null pointer if the unknown handler is of the wrong type.
+    */
     template <class ValueType>
     THERON_FORCEINLINE static const ReceiverHandler<ObjectType, ValueType> *CastHandler(const IReceiverHandler *const handler)
     {
@@ -76,4 +80,3 @@ public:
 
 
 #endif // THERON_DETAIL_HANDLERS_RECEIVERHANDLERCAST_H
-

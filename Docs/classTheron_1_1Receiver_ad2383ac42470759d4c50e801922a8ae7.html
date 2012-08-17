@@ -89,7 +89,7 @@ window.onload = initDynSections;
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Receiver_aaecc6c19f587eac73103dc16c71a45df.html#aaecc6c19f587eac73103dc16c71a45df">Consume</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Receiver_a753087ea4ee8670ae098b4704b4056a4.html#a753087ea4ee8670ae098b4704b4056a4">Count</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Receiver_ab3a0693b1261d3d0853627d227dac3e6.html#ab3a0693b1261d3d0853627d227dac3e6">DeregisterHandler</a></td></tr>
-          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Receiver_a22a1d3557a6cc167d1ccb9ad9cb95816.html#a22a1d3557a6cc167d1ccb9ad9cb95816">GetAddress</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Receiver_ade22428952084fee67865a194ade6df2.html#ade22428952084fee67865a194ade6df2">GetAddress</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Receiver_af52a34e59cded82445938db098ea9e08.html#af52a34e59cded82445938db098ea9e08">Receiver</a></td></tr>
           <tr><td class="navtab"><a class="qindexHL" href="classTheron_1_1Receiver_ad2383ac42470759d4c50e801922a8ae7.html#ad2383ac42470759d4c50e801922a8ae7">RegisterHandler</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Receiver_a4cd17c1a51a4f01e66313c2fa0a0de44.html#a4cd17c1a51a4f01e66313c2fa0a0de44">Reset</a></td></tr>
@@ -128,31 +128,31 @@ template&lt;class ClassType , class ValueType &gt; </div>
 
 <p>Registers a message handler for a specific message type. </p>
 <p>The handler is a member function on a handler object of type ClassType. The handler takes as input a message of type ValueType and a <em>from</em> address indicating the sender of the message. The handler will be executed whenever messages of type ValueType are received.</p>
-<p>A common pattern is to register a "catch" handler on a simple "catcher" object whose purpose is to catch and hold the value of an arrived message:</p>
+<p>The <a class="el" href="classTheron_1_1Catcher.html">Catcher</a> helper is a useful utility that can be used as a "catcher" for messages received by receivers. It's a template and can be instantiated against a specific message type, which it then catches. Its <a class="el" href="classTheron_1_1Catcher_a4f85127566eeb430c49ba995f59afe17.html#a4f85127566eeb430c49ba995f59afe17">Push</a> method has the signature of a message handler and so can be registered as a message handler using RegisterHandler. It has the semantics of a queue, and acts as a FIFO buffer of received messages, ensuring that newly arrived messages don't simply overwrite previously received ones. In addition it is thread-safe and so can safely be read (popped) while still registered as a handler on a <a class="el" href="classTheron_1_1Receiver.html" title="A standalone entity that can accept messages sent by actors.">Receiver</a>.</p>
 <div class="fragment"><pre class="fragment">    <span class="keyword">struct </span>Message
     {
         <span class="keywordtype">int</span> mValue;
     };
 
-    <span class="keyword">class </span>Catcher
-    {
-    <span class="keyword">public</span>:
-
-        <span class="keyword">inline</span> <span class="keywordtype">void</span> Catch(<span class="keyword">const</span> Message &amp;message, <span class="keyword">const</span> <a class="code" href="classTheron_1_1Address.html" title="The unique address of an entity that can send or receive messages.">Theron::Address</a> from)
-        {
-            mMessage = message;
-        }
-
-        Message mMessage;
-    };
-
     <a class="code" href="classTheron_1_1Receiver.html" title="A standalone entity that can accept messages sent by actors.">Theron::Receiver</a> receiver;
-    Catcher catcher;
+    <a class="code" href="classTheron_1_1Catcher.html" title="A simple utility class template that catches messages received by a Receiver.">Theron::Catcher&lt;Message&gt;</a> catcher;
 
-    receiver.<a class="code" href="classTheron_1_1Receiver_ad2383ac42470759d4c50e801922a8ae7.html#ad2383ac42470759d4c50e801922a8ae7" title="Registers a message handler for a specific message type.">RegisterHandler</a>(&amp;catcher, &amp;Catcher::Catch);
-</pre></div><p>Having registered the catcher, the calling thread then examines the caught message after synchronizing with its arrival via a blocking call to Wait:</p>
-<div class="fragment"><pre class="fragment">    receiver.<a class="code" href="classTheron_1_1Receiver_a5dbee36b18e7c0549ba860d93e2265fd.html#a5dbee36b18e7c0549ba860d93e2265fd" title="Waits until one or more messages arrive at the receiver.">Wait</a>();
-    printf(<span class="stringliteral">&quot;Caught message with value %d\n&quot;</span>, catcher.mMessage.mValue);
+    <span class="comment">// Register the Push method of the Catcher as a handler.</span>
+    receiver.<a class="code" href="classTheron_1_1Receiver_ad2383ac42470759d4c50e801922a8ae7.html#ad2383ac42470759d4c50e801922a8ae7" title="Registers a message handler for a specific message type.">RegisterHandler</a>(&amp;catcher, &amp;<a class="code" href="classTheron_1_1Catcher.html" title="A simple utility class template that catches messages received by a Receiver.">Theron::Catcher&lt;Message&gt;::Push</a>);
+</pre></div><p>Having registered the catcher, the calling thread then pops caught messages from the <a class="el" href="classTheron_1_1Catcher.html" title="A simple utility class template that catches messages received by a Receiver.">Catcher</a> after synchronizing with their arrival via blocking calls to Wait:</p>
+<div class="fragment"><pre class="fragment">    <span class="comment">// Wait for two messages to arrive.</span>
+    receiver.<a class="code" href="classTheron_1_1Receiver_a5dbee36b18e7c0549ba860d93e2265fd.html#a5dbee36b18e7c0549ba860d93e2265fd" title="Waits until one or more messages arrive at the receiver.">Wait</a>();
+    receiver.<a class="code" href="classTheron_1_1Receiver_a5dbee36b18e7c0549ba860d93e2265fd.html#a5dbee36b18e7c0549ba860d93e2265fd" title="Waits until one or more messages arrive at the receiver.">Wait</a>();
+
+    <span class="comment">// Read the arrived messages from the catcher&#39;s internal queue.</span>
+    Message message;
+    <a class="code" href="classTheron_1_1Address.html" title="The unique address of an entity that can send or receive messages.">Theron::Address</a> from;
+
+    catcher.<a class="code" href="classTheron_1_1Catcher_a6414c84de332310f0345bbec226f0542.html#a6414c84de332310f0345bbec226f0542" title="Gets the next caught message, removing it from the queue.">Pop</a>(message, from);
+    printf(<span class="stringliteral">&quot;Caught message with value %d\n&quot;</span>, message.mValue);
+
+    catcher.<a class="code" href="classTheron_1_1Catcher_a6414c84de332310f0345bbec226f0542.html#a6414c84de332310f0345bbec226f0542" title="Gets the next caught message, removing it from the queue.">Pop</a>(message, from);
+    printf(<span class="stringliteral">&quot;Caught message with value %d\n&quot;</span>, message.mValue);
 </pre></div><dl><dt><b>Template Parameters:</b></dt><dd>
   <table border="0" cellspacing="2" cellpadding="0">
     <tr><td valign="top"></td><td valign="top"><em>ClassType</em>&nbsp;</td><td>The type of the registered handler class. </td></tr>
@@ -167,8 +167,7 @@ template&lt;class ClassType , class ValueType &gt; </div>
   </table>
   </dd>
 </dl>
-<dl class="return"><dt><b>Returns:</b></dt><dd>True, if the handler was successfully registered.</dd></dl>
-<dl class="see"><dt><b>See also:</b></dt><dd><a href="http://www.theron-library.com/index.php?t=page&amp;p=Receiver">Using a Receiver</a> </dd></dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>True, if the handler was successfully registered. </dd></dl>
 
 </div>
 </div>
@@ -181,7 +180,7 @@ template&lt;class ClassType , class ValueType &gt; </div>
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Files</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Enumerations</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(8)"><span class="SelectionMark">&nbsp;</span>Enumerator</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(9)"><span class="SelectionMark">&nbsp;</span>Defines</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Files</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Defines</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">

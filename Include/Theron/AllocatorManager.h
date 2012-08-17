@@ -1,6 +1,4 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_ALLOCATORMANAGER_H
 #define THERON_ALLOCATORMANAGER_H
 
@@ -11,11 +9,10 @@ Manager for allocators used within Theron.
 */
 
 
+#include <Theron/Assert.h>
 #include <Theron/DefaultAllocator.h>
 #include <Theron/Defines.h>
 #include <Theron/IAllocator.h>
-
-#include <Theron/Detail/Debug/Assert.h>
 
 
 namespace Theron
@@ -57,8 +54,6 @@ If the \ref DefaultAllocator is replaced with a custom allocator then it must be
 replaced at application start, before any Theron objects (\ref Framework "frameworks",
 \ref Actor "actors" or \ref Receiver "receivers") are constructed. \ref GetAllocator
 can be called any number of times, both before and after a call to \ref SetAllocator.
-
-\see <a href="http://www.theron-library.com/index.php?t=page&p=CustomAllocator">Using a custom allocator</a>
 */
 class AllocatorManager
 {
@@ -124,7 +119,9 @@ public:
 
 private:
 
-    /// Default constructor. Private, since the AllocatorManager is a singleton class.
+    /**
+    Default constructor. Private, since the AllocatorManager is a singleton class.
+    */
     inline AllocatorManager() :
       mDefaultAllocator(),
       mAllocator(&mDefaultAllocator)
@@ -145,4 +142,3 @@ private:
 
 
 #endif // THERON_ALLOCATORMANAGER_H
-

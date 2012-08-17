@@ -1,17 +1,14 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-
-
 #ifndef THERON_DETAIL_CONTAINERS_LIST_H
 #define THERON_DETAIL_CONTAINERS_LIST_H
 
 
 #include <new>
 
+#include <Theron/Assert.h>
 #include <Theron/BasicTypes.h>
 #include <Theron/AllocatorManager.h>
 #include <Theron/Defines.h>
-
-#include <Theron/Detail/Debug/Assert.h>
 
 
 namespace Theron
@@ -20,81 +17,103 @@ namespace Detail
 {
 
 
-/// Class template implementing a generic unsorted list.
+/**
+Class template implementing a generic unsorted list.
+*/
 template <class ItemType>
 class List
 {
 public:
 
-    /// Defines the node type used within the list.
-    /// Class template defining a generic node in a generic list.
-    /// Wraps the list item type in a wrapper class with next and previous pointers.
+    /**
+    Defines the node type used within the list.
+    Class template defining a generic node in a generic list.
+    Wraps the list item type in a wrapper class with next and previous pointers.
+    */
     struct Node
     {
         ItemType mItem;     ///> The item stored in the node.
         Node *mNext;        ///> Pointer to the next node in the list.
     };
 
-    /// Const iterator type.
+    /**
+    Const iterator type.
+    */
     class ListConstIterator
     {
     public:
 
-        /// Default constructor
-        /// Constructs an invalid iterator which must be assigned before being used.
+        /**
+        Default constructor
+        Constructs an invalid iterator which must be assigned before being used.
+        */
         THERON_FORCEINLINE ListConstIterator() : mNode(0)
         {
         }
 
-        /// Constructor
-        /// \param node The list node that the iterator initially references.
+        /**
+        Constructor
+        \param node The list node that the iterator initially references.
+        */
         THERON_FORCEINLINE explicit ListConstIterator(Node *const node) : mNode(node)
         {
         }
 
-        /// Copy constructor.
+        /**
+        Copy constructor.
+        */
         THERON_FORCEINLINE ListConstIterator(const ListConstIterator &other) : mNode(other.mNode)
         {
         }
 
-        /// Assignment operator.
+        /**
+        Assignment operator.
+        */
         THERON_FORCEINLINE ListConstIterator &operator=(const ListConstIterator &other)
         {
             mNode = other.mNode;
             return *this;
         }
 
-        /// Dereference operator. Returns a reference to the list item that the iterator currently references.
-        /// \return A const reference to the list item referenced by the iterator.
-        /// \note If the iterator doesn't reference a valid item then the result is undefined.
+        /**
+        Dereference operator. Returns a reference to the list item that the iterator currently references.
+        \return A const reference to the list item referenced by the iterator.
+        \note If the iterator doesn't reference a valid item then the result is undefined.
+        */
         THERON_FORCEINLINE const ItemType &operator*() const
         {
             THERON_ASSERT(mNode);
             return mNode->mItem;
         }
 
-        /// Pre-increment operator.
-        /// Moves the iterator to reference the next node in the list.
-        /// If the iterator currently references the last item in the list then the iterator
-        /// beomes equal to End after incrementation.
-        /// \note If the iterator is already equal to End then the result is undefined.
+        /**
+        Pre-increment operator.
+        Moves the iterator to reference the next node in the list.
+        If the iterator currently references the last item in the list then the iterator
+        beomes equal to End after incrementation.
+        \note If the iterator is already equal to End then the result is undefined.
+        */
         THERON_FORCEINLINE void operator++()
         {
             THERON_ASSERT(mNode);
             mNode = mNode->mNext;
         }
 
-        /// Equality operator. Compares two iterators for equality.
-        /// \param other Another iterator whose value is to be compared to this one.
-        /// \return True if the iterators reference the same item in the same list, otherwise false.
+        /**
+        Equality operator. Compares two iterators for equality.
+        \param other Another iterator whose value is to be compared to this one.
+        \return True if the iterators reference the same item in the same list, otherwise false.
+        */
         THERON_FORCEINLINE bool operator==(const ListConstIterator &other) const
         {
             return (mNode == other.mNode);
         }
 
-        /// Inequality operator. Compares two iterators for inequality.
-        /// \param other Another iterator whose value is to be compared to this one.
-        /// \return True if the iterators reference different items or different lists, otherwise false.
+        /**
+        Inequality operator. Compares two iterators for inequality.
+        \param other Another iterator whose value is to be compared to this one.
+        \return True if the iterators reference different items or different lists, otherwise false.
+        */
         THERON_FORCEINLINE bool operator!=(const ListConstIterator &other) const
         {
             return !operator==(other);
@@ -105,124 +124,170 @@ public:
         Node *mNode;        ///< Pointer to the list node that the iterator references.
     };
 
-    /// Iterator type.
+    /**
+    Iterator type.
+    */
     class ListIterator : public ListConstIterator
     {
     public:
 
-        /// Default constructor
-        /// Constructs an invalid iterator which must be assigned before being used.
+        /**
+        Default constructor
+        Constructs an invalid iterator which must be assigned before being used.
+        */
         THERON_FORCEINLINE ListIterator() : ListConstIterator(0)
         {
         }
 
-        /// Constructor
-        /// \param node The list node that the iterator initially references.
+        /**
+        Constructor
+        \param node The list node that the iterator initially references.
+        */
         THERON_FORCEINLINE explicit ListIterator(Node *const node) : ListConstIterator(node)
         {
         }
 
-        /// Copy constructor.
+        /**
+        Copy constructor.
+        */
         THERON_FORCEINLINE ListIterator(const ListConstIterator &other) : ListConstIterator::mNode(other.mNode)
         {
         }
 
-        /// Assignment operator.
+        /**
+        Assignment operator.
+        */
         THERON_FORCEINLINE ListIterator &operator=(const ListConstIterator &other)
         {
             ListConstIterator::mNode = other.mNode;
             return *this;
         }
 
-        /// Dereference operator. Returns a reference to the list item that the iterator currently references.
-        /// \return A reference to the list item referenced by the iterator.
-        /// \note If the iterator doesn't reference a valid item then the result is undefined.
+        /**
+        Dereference operator. Returns a reference to the list item that the iterator currently references.
+        \return A reference to the list item referenced by the iterator.
+        \note If the iterator doesn't reference a valid item then the result is undefined.
+        */
         THERON_FORCEINLINE ItemType &operator*()
         {
             THERON_ASSERT(ListConstIterator::mNode);
             return ListConstIterator::mNode->mItem;
         }
 
-        /// Equality operator. Compares two iterators for equality.
-        /// \param other Another iterator whose value is to be compared to this one.
-        /// \return True if the iterators reference the same item in the same list, otherwise false.
+        /**
+        Equality operator. Compares two iterators for equality.
+        \param other Another iterator whose value is to be compared to this one.
+        \return True if the iterators reference the same item in the same list, otherwise false.
+        */
         THERON_FORCEINLINE bool operator==(const ListConstIterator &other) const
         {
             return ListConstIterator::operator==(other);
         }
 
-        /// Inequality operator. Compares two iterators for inequality.
-        /// \param other Another iterator whose value is to be compared to this one.
-        /// \return True if the iterators reference different items or different lists, otherwise false.
+        /**
+        Inequality operator. Compares two iterators for inequality.
+        \param other Another iterator whose value is to be compared to this one.
+        \return True if the iterators reference different items or different lists, otherwise false.
+        */
         THERON_FORCEINLINE bool operator!=(const ListConstIterator &other) const
         {
             return ListConstIterator::operator!=(other);
         }
     };
 
-    /// Defines the iterator type exposed by the list.
+    /**
+    Defines the iterator type exposed by the list.
+    */
     typedef ListIterator iterator;
 
-    /// Defines the const iterator type exposed by the list.
+    /**
+    Defines the const iterator type exposed by the list.
+    */
     typedef ListConstIterator const_iterator;
 
-    /// Constructor
+    /**
+    Constructor
+    */
     inline List();
     
-    /// Destructor
+    /**
+    Destructor
+    */
     inline ~List();
 
-    /// Returns an iterator referencing the first item in the list.
-    /// \return An iterator referencing the first item in the list, or End if the list is empty.
+    /**
+    Returns an iterator referencing the first item in the list.
+    \return An iterator referencing the first item in the list, or End if the list is empty.
+    */
     inline iterator Begin();
 
-    /// Returns an iterator referencing the end of the list.
-    /// Incrementing an iterator that references the last item in the list results in the
-    /// iterator being equal to the iterator returned by End.
-    /// \return An iterator referencing the end of the list.
+    /**
+    Returns an iterator referencing the end of the list.
+    Incrementing an iterator that references the last item in the list results in the
+    iterator being equal to the iterator returned by End.
+    \return An iterator referencing the end of the list.
+    */
     inline iterator End();
 
-    /// Returns an iterator referencing the first item in the list.
-    /// \return An iterator referencing the first item in the list, or End if the list is empty.
+    /**
+    Returns an iterator referencing the first item in the list.
+    \return An iterator referencing the first item in the list, or End if the list is empty.
+    */
     inline const_iterator Begin() const;
 
-    /// Returns an iterator referencing the end of the list.
-    /// Incrementing an iterator that references the last item in the list results in the
-    /// iterator being equal to the iterator returned by End.
-    /// \return An iterator referencing the end of the list.
+    /**
+    Returns an iterator referencing the end of the list.
+    Incrementing an iterator that references the last item in the list results in the
+    iterator being equal to the iterator returned by End.
+    \return An iterator referencing the end of the list.
+    */
     inline const_iterator End() const;
 
-    /// Returns the number of items currently in the list.
-    /// \return The number of items in the list.
+    /**
+    Returns the number of items currently in the list.
+    \return The number of items in the list.
+    */
     inline uint32_t Size() const;
 
-    /// Returns true if there are no items currently in the list.
+    /**
+    Returns true if there are no items currently in the list.
+    */
     inline bool Empty() const;
 
-    /// Empties the list, removing all previously inserted items.
+    /**
+    Empties the list, removing all previously inserted items.
+    */
     inline void Clear();
 
-    /// Adds an item to the list. The new item is copied by reference and added at the head.
-    /// No checking for duplicates is performed.
-    /// \param item A const reference to the item to be added to the list.
+    /**
+    Adds an item to the list. The new item is copied by reference and added at the head.
+    No checking for duplicates is performed.
+    \param item A const reference to the item to be added to the list.
+    */
     inline void Insert(const ItemType &item);
 
-    /// Returns a bool result indicating whether the list contains an item equal to the
-    /// given item.
-    /// \param item The item to be searched for.
-    /// \return True, if the list contains an equal item, otherwise false.
+    /**
+    Returns a bool result indicating whether the list contains an item equal to the
+    given item.
+    \param item The item to be searched for.
+    \return True, if the list contains an equal item, otherwise false.
+    */
     inline bool Contains(const ItemType &item) const;
 
-    /// Removes the first occurance of an item from the list.
-    /// The list is searched for an item equal to the provided item. If one is found
-    /// then the first such item found is removed from the list.
-    /// \note If the list contains duplicate copies of the removed item then the
-    /// duplicates will remain and should be removed with subsequent calls to Remove.
-    /// \param item The item to be removed.
-    /// \return True if the item was found and removed, otherwise false.
+    /**
+    Removes the first occurance of an item from the list.
+    The list is searched for an item equal to the provided item. If one is found
+    then the first such item found is removed from the list.
+    \note If the list contains duplicate copies of the removed item then the
+    duplicates will remain and should be removed with subsequent calls to Remove.
+    \param item The item to be removed.
+    \return True if the item was found and removed, otherwise false.
+    */
     inline bool Remove(const ItemType &item);
 
-    /// Returns a const reference to the first item in the list.
+    /**
+    Returns a const reference to the first item in the list.
+    */
     inline const ItemType &Front() const;
 
 private:
@@ -401,4 +466,3 @@ THERON_FORCEINLINE const ItemType &List<ItemType>::Front() const
 
 
 #endif // THERON_DETAIL_CONTAINERS_LIST_H
-

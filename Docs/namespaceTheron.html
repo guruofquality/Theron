@@ -86,18 +86,20 @@ window.onload = initDynSections;
 </div>
 <div class="contents">
 <h1>Theron Namespace Reference</h1>
-<p>Main namespace, containing all public API components.  
+<p>Main namespace containing all public API components.  
 <a href="#_details">More...</a></p>
 <table border="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="2"><h2>Classes</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">class &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTheron_1_1Actor.html">Actor</a></td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The actor baseclass.  <a href="classTheron_1_1Actor.html#_details">More...</a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">class &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTheron_1_1ActorRef.html">ActorRef</a></td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Used to reference an actor in user code.  <a href="classTheron_1_1ActorRef.html#_details">More...</a><br/></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Legacy utility for backwards compatibility.  <a href="classTheron_1_1ActorRef.html#_details">More...</a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">class &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTheron_1_1Address.html">Address</a></td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The unique address of an entity that can send or receive messages.  <a href="classTheron_1_1Address.html#_details">More...</a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">class &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTheron_1_1AllocatorManager.html">AllocatorManager</a></td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Singleton class that manages allocators for use by <a class="el" href="namespaceTheron.html" title="Main namespace, containing all public API components.">Theron</a>.  <a href="classTheron_1_1AllocatorManager.html#_details">More...</a><br/></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Singleton class that manages allocators for use by <a class="el" href="namespaceTheron.html" title="Main namespace containing all public API components.">Theron</a>.  <a href="classTheron_1_1AllocatorManager.html#_details">More...</a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">class &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTheron_1_1Catcher.html">Catcher</a></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">A simple utility class template that catches messages received by a <a class="el" href="classTheron_1_1Receiver.html">Receiver</a>.  <a href="classTheron_1_1Catcher.html#_details">More...</a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">class &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTheron_1_1DefaultAllocator.html">DefaultAllocator</a></td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">A simple general purpose memory allocator used by default.  <a href="classTheron_1_1DefaultAllocator.html#_details">More...</a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">class &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTheron_1_1Framework.html">Framework</a></td></tr>
@@ -107,23 +109,21 @@ window.onload = initDynSections;
 <tr><td class="memItemLeft" align="right" valign="top">class &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTheron_1_1Receiver.html">Receiver</a></td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">A standalone entity that can accept messages sent by <a class="el" href="classTheron_1_1Actor.html">actors</a>.  <a href="classTheron_1_1Receiver.html#_details">More...</a><br/></td></tr>
 <tr><td colspan="2"><h2>Typedefs</h2></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">typedef unsigned char&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceTheron_af5b09d51b6e219f81410bdf8b317ea71.html#af5b09d51b6e219f81410bdf8b317ea71">uint8_t</a></td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">An 8-bit unsigned integer.  <a href="#af5b09d51b6e219f81410bdf8b317ea71"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">typedef unsigned int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceTheron_aa154bad6b7514de43642bbbb02ca974d.html#aa154bad6b7514de43642bbbb02ca974d">uint32_t</a></td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">A 32-bit unsigned integer.  <a href="#aa154bad6b7514de43642bbbb02ca974d"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">typedef unsigned long long&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceTheron_a87a6a71a9068fa4300e16a5db807ef97.html#a87a6a71a9068fa4300e16a5db807ef97">uint64_t</a></td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">A 64-bit unsigned integer.  <a href="#a87a6a71a9068fa4300e16a5db807ef97"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">typedef unsigned long&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceTheron_a47050cd566c45e91f5c076bb7790786e.html#a47050cd566c45e91f5c076bb7790786e">uintptr_t</a></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">typedef ::<a class="el" href="namespaceTheron_acab5b9baa27de520ef83b3024258429c.html#acab5b9baa27de520ef83b3024258429c">uint8_t</a>&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceTheron_acab5b9baa27de520ef83b3024258429c.html#acab5b9baa27de520ef83b3024258429c">uint8_t</a></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">typedef ::<a class="el" href="namespaceTheron_a254da7d1d07833b997828500fbf73daa.html#a254da7d1d07833b997828500fbf73daa">uint32_t</a>&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceTheron_a254da7d1d07833b997828500fbf73daa.html#a254da7d1d07833b997828500fbf73daa">uint32_t</a></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">typedef ::<a class="el" href="namespaceTheron_aa1e39ca4c527034d6b784bea7f085e5f.html#aa1e39ca4c527034d6b784bea7f085e5f">int32_t</a>&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceTheron_aa1e39ca4c527034d6b784bea7f085e5f.html#aa1e39ca4c527034d6b784bea7f085e5f">int32_t</a></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">typedef ::<a class="el" href="namespaceTheron_ade28202127531a0f27728c157d1b925a.html#ade28202127531a0f27728c157d1b925a">uint64_t</a>&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceTheron_ade28202127531a0f27728c157d1b925a.html#ade28202127531a0f27728c157d1b925a">uint64_t</a></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">typedef ::<a class="el" href="namespaceTheron_a529ae0c39c30bf1ddc7fa87de771cbac.html#a529ae0c39c30bf1ddc7fa87de771cbac">uintptr_t</a>&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceTheron_a529ae0c39c30bf1ddc7fa87de771cbac.html#a529ae0c39c30bf1ddc7fa87de771cbac">uintptr_t</a></td></tr>
 </table>
 <hr/><a name="_details"></a><h2>Detailed Description</h2>
-<p>Main namespace, containing all public API components. </p>
+<p>Main namespace containing all public API components. </p>
 </div>
 <!--- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Files</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Enumerations</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(8)"><span class="SelectionMark">&nbsp;</span>Enumerator</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(9)"><span class="SelectionMark">&nbsp;</span>Defines</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Files</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Defines</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
