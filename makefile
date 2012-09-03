@@ -257,7 +257,6 @@ THERON_HEADERS = \
 	Include/Theron/Detail/Threading/Thread.h \
 	Include/Theron/Detail/Threading/Utils.h \
 	Include/Theron/Detail/MailboxProcessor/ProcessorContext.h \
-	Include/Theron/Detail/MailboxProcessor/ThreadCollection.h \
 	Include/Theron/Detail/MailboxProcessor/ThreadPool.h \
 	Include/Theron/Detail/MailboxProcessor/WorkerThreadStore.h \
 	Include/Theron/Detail/MailboxProcessor/WorkItem.h \
@@ -269,6 +268,7 @@ THERON_HEADERS = \
 	Include/Theron/Assert.h \
 	Include/Theron/BasicTypes.h \
 	Include/Theron/Catcher.h \
+	Include/Theron/Counters.h \
 	Include/Theron/DefaultAllocator.h \
 	Include/Theron/Defines.h \
 	Include/Theron/Framework.h \
@@ -288,7 +288,6 @@ THERON_SOURCES = \
 	Theron/HandlerCollection.cpp \
 	Theron/MessageSender.cpp \
 	Theron/Receiver.cpp \
-	Theron/ThreadCollection.cpp \
 	Theron/WorkItem.cpp
 
 THERON_OBJECTS = \
@@ -302,7 +301,6 @@ THERON_OBJECTS = \
 	${BUILD}/HandlerCollection.o \
 	${BUILD}/MessageSender.o \
 	${BUILD}/Receiver.o \
-	${BUILD}/ThreadCollection.o \
 	${BUILD}/WorkItem.o
 
 $(THERON_LIB): $(THERON_OBJECTS)
@@ -338,9 +336,6 @@ ${BUILD}/MessageSender.o: Theron/MessageSender.cpp ${THERON_HEADERS}
 ${BUILD}/Receiver.o: Theron/Receiver.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/Receiver.cpp -o ${BUILD}/Receiver.o ${INCLUDE_FLAGS}
 
-${BUILD}/ThreadCollection.o: Theron/ThreadCollection.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Theron/ThreadCollection.cpp -o ${BUILD}/ThreadCollection.o ${INCLUDE_FLAGS}
-
 ${BUILD}/WorkItem.o: Theron/WorkItem.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/WorkItem.cpp -o ${BUILD}/WorkItem.o ${INCLUDE_FLAGS}
 
@@ -357,7 +352,8 @@ TESTS_HEADERS = \
 	Tests/TestFramework/TestException.h \
 	Tests/TestFramework/TestManager.h \
 	Tests/TestFramework/TestSuite.h \
-	Tests/TestSuites/FeatureTestSuite.h
+	Tests/TestSuites/FeatureTestSuite.h \
+	Tests/TestSuites/LegacyTestSuite.h
 
 TESTS_SOURCES = \
 	Tests/Tests.cpp

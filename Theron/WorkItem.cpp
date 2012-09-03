@@ -3,6 +3,7 @@
 
 #include <Theron/Actor.h>
 #include <Theron/Assert.h>
+#include <Theron/Counters.h>
 
 #include <Theron/Detail/Directory/Directory.h>
 #include <Theron/Detail/Directory/Entry.h>
@@ -20,8 +21,10 @@ namespace Detail
 {
 
 
-void WorkItem::Process(Mailbox *const mailbox, ProcessorContext *const context)
+void WorkItem::Process(Mailbox *const mailbox, WorkerThreadStore *const store)
 {
+    ProcessorContext *const context(&store->mProcessorContext);
+
     // Load the context data from the worker thread's processor context.
     Directory<Entry> *const actorDirectory(context->mActorDirectory);
     Queue<Mailbox> *const workQueue(context->mWorkQueue);
@@ -32,6 +35,9 @@ void WorkItem::Process(Mailbox *const mailbox, ProcessorContext *const context)
     THERON_ASSERT(workQueue);
     THERON_ASSERT(fallbackHandlers);
     THERON_ASSERT(messageAllocator);
+
+    // Increment the context's message processing event counter.
+    context->mCounters[Theron::COUNTER_MESSAGES_PROCESSED].Increment();
 
     // Read the address of the mailbox into a local.
     const Address address(mailbox->GetAddress());

@@ -10,6 +10,7 @@ Actor baseclass.
 
 
 #include <Theron/Address.h>
+#include <Theron/Align.h>
 #include <Theron/AllocatorManager.h>
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
@@ -24,6 +25,7 @@ Actor baseclass.
 #include <Theron/Detail/Messages/IMessage.h>
 #include <Theron/Detail/Messages/MessageCreator.h>
 #include <Theron/Detail/Messages/MessageSender.h>
+#include <Theron/Detail/Mailboxes/Mailbox.h>
 #include <Theron/Detail/MailboxProcessor/ProcessorContext.h>
 #include <Theron/Detail/Threading/Atomic.h>
 
@@ -271,6 +273,21 @@ public:
     constructor, or destructor.
     */
     inline Framework &GetFramework() const;
+
+    /**
+    \brief Gets the number of messages queued at this actor, awaiting processing.
+
+    Returns the number of messages currently in the message queue of the actor.
+    The messages in the queue are those that have been received by the actor but
+    for which registered message handlers have not yet been executed, and so are
+    still awaiting processing.
+    
+    \note If called from a message handler function, the returned count includes
+    the message whose receipt triggered the execution of the handler. This behavior
+    changed in Theron 4 -- in previous versions, the count didn't include the
+    current message.
+    */
+    inline uint32_t GetNumQueuedMessages() const;
 
 protected:
 
@@ -691,15 +708,19 @@ protected:
     This method sends a message to the entity at a given address, and is functionally
     identical to the similar \ref Send method.
     
-    It differs from \ref Send in that it is generally more efficient when called as the last
-    operation of a message handler. It should specifically not be used from actor constructors
-    or destructors; use \ref Send in those situations instead.
+    In principle it differs from \ref Send in that it is potentially more efficient when
+    called as the last operation of a message handler. TailSend causes the recipient of
+    the sent message to be executed by a worker thread that is already active, rather
+    than waking a sleeping thread to process it. This is useful when called as the
+    last operation of a returning message handler, where it is known that the thread
+    executing the message handler is about to become available.
 
-    TailSend causes the recipient of the sent message to be executed by a worker thread
-    that is already active, rather than waking a sleeping thread to process it.
-    This is useful when called as the last operation of a returning message handler,
-    where it is known that the thread executing the message handler is about to become
-    available.
+    In the current implementation, threads are not woken by a condition variable so
+    TailSend and Send are identical in performance as well as functionality.
+    The TailSend method is still supported, mainly for backwards compatibility.
+    
+    \note TailSend should not be used from actor constructors or destructors; use
+    \ref Send in those situations instead.
 
     \code
     class Processor : public Theron::Actor
@@ -724,19 +745,9 @@ protected:
     };
     \endcode
 
-    Notionally, TailSend causes the sending and receiving actors to be executed synchronously,
-    in series, rather than overlapping the execution of the receiving actor with the execution
-    of the remainder of the sending message handler (and any subsequent handlers executed for the
-    same message) in the sending actor. When sending a message at the end ('tail') of a message handler,
-    the potential for useful overlap is marginal at best anyway, so it's faster to not bother waking
-    a thread, and so avoid the thread synchronization overheads that waking a thread entails.
-    
+   
     \tparam ValueType The message type (any copyable class or Plain Old Datatype).
     \return True, if the message was delivered to the target entity, otherwise false.
-
-    \note Calling this method from positions other than at the end ("tail") of a
-    message handler is not generally recommended. In particular it should never be
-    called from actor constructors or destructors.
 
     \see Send
     */
@@ -788,6 +799,17 @@ THERON_FORCEINLINE Address Actor::GetAddress() const
 THERON_FORCEINLINE Framework &Actor::GetFramework() const
 {
     return *mFramework;
+}
+
+
+THERON_FORCEINLINE uint32_t Actor::GetNumQueuedMessages() const
+{
+    // Get a reference to the mailbox at which this actor is registered.
+    const Address address(GetAddress());
+    Framework &framework(GetFramework());
+    const Detail::Mailbox &mailbox(framework.mMailboxes.GetEntry(address.AsInteger()));
+
+    return mailbox.Count();
 }
 
 

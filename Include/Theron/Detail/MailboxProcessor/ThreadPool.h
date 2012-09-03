@@ -10,9 +10,7 @@
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
 
-#include <Theron/Detail/Allocators/PoolAllocator.h>
-#include <Theron/Detail/MailboxProcessor/ThreadCollection.h>
-#include <Theron/Detail/Threading/SpinLock.h>
+#include <Theron/Detail/Containers/IntrusiveList.h>
 #include <Theron/Detail/Threading/Thread.h>
 #include <Theron/Detail/Threading/Utils.h>
 
@@ -32,264 +30,214 @@ class ThreadPool
 public:
 
     /**
-    Worker thread entry point function.
-    Only global (static) functions can be used as thread entry points. Therefore this static method
-    exists to wrap the non-static class method that is the real entry point.
-    \param context Pointer to a context class that provides the context in which the thread is run.
+    User-allocated per-thread context structure.
+    The client must allocate one of these for each thread it creates.
+    The context structure derives from IntrusiveList<ThreadContext>::Node so can be stored in lists.
     */
-    static void StaticWorkerThreadEntryPoint(void *const context);
+    struct ThreadContext : public IntrusiveList<ThreadContext>::Node
+    {
+    public:
 
-    /**
-    Manager thread entry point function.
-    */
-    static void StaticManagerThreadEntryPoint(void *const context);
+        /**
+        Constructor. Creates a ThreadContext wrapping a pointer to user-defined worker context object.
+        */
+        inline explicit ThreadContext(WorkerContext *const workerContext) :
+          mWorkerContext(workerContext),
+          mWorkQueue(0),
+          mNodeMask(0),
+          mProcessorMask(0),
+          mRunning(false),
+          mStarted(false),
+          mThread(0)
+        {
+        }
 
-    /**
-    Constructor.
-    */
-    explicit ThreadPool(WorkQueue &workQueue);
+        // Public
+        WorkerContext *mWorkerContext;          ///< Pointer to user-defined context object.
 
-    /**
-    Destructor.
-    */
-    ~ThreadPool();
-
-    /**
-    Returns the number of worker threads currently in existence.
-    */
-    inline uint32_t GetThreadCount() const;
+        // Internal
+        WorkQueue *mWorkQueue;                  ///< Pointer to the work queue processed by the thread.
+        uint32_t mNodeMask;                     ///< Bit-field NUMA node affinity mask for the created thread.
+        uint32_t mProcessorMask;                ///< Bit-field processor affinity mask within specified nodes.
+        bool mRunning;                          ///< Indicates whether the thread is running; used to stop running threads.
+        bool mStarted;                          ///< Indicates whether the thread has started.
+        Thread *mThread;                        ///< Pointer to the thread object.
+    };
 
     /**
     Creates an additional worker thread for processing of work items.
-    \param workerContext Pointer to a caller-owned context scratch pad for the thread.
-    \param nodeMask Bitmask specifying on which NUMA processor nodes the thread may execute.
-    \param processorMask Bitmask specifying a subset of the processors in each indicated NUMA processor node.
+    The thread is created but not yet started - call StartThread for that.
+    \param threadContext Pointer to a caller-allocated context object for the thread.
     */
-    inline bool CreateThread(
-        WorkerContext *const workerContext,
+    inline static bool CreateThread(ThreadContext *const threadContext);
+
+    /**
+    Starts the given thread, which must have been created with CreateThread.
+    \param workQueue Pointer to the shared work queue that the thread will service.
+    \param nodeMask Bit-mask specifying on which NUMA processor nodes the thread may execute.
+    \param processorMask Bit-mask specifying a subset of the processors in each indicated NUMA processor node.
+    */
+    inline static bool StartThread(
+        ThreadContext *const threadContext,
+        WorkQueue *const workQueue,
         const uint32_t nodeMask,
         const uint32_t processorMask);
 
     /**
-    Destroys one of the running worker threads and returns its context pointer.
-    \return Pointer to the caller-owned context scratch pad for the thread.
+    Stops the given thread, which must have been started with StartThread.
     */
-    inline WorkerContext *DestroyThread();
+    inline static bool StopThread(ThreadContext *const threadContext);
 
     /**
-    Destroys all of the running worker threads.
+    Destroys the given thread, which must have been stopped with StopThread.
     */
-    inline bool DestroyAllThreads();
+    inline static bool DestroyThread(ThreadContext *const threadContext);
 
     /**
-    Returns true if the threadpool has no work in its queue.
+    Returns true if the given thread has been started but not stopped.
     */
-    inline bool Empty() const;
+    inline static bool IsRunning(ThreadContext *const threadContext);
+
+    /**
+    Returns true if the given thread has started.
+    */
+    inline static bool IsStarted(ThreadContext *const threadContext);
 
 private:
-
-    /**
-    Wrapper struct used to pass both a threadpool pointer and a per-thread context to a started thread.
-    */
-    struct ThreadContext
-    {
-        inline ThreadContext(ThreadPool *const threadPool, WorkerContext *const workerContext) :
-          mThreadPool(threadPool),
-          mWorkerContext(workerContext)
-        {
-        }
-
-        ThreadPool *mThreadPool;                ///< Used to execute a member function entry point.
-        WorkerContext *mWorkerContext;          ///< Pointer to per-thread storage for a worker thread.
-    };
-
-    typedef PoolAllocator<ThreadContext, THERON_CACHELINE_ALIGNMENT> ContextAllocator;
 
     ThreadPool(const ThreadPool &other);
     ThreadPool &operator=(const ThreadPool &other);
 
-    inline void WorkerThreadProc(WorkerContext *const workerContext);
-    inline void ManagerThreadProc();
-
-    mutable SpinLock mSpinLock;                 ///< Protects access to shared internal state.
-    WorkQueue *mWorkQueue;                      ///< Pointer to a queue of work items for processing.
-    uint32_t mThreadCount;                      ///< The number of threads currently running.
-    ThreadCollection mWorkerThreads;            ///< Owned collection of worker threads.
-    ContextAllocator mContextAllocator;         ///< Caching pool allocator for thread contexts.
-    Thread mManagerThread;                      ///< Dynamically creates and destroys the worker threads.
-    bool mDone;                                 ///< Tells the threads to terminate prior to destruction.
+    /**
+    Worker thread entry point function.
+    Only global (static) functions can be used as thread entry points.
+    \param context Pointer to a context object that provides the context in which the thread is run.
+    */
+    inline static void ThreadEntryPoint(void *const context);
 };
 
 
 template <class WorkQueue, class WorkProcessor, class WorkerContext>
-inline ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::ThreadPool(WorkQueue &workQueue) :
-  mSpinLock(),
-  mWorkQueue(&workQueue),
-  mThreadCount(0),
-  mWorkerThreads(),
-  mContextAllocator(),
-  mManagerThread(),
-  mDone(false)
+inline bool ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::CreateThread(ThreadContext *const threadContext)
 {
-    // Start the manager thread.
-    mManagerThread.Start(StaticManagerThreadEntryPoint, this);
+    // Allocate a new thread, aligning the memory to a cache-line boundary to reduce false-sharing of cache-lines.
+    void *const threadMemory = AllocatorManager::Instance().GetAllocator()->AllocateAligned(sizeof(Thread), THERON_CACHELINE_ALIGNMENT);
+    if (threadMemory == 0)
+    {
+        return false;
+    }
+
+    // Construct the thread object.
+    Thread *const thread = new (threadMemory) Thread();
+
+    // Set up the private part of the user-allocated context. We pass in a pointer to the
+    // threadpool instance so we can use a member function as the entry point.
+    threadContext->mStarted = false;
+    threadContext->mThread = thread;
+   
+    return true;
 }
 
 
 template <class WorkQueue, class WorkProcessor, class WorkerContext>
-inline ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::~ThreadPool()
-{
-    // Wait for the manager thread to terminate.
-    mManagerThread.Join();
-}
-
-
-template <class WorkQueue, class WorkProcessor, class WorkerContext>
-inline uint32_t ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::GetThreadCount() const
-{
-    uint32_t threadCount(0);
-
-    // Lock the manager thread monitor while we access shared state.
-    mSpinLock.Lock();
-    threadCount = mThreadCount;
-    mSpinLock.Unlock();
-
-    return threadCount;
-}
-
-
-template <class WorkQueue, class WorkProcessor, class WorkerContext>
-inline bool ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::CreateThread(
-    WorkerContext *const workerContext,
+inline bool ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::StartThread(
+    ThreadContext *const threadContext,
+    WorkQueue *const workQueue,
     const uint32_t nodeMask,
     const uint32_t processorMask)
 {
-    bool success(false);
+    THERON_ASSERT(threadContext->mRunning == false);
+    THERON_ASSERT(threadContext->mThread);
+    THERON_ASSERT(threadContext->mThread->Running() == false);
 
-    mSpinLock.Lock();
+    threadContext->mWorkQueue = workQueue;
+    threadContext->mNodeMask = nodeMask;
+    threadContext->mProcessorMask = processorMask;
+    threadContext->mRunning = true;
 
-    // Use the pool to allocate a context structure for the new thread.
-    if (void *const threadContextMemory = mContextAllocator.Allocate(sizeof(ThreadContext)))
-    {
-        // In-place construct the thread context in the allocated memory.
-        ThreadContext *const threadContext(new (threadContextMemory) ThreadContext(this, workerContext));
-
-        // Create the worker thread, passing it the constructed context.
-        mWorkerThreads.CreateThread(StaticWorkerThreadEntryPoint, threadContext, nodeMask, processorMask);
-
-        success = true;
-    }
-
-    mSpinLock.Unlock();
-
-    return success;
-}
-
-
-template <class WorkQueue, class WorkProcessor, class WorkerContext>
-inline WorkerContext *ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::DestroyThread()
-{
-    // TODO: Not implemented yet.
-    return 0;
-}
-
-
-template <class WorkQueue, class WorkProcessor, class WorkerContext>
-inline bool ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::DestroyAllThreads()
-{
-    // Signal the threads to terminate. We're the only writer so synchronization isn't needed.
-    mDone = true;
-
-    // Wait for the worker threads to stop, and then delete them.
-    mWorkerThreads.DestroyThreads();
+    // Start the thread, running it via a static (non-member function) entry point that wraps the real member function.
+    threadContext->mThread->Start(ThreadEntryPoint, threadContext);
 
     return true;
 }
 
 
 template <class WorkQueue, class WorkProcessor, class WorkerContext>
-inline bool ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::Empty() const
+inline bool ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::StopThread(ThreadContext *const threadContext)
 {
-    return mWorkQueue->Empty();
+    THERON_ASSERT(threadContext->mThread);
+    THERON_ASSERT(threadContext->mThread->Running());
+
+    // Reset the enabled flag in the context object for the thread.
+    // The thread will terminate once it sees the flag has been reset.
+    threadContext->mRunning = false;
+
+    // Wait for the thread to finish.
+    threadContext->mThread->Join();
+
+    return true;
 }
 
 
 template <class WorkQueue, class WorkProcessor, class WorkerContext>
-inline void ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::StaticWorkerThreadEntryPoint(void *const context)
+inline bool ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::DestroyThread(ThreadContext *const threadContext)
+{
+    THERON_ASSERT(threadContext->mRunning == false);
+    THERON_ASSERT(threadContext->mThread);
+    THERON_ASSERT(threadContext->mThread->Running() == false);
+
+    // Destruct the thread object explicitly since we constructed using placement new.
+    threadContext->mThread->~Thread();
+
+    // Free the memory for the thread.
+    AllocatorManager::Instance().GetAllocator()->Free(threadContext->mThread, sizeof(Thread));
+    threadContext->mThread = 0;
+
+    return true;
+}
+
+
+template <class WorkQueue, class WorkProcessor, class WorkerContext>
+THERON_FORCEINLINE bool ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::IsRunning(ThreadContext *const threadContext)
+{
+    return threadContext->mRunning;
+}
+
+
+template <class WorkQueue, class WorkProcessor, class WorkerContext>
+THERON_FORCEINLINE bool ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::IsStarted(ThreadContext *const threadContext)
+{
+    return threadContext->mStarted;
+}
+
+
+template <class WorkQueue, class WorkProcessor, class WorkerContext>
+inline void ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::ThreadEntryPoint(void *const context)
 {
     // The static entry point function is provided with a pointer to a context structure.
     // The context structure is specific to this worker thread.
-    THERON_ASSERT(context);
     ThreadContext *const threadContext(reinterpret_cast<ThreadContext *>(context));
 
-    THERON_ASSERT(threadContext->mThreadPool);
-    THERON_ASSERT(threadContext->mWorkerContext);
+    // Set the NUMA node and processor affinity for the running thread.
+    Utils::SetThreadAffinity(threadContext->mNodeMask, threadContext->mProcessorMask);
 
-    // The thread entry point has to be a static function,
-    // so in this static wrapper function we call the non-static method
-    // on the instance, a pointer to which is provided in the context structure.
-    ThreadPool *const threadPool(threadContext->mThreadPool);
-    WorkerContext *const workerContext(threadContext->mWorkerContext);
-
-    // Call the member function entry point, passing it the thread's context storage.
-    threadPool->WorkerThreadProc(workerContext);
-
-    // Destruct the thread context.
-    threadContext->~ThreadContext();
-
-    // Lock the manager thread monitor while we access shared state.
-    threadPool->mSpinLock.Lock();
-    threadPool->mContextAllocator.Free(threadContext);
-    threadPool->mSpinLock.Unlock();
-}
-
-
-template <class WorkQueue, class WorkProcessor, class WorkerContext>
-inline void ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::StaticManagerThreadEntryPoint(void *const context)
-{
-    ThreadPool *const threadPool(reinterpret_cast<ThreadPool *>(context));
-    threadPool->ManagerThreadProc();
-}
-
-
-template <class WorkQueue, class WorkProcessor, class WorkerContext>
-inline void ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::WorkerThreadProc(WorkerContext *const context)
-{
-    // Lock the manager thread monitor while we access shared state.
-    mSpinLock.Lock();
-    ++mThreadCount;
-    mSpinLock.Unlock();
+    // Mark the thread as started so the caller knows they can start issuing work.
+    threadContext->mStarted = true;
 
     uint32_t backoff(0);
-    while (!mDone)
+    while (threadContext->mRunning)
     {
         // Try to get a work item from the work queue.
-        if (typename WorkQueue::ItemType *const item = mWorkQueue->Pop())
+        if (typename WorkQueue::ItemType *const item = threadContext->mWorkQueue->Pop())
         {
-            // Process the item and re-schedule it if it needs more processing.
-            WorkProcessor::Process(item, &context->mProcessorContext);
+            // Process the item, passing it the user context, and re-schedule it if it needs more processing.
+            WorkProcessor::Process(item, threadContext->mWorkerContext);
             backoff = 0;
         }
         else
         {
             Utils::Backoff(backoff);
         }
-    }
-
-    // Lock the manager thread monitor while we access shared state.
-    mSpinLock.Lock();
-    --mThreadCount;
-    mSpinLock.Unlock();
-}
-
-
-template <class WorkQueue, class WorkProcessor, class WorkerContext>
-inline void ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::ManagerThreadProc()
-{
-    // TODO: Currently the manager thread isn't used.
-    while (!mDone)
-    {
-        Utils::SleepThread(10);
     }
 }
 

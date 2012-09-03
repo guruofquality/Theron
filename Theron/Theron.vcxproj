@@ -29,7 +29,6 @@
     <ClCompile Include="HandlerCollection.cpp" />
     <ClCompile Include="MessageSender.cpp" />
     <ClCompile Include="Receiver.cpp" />
-    <ClCompile Include="ThreadCollection.cpp" />
     <ClCompile Include="WorkItem.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -41,6 +40,7 @@
     <ClInclude Include="..\Include\Theron\Assert.h" />
     <ClInclude Include="..\Include\Theron\BasicTypes.h" />
     <ClInclude Include="..\Include\Theron\Catcher.h" />
+    <ClInclude Include="..\Include\Theron\Counters.h" />
     <ClInclude Include="..\Include\Theron\DefaultAllocator.h" />
     <ClInclude Include="..\Include\Theron\Defines.h" />
     <ClInclude Include="..\Include\Theron\Detail\Alignment\ActorAlignment.h" />
@@ -76,7 +76,6 @@
     <ClInclude Include="..\Include\Theron\Detail\Mailboxes\Mailbox.h" />
     <ClInclude Include="..\Include\Theron\Detail\Mailboxes\Queue.h" />
     <ClInclude Include="..\Include\Theron\Detail\MailboxProcessor\ProcessorContext.h" />
-    <ClInclude Include="..\Include\Theron\Detail\MailboxProcessor\ThreadCollection.h" />
     <ClInclude Include="..\Include\Theron\Detail\MailboxProcessor\ThreadPool.h" />
     <ClInclude Include="..\Include\Theron\Detail\MailboxProcessor\WorkerThreadStore.h" />
     <ClInclude Include="..\Include\Theron\Detail\MailboxProcessor\WorkItem.h" />

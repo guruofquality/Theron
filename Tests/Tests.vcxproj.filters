@@ -32,6 +32,9 @@
     <ClInclude Include="TestFramework\TestSuite.h">
       <Filter>Header Files\TestFramework</Filter>
     </ClInclude>
+    <ClInclude Include="TestSuites\LegacyTestSuite.h">
+      <Filter>Header Files\TestSuites</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Tests.cpp">

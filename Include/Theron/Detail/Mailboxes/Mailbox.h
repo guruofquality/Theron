@@ -3,6 +3,7 @@
 #define THERON_DETAIL_DIRECTORY_MAILBOXES_MAILBOX_H
 
 
+#include <Theron/BasicTypes.h>
 #include <Theron/Address.h>
 #include <Theron/Align.h>
 #include <Theron/Defines.h>
@@ -73,6 +74,11 @@ public:
     */
     inline IMessage *Pop();
 
+    /**
+    Returns the number of messages currently queued in the mailbox.
+    */
+    inline uint32_t Count() const;
+
 private:
 
     typedef IntrusiveQueue<IMessage> MessageQueue;
@@ -80,11 +86,16 @@ private:
     Address mAddress;                           ///< Unique address of this mailbox.
     mutable SpinLock mSpinLock;                 ///< Thread synchronization object protecting the mailbox.
     MessageQueue mQueue;                        ///< Queue of messages in this mailbox.
+    uint32_t mMessageCount;                     ///< Size of the message queue.
 
 } THERON_POSTALIGN(THERON_CACHELINE_ALIGNMENT);
 
 
-inline Mailbox::Mailbox() : mAddress(), mSpinLock(), mQueue()
+inline Mailbox::Mailbox() :
+  mAddress(),
+  mSpinLock(),
+  mQueue(),
+  mMessageCount(0)
 {
 }
 
@@ -122,6 +133,7 @@ THERON_FORCEINLINE bool Mailbox::Empty() const
 THERON_FORCEINLINE void Mailbox::Push(IMessage *const message)
 {
     mQueue.Push(message);
+    ++mMessageCount;
 }
 
 
@@ -133,7 +145,14 @@ THERON_FORCEINLINE IMessage *Mailbox::Front() const
 
 THERON_FORCEINLINE IMessage *Mailbox::Pop()
 {
+    --mMessageCount;
     return mQueue.Pop();
+}
+
+
+THERON_FORCEINLINE uint32_t Mailbox::Count() const
+{
+    return mMessageCount;
 }
 
 

@@ -68,9 +68,6 @@
     <ClCompile Include="Receiver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ThreadCollection.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="WorkItem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -211,9 +208,6 @@
     <ClInclude Include="..\Include\Theron\Detail\MailboxProcessor\ProcessorContext.h">
       <Filter>Header Files\Detail\MailboxProcessor</Filter>
     </ClInclude>
-    <ClInclude Include="..\Include\Theron\Detail\MailboxProcessor\ThreadCollection.h">
-      <Filter>Header Files\Detail\MailboxProcessor</Filter>
-    </ClInclude>
     <ClInclude Include="..\Include\Theron\Detail\MailboxProcessor\ThreadPool.h">
       <Filter>Header Files\Detail\MailboxProcessor</Filter>
     </ClInclude>
@@ -267,6 +261,9 @@
     </ClInclude>
     <ClInclude Include="..\Include\Theron\Detail\Alignment\ActorAlignment.h">
       <Filter>Header Files\Detail\Alignment</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Counters.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

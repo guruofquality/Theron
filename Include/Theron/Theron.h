@@ -17,6 +17,7 @@ All-inclusive wrapper header that includes all public headers.
 #include <Theron/Assert.h>
 #include <Theron/BasicTypes.h>
 #include <Theron/Catcher.h>
+#include <Theron/Counters.h>
 #include <Theron/DefaultAllocator.h>
 #include <Theron/Defines.h>
 #include <Theron/Framework.h>

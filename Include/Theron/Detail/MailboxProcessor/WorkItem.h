@@ -16,7 +16,7 @@ namespace Detail
 {
 
 
-struct ProcessorContext;
+struct WorkerThreadStore;
 
 
 /**
@@ -29,7 +29,7 @@ public:
     /**
     Processes the work item, re-adding it to the given work queue if it needs more processing.
     */
-    static void Process(Mailbox *const mailbox, ProcessorContext *const context);
+    static void Process(Mailbox *const mailbox, WorkerThreadStore *const store);
 
 private:
 

@@ -29,13 +29,7 @@
 // Enable checking for unregistered message types.
 #define THERON_ENABLE_MESSAGE_REGISTRATION_CHECKS 1
 
-#include <Theron/Actor.h>
-#include <Theron/Address.h>
-#include <Theron/AllocatorManager.h>
-#include <Theron/DefaultAllocator.h>
-#include <Theron/Framework.h>
-#include <Theron/Receiver.h>
-#include <Theron/Register.h>
+#include <Theron/Theron.h>
 
 #include "../Common/Timer.h"
 
@@ -95,7 +89,7 @@ THERON_REGISTER_MESSAGE(PingPong::StartMessage);
 
 int main(int argc, char *argv[])
 {
-    int numMessagesProcessed(0), numThreadsPulsed(0), numThreadsWoken(0);
+    int numMessagesProcessed(0);
 
     const int numMessages = (argc > 1 && atoi(argv[1]) > 0) ? atoi(argv[1]) : 50000000;
     const int numThreads = (argc > 2 && atoi(argv[2]) > 0) ? atoi(argv[2]) : 16;
@@ -126,15 +120,12 @@ int main(int argc, char *argv[])
     receiver.Wait();
     timer.Stop();
 
-    //numMessagesProcessed = framework.GetCounterValue(Theron::Framework::COUNTER_MESSAGES_PROCESSED);
-    //numThreadsPulsed = framework.GetCounterValue(Theron::Framework::COUNTER_THREADS_PULSED);
-    //numThreadsWoken = framework.GetCounterValue(Theron::Framework::COUNTER_THREADS_WOKEN);
+    numMessagesProcessed = framework.GetCounterValue(Theron::COUNTER_MESSAGES_PROCESSED);
 
     // The number of full cycles is half the number of messages.
     printf("Completed %d message response cycles\n", numMessages / 2);
     printf("Sent %d messages in %.1f seconds\n", numMessagesProcessed, timer.Seconds());
     printf("Average response time is %.10f seconds\n", timer.Seconds() / (numMessages / 2));
-    printf("Threads pulsed: %d, woken: %d\n", numThreadsPulsed, numThreadsWoken);
 
 #if THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
     Theron::IAllocator *const allocator(Theron::AllocatorManager::Instance().GetAllocator());

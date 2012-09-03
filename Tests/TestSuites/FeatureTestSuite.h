@@ -67,10 +67,8 @@ public:
         TESTFRAMEWORK_REGISTER_TEST(SendMessageInDestructor);
         TESTFRAMEWORK_REGISTER_TEST(DeregisterHandlerInDestructor);
         TESTFRAMEWORK_REGISTER_TEST(CreateActorInHandler);
-#if 0
         TESTFRAMEWORK_REGISTER_TEST(GetNumQueuedMessagesInHandler);
         TESTFRAMEWORK_REGISTER_TEST(GetNumQueuedMessagesInFunction);
-#endif // 0
         TESTFRAMEWORK_REGISTER_TEST(UseBlindDefaultHandler);
         TESTFRAMEWORK_REGISTER_TEST(IsHandlerRegisteredInHandler);
         TESTFRAMEWORK_REGISTER_TEST(SetFallbackHandler);
@@ -86,6 +84,8 @@ public:
         TESTFRAMEWORK_REGISTER_TEST(MultipleFrameworks);
         TESTFRAMEWORK_REGISTER_TEST(ConstructFrameworkWithParameters);
         TESTFRAMEWORK_REGISTER_TEST(UseActorRefs);
+        TESTFRAMEWORK_REGISTER_TEST(ThreadCountApi);
+        TESTFRAMEWORK_REGISTER_TEST(EventCounterApi);
     }
 
     inline static void ConstructFramework()
@@ -646,7 +646,6 @@ public:
         receiver.Wait();
     }
 
-#if 0
     inline static void GetNumQueuedMessagesInHandler()
     {
         typedef Catcher<Theron::uint32_t> CountCatcher;
@@ -665,11 +664,12 @@ public:
 
         // Wait for and check both replies.
         // Race condition decides whether the second message has already arrived.
+        // In Theron 4 the count includes the message currently being processed.
         receiver.Wait();
-        Check(catcher.mMessage == 0 || catcher.mMessage == 1, "Bad count");
+        Check(catcher.mMessage == 1 || catcher.mMessage == 2, "GetNumQueuedMessages failed");
 
         receiver.Wait();
-        Check(catcher.mMessage == 0, "Bad count");
+        Check(catcher.mMessage == 1, "GetNumQueuedMessages failed");
     }
 
     inline static void GetNumQueuedMessagesInFunction()
@@ -689,19 +689,18 @@ public:
 
         // Race conditions decide how many messages are in the queue when we ask.
         Theron::uint32_t numMessages(actor.GetNumQueuedMessages());
-        Check(numMessages < 3, "Bad count");
+        Check(numMessages < 3, "GetNumQueuedMessages failed, expected less than 3 messages");
 
         receiver.Wait();
 
         numMessages = actor.GetNumQueuedMessages();
-        Check(numMessages < 2, "Bad count");
+        Check(numMessages < 2, "GetNumQueuedMessages failed, expected less than 2 messages");
 
         receiver.Wait();
 
         numMessages = actor.GetNumQueuedMessages();
-        Check(numMessages == 0, "Bad count");
+        Check(numMessages == 0, "GetNumQueuedMessages failed, expected 0 messages");
     }
-#endif // 0
 
     inline static void UseBlindDefaultHandler()
     {
@@ -1117,6 +1116,97 @@ public:
         receiver.Wait();
     }
 
+    inline static void ThreadCountApi()
+    {
+        Theron::Framework framework;
+
+        Theron::Detail::Utils::SleepThread(10);
+
+        // Create more worker threads.
+        framework.SetMinThreads(32);
+        Check(framework.GetMinThreads() >= 32, "GetMinThreads failed");
+
+        Theron::Detail::Utils::SleepThread(10);
+
+        // Stop most of the threads.
+        framework.SetMaxThreads(8);
+        Check(framework.GetMaxThreads() <= 8, "GetMaxThreads failed");
+
+        Theron::Detail::Utils::SleepThread(10);
+
+        // Re-start all of the threads and create some more.
+        framework.SetMinThreads(64);
+        Check(framework.GetMinThreads() >= 64, "GetMinThreads failed");
+
+        Theron::Detail::Utils::SleepThread(10);
+
+        // Stop all threads but one.
+        framework.SetMaxThreads(1);
+        Check(framework.GetMaxThreads() <= 1, "GetMaxThreads failed");
+
+        Theron::Detail::Utils::SleepThread(10);
+
+        Check(framework.GetPeakThreads() >= 1, "GetPeakThreads failed");
+        Check(framework.GetNumThreads() >= 1, "GetNumThreads failed");
+        Check(framework.GetPeakThreads() >= framework.GetNumThreads(), "GetPeakThreads failed");
+    }
+
+    inline static void EventCounterApi()
+    {
+        typedef Replier<int> IntReplier;
+
+        Theron::Framework framework;
+        Theron::Receiver receiver;
+
+        Theron::Detail::Utils::SleepThread(10);
+
+        // Check initial values.
+        Check(framework.GetCounterValue(Theron::COUNTER_MESSAGES_PROCESSED) == 0, "GetCounterValue failed");
+
+        uint32_t counterValues[32];
+        uint32_t valueCount(framework.GetPerThreadCounterValues(Theron::COUNTER_MESSAGES_PROCESSED, counterValues, 32));
+
+        uint32_t messagesProcessed(0);
+        for (uint32_t index = 0; index < valueCount; ++index)
+        {
+            messagesProcessed += counterValues[index];
+        }
+
+        Check(messagesProcessed == 0, "GetPerThreadCounterValues failed");
+
+        IntReplier replier(framework);
+        framework.Send(int(0), receiver.GetAddress(), replier.GetAddress());
+        receiver.Wait();
+
+        // Check values after some work.
+        Check(framework.GetCounterValue(Theron::COUNTER_MESSAGES_PROCESSED) > 0, "GetCounterValue failed");
+
+        valueCount = framework.GetPerThreadCounterValues(Theron::COUNTER_MESSAGES_PROCESSED, counterValues, 32);
+
+        messagesProcessed = 0;
+        for (uint32_t index = 0; index < valueCount; ++index)
+        {
+            messagesProcessed += counterValues[index];
+        }
+
+        Check(messagesProcessed == 1, "GetPerThreadCounterValues failed");
+
+        // Check values after reset.
+        framework.ResetCounters();
+
+        Check(framework.GetCounterValue(Theron::COUNTER_MESSAGES_PROCESSED) == 0, "GetCounterValue failed");
+
+        valueCount = framework.GetPerThreadCounterValues(Theron::COUNTER_MESSAGES_PROCESSED, counterValues, 32);
+
+        messagesProcessed = 0;
+        for (uint32_t index = 0; index < valueCount; ++index)
+        {
+            messagesProcessed += counterValues[index];
+        }
+
+        Check(messagesProcessed == 0, "GetPerThreadCounterValues failed");
+    }
+
 private:
 
     class TrivialActor : public Theron::Actor
@@ -1519,7 +1609,6 @@ private:
         }
     };
 
-#if 0
     class MessageQueueCounter : public Theron::Actor
     {
     public:
@@ -1534,7 +1623,6 @@ private:
             Send(GetNumQueuedMessages(), from);
         }
     };
-#endif // 0
 
     class BlindActor : public Theron::Actor
     {

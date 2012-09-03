@@ -4,6 +4,7 @@
 
 
 #include <Theron/BasicTypes.h>
+#include <Theron/Counters.h>
 #include <Theron/Defines.h>
 #include <Theron/IAllocator.h>
 
@@ -12,6 +13,13 @@
 #include <Theron/Detail/Handlers/FallbackHandlerCollection.h>
 #include <Theron/Detail/Mailboxes/Mailbox.h>
 #include <Theron/Detail/Mailboxes/Queue.h>
+#include <Theron/Detail/Threading/Atomic.h>
+
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning (disable:4324)  // structure was padded due to __declspec(align())
+#endif //_MSC_VER
 
 
 namespace Theron
@@ -38,10 +46,7 @@ struct ProcessorContext
       mMailboxes(mailboxes),
       mWorkQueue(workQueue),
       mFallbackHandlers(fallbackHandlers),
-      mMessageAllocator(messageAllocator),
-      mMessageCount(0),
-      mPulseCount(0),
-      mWakeCount(0)
+      mMessageAllocator(messageAllocator)
     {
     }
 
@@ -50,9 +55,7 @@ struct ProcessorContext
     Queue<Mailbox> *mWorkQueue;                             ///< Pointer to the work queue serviced by this context.
     FallbackHandlerCollection *mFallbackHandlers;           ///< Pointer to fallback handlers for undelivered messages.
     IAllocator *mMessageAllocator;                          ///< Pointer to a message memory block allocator.
-    uint32_t mMessageCount;                                 ///< Number of messages processed within this context.
-    uint32_t mPulseCount;                                   ///< Number of times the threadpool was pulsed within this context.
-    uint32_t mWakeCount;                                    ///< Number of times a thread was woken within this context.
+    Atomic::UInt32 mCounters[MAX_COUNTERS];                 ///< Events counters.
 
 private:
 
@@ -63,6 +66,11 @@ private:
 
 } // namespace Detail
 } // namespace Theron
+
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif //_MSC_VER
 
 
 #endif // THERON_DETAIL_MAILBOXPROCESSOR_PROCESSORCONTEXT_H

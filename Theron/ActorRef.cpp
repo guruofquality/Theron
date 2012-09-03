@@ -54,6 +54,12 @@ void ActorRef::Dereference()
 }
 
 
+uint32_t ActorRef::GetNumQueuedMessages() const
+{
+    return mActor->GetNumQueuedMessages();
+}
+
+
 Detail::ProcessorContext &ActorRef::GetProcessorContext()
 {
     return mActor->GetFramework().mProcessorContext;

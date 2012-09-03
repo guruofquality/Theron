@@ -12,15 +12,18 @@ Framework that hosts and executes actors.
 
 #include <Theron/ActorRef.h>
 #include <Theron/Address.h>
+#include <Theron/Align.h>
 #include <Theron/AllocatorManager.h>
 #include <Theron/Assert.h>
 #include <Theron/BasicTypes.h>
+#include <Theron/Counters.h>
 #include <Theron/Defines.h>
 #include <Theron/IAllocator.h>
 
 #include <Theron/Detail/Alignment/ActorAlignment.h>
 #include <Theron/Detail/Allocators/CachingAllocator.h>
 #include <Theron/Detail/Allocators/ThreadsafeAllocator.h>
+#include <Theron/Detail/Containers/IntrusiveList.h>
 #include <Theron/Detail/Directory/Directory.h>
 #include <Theron/Detail/Directory/Entry.h>
 #include <Theron/Detail/Handlers/DefaultFallbackHandler.h>
@@ -34,6 +37,15 @@ Framework that hosts and executes actors.
 #include <Theron/Detail/MailboxProcessor/ThreadPool.h>
 #include <Theron/Detail/MailboxProcessor/WorkerThreadStore.h>
 #include <Theron/Detail/MailboxProcessor/WorkItem.h>
+#include <Theron/Detail/Threading/Atomic.h>
+#include <Theron/Detail/Threading/SpinLock.h>
+#include <Theron/Detail/Threading/Thread.h>
+
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning (disable:4324)  // structure was padded due to __declspec(align())
+#endif //_MSC_VER
 
 
 namespace Theron
@@ -74,7 +86,7 @@ framework by means of an explicit parameter to the Framework::Framework construc
 Additionally, the number of threads can be increased or decreased at runtime
 by calling \ref SetMinThreads or \ref SetMaxThreads. The utilization of the currently
 enabled threads is measured by performance metrics, queried by \ref GetCounterValue
-and enumerated by \ref Counter.
+and enumerated by \ref Theron::Counter.
 
 The worker threads are created and synchronized using underlying threading
 objects. Different implementations of these threading objects are possible,
@@ -310,6 +322,168 @@ public:
     inline bool Send(const ValueType &value, const Address &from, const Address &address);
 
     /**
+    \brief Specifies a maximum limit on the number of worker threads enabled in this framework.
+
+    This method allows an application to place an upper bound on the thread count.
+    Users can use this method, together with SetMinThreads, to implement a policy for
+    framework threadpool management.
+
+    This method will only decrease the actual number of worker threads, never increase it.
+    Calling this method is guaranteed to eventually result in the number of threads being
+    less than or equal to the specified limit, as long as messages continue to be sent and
+    unless a higher minimum limit is specified subsequently.
+
+    If two successive calls specify different maximums, the lower takes effect. If
+    conflicting minimum and maximums are specified by subsequent calls to this method
+    and SetMinThreads, then the later call wins.
+
+    The idea behind separate minimum and maximum limits, rather than a single method to
+    directly set the actual number of threads, is to allow negotiation between multiple
+    agents, each with a different interest in the thread count. One may require a certain
+    minimum number of threads for its processing, but not care if the actual number of
+    threads is higher, while another may wish to impose a maximum limit on the number of
+    threads in existence, but be satisfied if there are less.
+
+    \note If the number of threads before the call was higher than the requested maximum,
+    there may be an arbitrary delay after calling this method before the number of threads
+    drops to the requested value. The number of threads is managed over time, and is not
+    guaranteed to be less than or equal to the requested maximum immediately after the call.
+    Threads self-terminate on being woken, if they discover that the actual thread count
+    is higher than the limit. This means that until some threads are woken by the arrival
+    of new messages, the actual thread count will remain unchanged.
+
+    \param count A positive integer - behavior for zero is undefined.
+
+    \see SetMinThreads
+    */
+    void SetMaxThreads(const uint32_t count);
+
+    /**
+    \brief Specifies a minimum limit on the number of worker threads enabled in this framework.
+
+    This method allows an application to place a lower bound on the thread count.
+    Users can use this method, together with SetMaxThreads, to implement a policy for
+    framework threadpool management.
+
+    This method will only increase the actual number of worker threads, never reduce it.
+    Calling this method is guaranteed to eventually result in the number of threads being
+    greater than or equal to the specified limit, unless a lower maximum limit is specified
+    subsequently.
+
+    If two successive calls specify different minimums, the higher takes effect. If
+    conflicting minimum and maximums are specified by subsequent calls to this method
+    and SetMaxThreads, then the later call wins.
+
+    \note If the number of threads before the call was lower than the requested minimum,
+    there may be an arbitrary delay after calling this method before the number of threads rises
+    to the requested value. Threads are spawned or re-enabled by a manager thread dedicated
+    to that task, which runs asynchronously from other threads as a background task.
+    It spends most of its time asleep, only being woken by calls to SetMinThreads.
+
+    \param count A positive integer - behavior for zero is undefined.
+
+    \see SetMaxThreads
+    */
+    void SetMinThreads(const uint32_t count);
+
+    /**
+    \brief Returns the current maximum limit on the number of worker threads in this framework.
+
+    This method returns the current maximum limit on the size of the worker threadpool.
+    Setting a maximum thread limit with SetMaxThreads doesn't imply that that limit will be
+    returned by this function. The target thread count is negotiated over multiple calls,
+    and specifying a higher value than the current maximum may have no effect.
+
+    \note In the current implementation, GetMaxThreads and GetMinThreads return the same
+    value, which is the current target thread count. Note that this may be different from
+    the actual current number of threads, returned by GetNumThreads.
+
+    \see GetMinThreads
+    */
+    uint32_t GetMaxThreads() const;
+
+    /**
+    \brief Returns the current minimum limit on the number of worker threads in this framework.
+
+    This method returns the current minimum limit on the size of the worker threadpool.
+    Setting a minimum thread limit with SetMinThreads doesn't imply that that limit will be
+    returned by this function. The target thread count is negotiated over multiple calls,
+    and specifying a lower value than the current minimum may have no effect.
+
+    \see GetMaxThreads
+    */
+    uint32_t GetMinThreads() const;
+
+    /**
+    \brief Gets the actual number of worker threads currently in this framework.
+
+    The returned count reflects the actual number of enabled threads at the time of the
+    call, which is independent from any maximum or minimum limits specified with
+    SetMaxThreads or SetMinThreads. The count includes all enabled threads, including any
+    that are sleeping due to having no work to do, but not including ones which were
+    created earlier but subsequently terminated to reduce the thread count.
+
+    \note The value returned by this method is specific to this framework instance. If
+    multiple frameworks are created then each has its own threadpool with an independently
+    managed thread count.
+
+    \see GetPeakThreads
+    */
+    uint32_t GetNumThreads() const;
+
+    /**
+    \brief Gets the peak number of worker threads ever active in the framework.
+
+    This call queries the highest number of simultaneously enabled threads seen since the
+    start of the framework. Note that this measures the highest actual number of threads,
+    as measured by GetNumThreads, rather than the highest values of the maximum or minimum
+    thread count limits.
+
+    \note The value returned by this method is specific to this framework instance. If
+    multiple frameworks are created then each has its own threadpool with an independently
+    managed thread count.
+    */
+    uint32_t GetPeakThreads() const;
+
+    /**
+    \brief Resets the \ref Counter "internal event counters".
+
+    \see Counter
+    \see GetCounterValue
+    */
+    void ResetCounters() const;
+
+    /**
+    \brief Gets the current value of a specified event counter.
+
+    Each Framework maintains a set of \ref Counter "internal event counters".
+    This method gets the current value of a specific counter, aggregated over all worker threads.
+
+    \param counter One of several values of an \ref Counter "enumerated type" identifying the available counters.
+    \return Current value of the counter at the time of the call.
+
+    \see GetPerThreadCounterValues
+    \see ResetCounters
+    */
+    uint32_t GetCounterValue(const Counter counter) const;
+
+    /**
+    \brief Gets the current per-thread values of a specified event counter.
+
+    Each Framework maintains a set of \ref Counter "internal event counters".
+    This method gets the current value of the counter for each of the currently active worker threads.
+
+    \param counter One of several values of an \ref Counter "enumerated type" identifying the available counters.
+    \param perThreadCounts Pointer to an array of uint32_t to be filled with per-thread counter values.
+    \param maxCounts The size of the perThreadCounts array and hence the maximum number of values to fetch.
+    \return The actual number of per-thread values fetched, matching the number of currently active worker threads.
+
+    \see GetCounterValue
+    \see ResetCounters
+    */
+    uint32_t GetPerThreadCounterValues(const Counter counter, uint32_t *const perThreadCounts, const uint32_t maxCounts) const;
+
+    /**
     \brief Sets the fallback message handler executed for unhandled messages.
 
     The fallback handler registered with the framework is run:
@@ -528,7 +702,7 @@ public:
     {
     public:
 
-        MyActor(Theron::Framework &framework, const int someParameter) : Theron::Actor(framework)
+        MyActor(Theron::Framework &framework, const int mSomeParameter) : Theron::Actor(framework)
         {
         }
     };
@@ -546,9 +720,8 @@ public:
 private:
 
     typedef Detail::Queue<Detail::Mailbox> WorkQueue;
-    typedef Detail::ThreadPool<WorkQueue, Detail::WorkItem, Detail::WorkerThreadStore> MailboxProcessor;
-    typedef Detail::IntrusiveList<Detail::WorkerThreadStore> WorkerThreadStoreList;
-    typedef Detail::PoolAllocator<Detail::WorkerThreadStore, THERON_CACHELINE_ALIGNMENT> StoreAllocator;
+    typedef Detail::ThreadPool<WorkQueue, Detail::WorkItem, Detail::WorkerThreadStore> ThreadPool;
+    typedef Detail::IntrusiveList<ThreadPool::ThreadContext> ContextList;
     typedef Detail::CachingAllocator<32> MessageCache;
 
     Framework(const Framework &other);
@@ -582,18 +755,35 @@ private:
         Detail::IMessage *const message,
         const Address &address);
 
+    /**
+    Static entry point function for the manager thread.
+    This is a static function that calls the real entry point member function.
+    */
+    static void ManagerThreadEntryPoint(void *const context);
+
+    /**
+    Entry point member function for the manager thread.
+    */
+    void ManagerThreadProc();
+
     uint32_t mIndex;                                        ///< Non-zero index of this framework, unique within the local process.
     Detail::Directory<Detail::Entry> mActorDirectory;       ///< Per-framework map of actor address indices to actors.
     Detail::Directory<Detail::Mailbox> mMailboxes;          ///< Per-framework mailbox array.
     WorkQueue mWorkQueue;                                   ///< Queue of mailboxes for processing.
-    mutable MailboxProcessor mMailboxProcessor;             ///< Pool of worker threads used to process mailboxes with received messages.
-    WorkerThreadStoreList mWorkerThreadStores;              ///< List of owned worker thread storage structures.
-    StoreAllocator mStoreAllocator;                         ///< Caching pool allocator for worker thread store objects.
     Detail::FallbackHandlerCollection mFallbackHandlers;    ///< Registered message handlers run for unhandled messages.
     Detail::DefaultFallbackHandler mDefaultFallbackHandler; ///< Default handler for unhandled messages.
     MessageCache mMessageCache;                             ///< Per-framework cache of message memory blocks.
     Detail::ThreadsafeAllocator mMessageAllocator;          ///< Thread-safe caching message block allocator.
     Detail::ProcessorContext mProcessorContext;             ///< Per-framework processor context data.
+    Detail::Thread mManagerThread;                          ///< Dynamically creates and destroys the worker threads.
+    bool mRunning;                                          ///< Flag used to terminate the manager thread.
+    Detail::Atomic::UInt32 mTargetThreadCount;              ///< Desired number of worker threads.
+    Detail::Atomic::UInt32 mPeakThreadCount;                ///< Peak number of worker threads.
+    Detail::Atomic::UInt32 mThreadCount;                    ///< Actual number of worker threads.
+    ContextList mThreadContexts;                            ///< List of worker thread context objects.
+    mutable Detail::SpinLock mThreadContextLock;            ///< Protects the thread context list.
+    uint32_t mNodeMask;                                     ///< Worker thread NUMA node affinity mask.
+    uint32_t mProcessorMask;                                ///< Worker thread NUMA node processor affinity mask.
 };
 
 
@@ -763,6 +953,11 @@ inline ActorRef Framework::CreateActor(const typename ActorType::Parameters &par
 
 
 } // namespace Theron
+
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif //_MSC_VER
 
 
 #endif // THERON_FRAMEWORK_H

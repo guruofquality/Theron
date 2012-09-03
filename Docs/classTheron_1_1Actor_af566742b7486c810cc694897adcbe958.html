@@ -91,6 +91,7 @@ window.onload = initDynSections;
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a8f0fd920b4d270cf8c8184104b958092.html#a8f0fd920b4d270cf8c8184104b958092">DeregisterHandler</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a268613b27d2d718b55e2eb489118aa04.html#a268613b27d2d718b55e2eb489118aa04">GetAddress</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_afe30f86e99ff80691ec11e207711a46a.html#afe30f86e99ff80691ec11e207711a46a">GetFramework</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a4f6af5dba4b36bbb55ee216589ccfb63.html#a4f6af5dba4b36bbb55ee216589ccfb63">GetNumQueuedMessages</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a6bfdf3ec59943e2c8f1e686d2e3c1077.html#a6bfdf3ec59943e2c8f1e686d2e3c1077">IsHandlerRegistered</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_a6a5a4bd492f490bf730274c247b584da.html#a6a5a4bd492f490bf730274c247b584da">RegisterHandler</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2">Send</a></td></tr>
@@ -131,8 +132,9 @@ template&lt;class ValueType &gt; </div>
 
 <p>Sends a message to the entity at the given address, without waking a worker thread. </p>
 <p>This method sends a message to the entity at a given address, and is functionally identical to the similar <a class="el" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2">Send</a> method.</p>
-<p>It differs from <a class="el" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2">Send</a> in that it is generally more efficient when called as the last operation of a message handler. It should specifically not be used from actor constructors or destructors; use <a class="el" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2">Send</a> in those situations instead.</p>
-<p>TailSend causes the recipient of the sent message to be executed by a worker thread that is already active, rather than waking a sleeping thread to process it. This is useful when called as the last operation of a returning message handler, where it is known that the thread executing the message handler is about to become available.</p>
+<p>In principle it differs from <a class="el" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2">Send</a> in that it is potentially more efficient when called as the last operation of a message handler. TailSend causes the recipient of the sent message to be executed by a worker thread that is already active, rather than waking a sleeping thread to process it. This is useful when called as the last operation of a returning message handler, where it is known that the thread executing the message handler is about to become available.</p>
+<p>In the current implementation, threads are not woken by a condition variable so TailSend and Send are identical in performance as well as functionality. The TailSend method is still supported, mainly for backwards compatibility.</p>
+<dl class="note"><dt><b>Note:</b></dt><dd>TailSend should not be used from actor constructors or destructors; use <a class="el" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2">Send</a> in those situations instead.</dd></dl>
 <div class="fragment"><pre class="fragment">    <span class="keyword">class </span>Processor : <span class="keyword">public</span> Theron::<a class="code" href="classTheron_1_1Actor_ab382214464453ecbadd73ebbd2789645.html#ab382214464453ecbadd73ebbd2789645" title="Default constructor.">Actor</a>
     {
     <span class="keyword">public</span>:
@@ -153,15 +155,13 @@ template&lt;class ValueType &gt; </div>
             <a class="code" href="classTheron_1_1Actor_af566742b7486c810cc694897adcbe958.html#af566742b7486c810cc694897adcbe958" title="Sends a message to the entity at the given address, without waking a worker thread...">TailSend</a>(result, from);
         }
     };
-</pre></div><p>Notionally, TailSend causes the sending and receiving actors to be executed synchronously, in series, rather than overlapping the execution of the receiving actor with the execution of the remainder of the sending message handler (and any subsequent handlers executed for the same message) in the sending actor. When sending a message at the end ('tail') of a message handler, the potential for useful overlap is marginal at best anyway, so it's faster to not bother waking a thread, and so avoid the thread synchronization overheads that waking a thread entails.</p>
-<dl><dt><b>Template Parameters:</b></dt><dd>
+</pre></div><dl><dt><b>Template Parameters:</b></dt><dd>
   <table border="0" cellspacing="2" cellpadding="0">
     <tr><td valign="top"></td><td valign="top"><em>ValueType</em>&nbsp;</td><td>The message type (any copyable class or Plain Old Datatype). </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="return"><dt><b>Returns:</b></dt><dd>True, if the message was delivered to the target entity, otherwise false.</dd></dl>
-<dl class="note"><dt><b>Note:</b></dt><dd>Calling this method from positions other than at the end ("tail") of a message handler is not generally recommended. In particular it should never be called from actor constructors or destructors.</dd></dl>
 <dl class="see"><dt><b>See also:</b></dt><dd><a class="el" href="classTheron_1_1Actor_afc5ae7842ea425c13440363bcb4ae1f2.html#afc5ae7842ea425c13440363bcb4ae1f2" title="Sends a message to the entity (actor or Receiver) at the given address.">Send</a> </dd></dl>
 
 </div>
@@ -175,7 +175,7 @@ template&lt;class ValueType &gt; </div>
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Files</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Defines</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Files</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Enumerations</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(8)"><span class="SelectionMark">&nbsp;</span>Enumerator</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(9)"><span class="SelectionMark">&nbsp;</span>Defines</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">

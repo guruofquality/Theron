@@ -8,7 +8,6 @@
 #include <Theron/IAllocator.h>
 
 #include <Theron/Detail/Allocators/CachingAllocator.h>
-#include <Theron/Detail/Containers/IntrusiveList.h>
 #include <Theron/Detail/Directory/Directory.h>
 #include <Theron/Detail/Directory/Entry.h>
 #include <Theron/Detail/Mailboxes/Mailbox.h>
@@ -25,7 +24,7 @@ namespace Detail
 /**
 Per-thread data store associated with worker threads.
 */
-struct WorkerThreadStore : public IntrusiveList<WorkerThreadStore>::Node
+struct WorkerThreadStore
 {
     typedef CachingAllocator<32> MessageCache;
 

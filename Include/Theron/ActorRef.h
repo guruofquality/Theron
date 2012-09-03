@@ -91,7 +91,7 @@ int main()
     MyActor actor(framework);
 
     // (1) The actor goes out of scope and destructed.
-    // (2) The Framework goes out of scope and is destructed.
+    // (4) the Framework goes out of scope and is destructed.
 }
 \endcode
 */
@@ -200,6 +200,16 @@ public:
     template <class ValueType>
     inline bool Push(const ValueType &value, const Address &from);
 
+    /**
+    \brief Gets the number of messages queued at the referenced actor.
+
+    Returns the number of messages currently in the message queue of the actor.
+    The messages in the queue are those that have been received by the actor but
+    for which registered message handlers have not yet been executed, and so are
+    still awaiting processing.
+    */
+    uint32_t GetNumQueuedMessages() const;
+
 private:
 
     /// Constructor. Constructs a reference to the given actor.
@@ -289,8 +299,6 @@ THERON_FORCEINLINE bool ActorRef::Push(const ValueType &value, const Address &fr
         GetFrameworkIndex(),
         message,
         GetAddress());
-
-    return true;
 }
 
 

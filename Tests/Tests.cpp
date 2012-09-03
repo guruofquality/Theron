@@ -6,12 +6,15 @@
 #include <string.h>
 
 #include "TestFramework/TestManager.h"
+
 #include "TestSuites/FeatureTestSuite.h"
+#include "TestSuites/LegacyTestSuite.h"
 
 
 
 /// Static instantiations of the test suites.
 Tests::FeatureTestSuite featureTestSuite;
+Tests::LegacyTestSuite legacyTestSuite;
 
 
 int main(int argc, char *argv[])

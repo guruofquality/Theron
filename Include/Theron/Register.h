@@ -55,7 +55,7 @@ class MyMessage
 THERON_REGISTER_MESSAGE(MyNamespace::MyMessage);
 \endcode
 
-\note If message types are registered, then \em all message types
+If message types are registered, then \em all message types
 must be registered, throughout the whole application, otherwise runtime
 errors will occur. Therefore it is simpler and less error prone to not
 register any message types at all. Only bother with message registration
@@ -64,6 +64,13 @@ If you decide to register your message types, you can turn on message
 registration checking, which helps to detect unregistered message types.
 Define \ref THERON_ENABLE_MESSAGE_REGISTRATION_CHECKS as 1 globally in your
 build, ideally via build settings.
+
+\note With message registration, the final type of each message must
+be unique. If two different message types (ie, with different scoped names)
+are actually identical, then the attempt to register the second type will
+fail with a confusing message about a template already having been defined.
+For example, this implies that two structs with identical contents are the
+same message type, even if they have different names.
 */
 
 
