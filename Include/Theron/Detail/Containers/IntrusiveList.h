@@ -89,10 +89,11 @@ public:
         becomes equal to End after incrementation.
         \note If the iterator is already equal to End then the result is undefined.
         */
-        THERON_FORCEINLINE void operator++()
+        THERON_FORCEINLINE Iterator operator++()
         {
             THERON_ASSERT(mNode);
             mNode = mNode->mNext;
+            return *this;
         }
 
         /**
@@ -168,9 +169,10 @@ public:
     inline void Insert(ItemType *const item);
 
     /**
-    Removes the given item from the list.
-    \param item A pointer to the item to be removed, which is expected to be present a list node.
-    \return True if the item was successfully removed, otherwise false.
+    Removes the given item from the list, if it is present.
+    \param item A pointer to an item which is to be removed, if present in the list.
+    \return True if the item was present and successfully removed, otherwise false.
+    \note This method searches the list!
     */
     inline bool Remove(ItemType *const item);
 

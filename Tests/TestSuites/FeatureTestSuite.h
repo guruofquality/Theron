@@ -693,13 +693,14 @@ public:
 
         receiver.Wait();
 
+        // There's no guarantee that the message handler will finish before the Wait() call returns.
         numMessages = actor.GetNumQueuedMessages();
-        Check(numMessages < 2, "GetNumQueuedMessages failed, expected less than 2 messages");
+        Check(numMessages <= 2, "GetNumQueuedMessages failed, expected less than 2 messages");
 
         receiver.Wait();
 
         numMessages = actor.GetNumQueuedMessages();
-        Check(numMessages == 0, "GetNumQueuedMessages failed, expected 0 messages");
+        Check(numMessages <= 1, "GetNumQueuedMessages failed, expected 0 messages");
     }
 
     inline static void UseBlindDefaultHandler()

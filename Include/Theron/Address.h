@@ -357,7 +357,7 @@ private:
     struct LocalComponents
     {
         uint32_t mFramework : 12;  ///< Integer index identifying the framework within the process (zero indicates a receiver).
-        uint32_t mIndex : 20;      ///< Integer index with the framework.
+        uint32_t mIndex : 20;      ///< Integer index of the actor within the framework (or receiver within the process).
     };
 
     struct Components

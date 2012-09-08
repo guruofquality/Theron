@@ -530,10 +530,12 @@ preprocessor settings in Visual Studio.
 */
 
 
+#if !defined(THERON_NUMA)
 #if THERON_WINDOWS
 #define THERON_NUMA 1
 #else
 #define THERON_NUMA 0
+#endif
 #endif
 
 

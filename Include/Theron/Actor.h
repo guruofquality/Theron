@@ -663,15 +663,28 @@ protected:
     }
     \endcode
 
-    If no actor or receiver exists with the given address, the
-    message will not be delivered, and \ref Send will return false.
+    The boolean return value returned by Send indicates whether the message was delivered.
+    Note however that messages sent to actors are in reality addressed to mailboxes, not
+    actors themselves. So a return value of true indicates only that the message was
+    delivered to a mailbox, which may well be unattended.
 
-    This can happen if the target entity is an actor and has been destructed,
-    due to going out of scope or explicitly deleted.
+    A return value of false indicates that an error occurred and the message was not
+    sent. In the case of messages addressed to a Receiver, this may indicate that
+    no such receiver is registered (it may have existed once and been destructed).
+    In the case of messages addressed to an actor, a false return value more likely
+    indicates that the message could not be allocated, due to out-of-memory.
 
-    If an actor is still registered at the destination address, but it has no handler
-    registered for messages of the sent type, then the message will be ignored,
-    but this method will still return true.
+    An important subtlety is that a return value of true indicates only that the message
+    was delivered to a mailbox, not that it was delivered to an associated actor, or
+    moreover that the receiving actor had message handlers registered for it. On the
+    contrary a true return value indicates only that the message was delivered to a mailbox.
+
+    The processing of the mailbox is scheduled asynchronously and typically happens
+    some time later, on a different thread. If no actor is registered at the mailbox
+    when it is eventually processed, then the message will simply be discarded, even
+    though it was delivered successfully to the mailbox. And even if an actor is
+    registered at the mailbox, it may have no handlers registered for the message
+    type, in which case the message may be silently discarded.
 
     Such undelivered or unhandled messages will be caught and reported as asserts by the
     default fallback handler, unless it is replaced by a custom user implementation using
@@ -682,7 +695,8 @@ protected:
 
     \tparam ValueType The message type (any copyable class or Plain-Old-Data type).
     \param value The message value to be sent.
-    \return True, if the message was delivered to the target entity, otherwise false.
+    \param address The address of the destination Receiver or Actor mailbox.
+    \return True, if the message was delivered, otherwise false.
 
     \note An important detail of message handling in Theron is that message handling
     order is guaranteed. That is, if an actor A sends two messages m1 and m2 successively
@@ -696,8 +710,6 @@ protected:
     Of course the guarantee doesn't apply to messages sent by different actors: If two
     actors A and B send messages m1 and m2 to a third actor C, there is explicitly no
     guarantee on the arrival order of m1 and m2 at C.
-
-    \see TailSend
     */
     template <class ValueType>
     inline bool Send(const ValueType &value, const Address &address) const;
@@ -747,7 +759,9 @@ protected:
 
    
     \tparam ValueType The message type (any copyable class or Plain Old Datatype).
-    \return True, if the message was delivered to the target entity, otherwise false.
+    \param value The message value to be sent.
+    \param address The address of the destination Receiver or Actor mailbox.
+    \return True, if the message was delivered, otherwise false.
 
     \see Send
     */

@@ -93,10 +93,11 @@ public:
         beomes equal to End after incrementation.
         \note If the iterator is already equal to End then the result is undefined.
         */
-        THERON_FORCEINLINE void operator++()
+        THERON_FORCEINLINE ListConstIterator operator++()
         {
             THERON_ASSERT(mNode);
             mNode = mNode->mNext;
+            return *this;
         }
 
         /**

@@ -60,7 +60,7 @@ endif()
 file(GLOB theron_sources "${CMAKE_CURRENT_SOURCE_DIR}/Theron/*.cpp")
 add_library(theron STATIC ${theron_sources})
 target_link_libraries(theron ${theron_libs})
-set_target_properties(theron PROPERTIES VERSION "4.02.01")
+set_target_properties(theron PROPERTIES VERSION "4.02.02")
 
 ########################################################################
 # Build unittests
