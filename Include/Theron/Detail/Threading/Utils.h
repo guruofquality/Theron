@@ -149,7 +149,7 @@ inline void Utils::Backoff(uint32_t &backoff)
     }
     else
     {
-        SleepThread(1UL);
+        SleepThread(0);
     }
 }
 
