@@ -18,25 +18,15 @@ static const int MAX_FILE_SIZE = 16384;
 
 
 // A file read request: read the contents of a disk file into a memory buffer.
-class ReadRequest
+struct ReadRequest
 {
 public:
 
-    ReadRequest() :
-      mClient(),
-      mFileName(0),
-      mProcessed(false),
-      mBuffer(0),
-      mBufferSize(0),
-      mFileSize(0)
-    {
-    }
-
-    ReadRequest(
-        const Theron::Address client,
-        const char *const fileName,
-        unsigned char *const buffer,
-        const unsigned int bufferSize) :
+    explicit ReadRequest(
+        const Theron::Address client = Theron::Address(),
+        const char *const fileName = 0,
+        unsigned char *const buffer = 0,
+        const unsigned int bufferSize = 0) :
       mClient(client),
       mFileName(fileName),
       mProcessed(false),
@@ -45,13 +35,6 @@ public:
       mFileSize(0)
     {
     }
-
-    Theron::Address Client() const { return mClient; }
-    const char *FileName() const { return mFileName; }
-    bool Processed() const { return mProcessed; }
-    unsigned char *Buffer() const { return mBuffer; }
-    unsigned int BufferSize() const { return mBufferSize; }
-    unsigned int FileSize() const { return mFileSize; }
 
     void Process()
     {
@@ -72,8 +55,6 @@ public:
             fclose(handle);
         }
     }
-
-private:
 
     Theron::Address mClient;            // Address of the requesting client.
     const char *mFileName;              // Name of the requested file.
@@ -150,10 +131,10 @@ private:
     void Handler(const WorkMessage &message, const Theron::Address from)
     {
         // Has this work item been processed?
-        if (message.Processed())
+        if (message.mProcessed)
         {
             // Send the result back to the caller that requested it.
-            Send(message, message.Client());
+            Send(message, message.mClient);
 
             // Add the worker that sent the result to the free list.
             mFreeQueue.push(from);
@@ -229,10 +210,10 @@ int main(int argc, char *argv[])
     while (!resultCatcher.Empty())
     {
         resultCatcher.Pop(result, from);
-        printf("Read %d bytes from file '%s'\n", result.FileSize(), result.FileName());
+        printf("Read %d bytes from file '%s'\n", result.mFileSize, result.mFileName);
 
         // Free the allocated buffer.
-        delete [] result.Buffer();
+        delete [] result.mBuffer;
     }
 }
 

@@ -60,7 +60,7 @@ endif()
 file(GLOB theron_sources "${CMAKE_CURRENT_SOURCE_DIR}/Theron/*.cpp")
 add_library(theron STATIC ${theron_sources})
 target_link_libraries(theron ${theron_libs})
-set_target_properties(theron PROPERTIES VERSION "4.02.02")
+set_target_properties(theron PROPERTIES VERSION "5.00.03")
 
 ########################################################################
 # Build unittests
@@ -81,7 +81,7 @@ file(GLOB sample_dirs
 foreach(sample_dir ${sample_dirs})
     get_filename_component(sample ${sample_dir} NAME)
     file(GLOB sample_sources "${sample_dir}/*.cpp")
-    if(sample_sources)
+    if(sample_sources AND NOT "${sample}" STREQUAL "Theron")
         add_executable(${sample} ${sample_sources})
         target_link_libraries(${sample} theron ${theron_libs})
     endif()
