@@ -31,13 +31,16 @@ endif()
 include(CheckTypeSize)
 enable_language(C)
 check_type_size("void*[8]" SIZEOF_CPU BUILTIN_TYPES_ONLY)
-if(${SIZEOF_CPU} STREQUAL 64)
+if(${SIZEOF_CPU} EQUAL 64)
     list(APPEND THERON_DEFINES -DTHERON_64BIT=1)
 endif()
 
+if(CMAKE_COMPILER_IS_GNUCXX AND ${SIZEOF_CPU} EQUAL 64)
+    list(APPEND THERON_DEFINES -fPIC)
+endif()
+
 if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-    list(APPEND THERON_DEFINES -DTHERON_DEBUG)
-    list(APPEND THERON_DEFINES -DTHERON_ENABLE_ASSERTS)
+    list(APPEND THERON_DEFINES -DTHERON_DEBUG=1)
 endif()
 
 ########################################################################
