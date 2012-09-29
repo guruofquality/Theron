@@ -1,0 +1,110 @@
+########################################################################
+# Include this file to get a list of include paths and definitions
+# Input: THERON_SOURCE_DIR
+# Output: THERON_INCLUDE_DIRS
+# Output: THERON_LIBRARY_DIRS
+# Output: THERON_LIBRARIES
+# Output: THERON_DEFINES
+# Output: THERON_SOURCES
+########################################################################
+
+########################################################################
+# Setup the list of sources
+########################################################################
+file(GLOB THERON_SOURCES "${THERON_SOURCE_DIR}/Theron/*.cpp")
+
+########################################################################
+# Detect the system defines
+########################################################################
+if(WIN32)
+    list(APPEND THERON_DEFINES -DTHERON_WINDOWS=1)
+endif()
+
+if(MSVC)
+    list(APPEND THERON_DEFINES -DTHERON_MSVC=1)
+endif()
+
+if(CMAKE_COMPILER_IS_GNUCXX)
+    list(APPEND THERON_DEFINES -DTHERON_GCC=1)
+endif()
+
+include(CheckTypeSize)
+enable_language(C)
+check_type_size("void*[8]" SIZEOF_CPU BUILTIN_TYPES_ONLY)
+if(${SIZEOF_CPU} STREQUAL 64)
+    list(APPEND THERON_DEFINES -DTHERON_64BIT=1)
+endif()
+
+if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+    list(APPEND THERON_DEFINES -DTHERON_DEBUG)
+    list(APPEND THERON_DEFINES -DTHERON_ENABLE_ASSERTS)
+endif()
+
+########################################################################
+# Setup the include directories
+########################################################################
+list(APPEND THERON_INCLUDE_DIRS ${THERON_SOURCE_DIR}/Include)
+list(APPEND THERON_INCLUDE_DIRS ${THERON_SOURCE_DIR}/Include/External)
+
+if(MSVC)
+    list(APPEND THERON_INCLUDE_DIRS ${THERON_SOURCE_DIR}/Include/Standard)
+endif(MSVC)
+
+########################################################################
+# Setup Boost and handle some system specific things
+########################################################################
+if(NOT MSVC)
+    if(UNIX AND EXISTS "/usr/lib64")
+        list(APPEND BOOST_LIBRARYDIR "/usr/lib64") #fedora 64-bit fix
+    endif(UNIX AND EXISTS "/usr/lib64")
+
+    set(Boost_ADDITIONAL_VERSIONS
+        "1.35.0" "1.35" "1.36.0" "1.36" "1.37.0" "1.37" "1.38.0" "1.38" "1.39.0" "1.39"
+        "1.40.0" "1.40" "1.41.0" "1.41" "1.42.0" "1.42" "1.43.0" "1.43" "1.44.0" "1.44"
+        "1.45.0" "1.45" "1.46.0" "1.46" "1.47.0" "1.47" "1.48.0" "1.48" "1.49.0" "1.49"
+        "1.50.0" "1.50" "1.51.0" "1.51" "1.52.0" "1.52" "1.53.0" "1.53" "1.54.0" "1.54"
+        "1.55.0" "1.55" "1.56.0" "1.56" "1.57.0" "1.57" "1.58.0" "1.58" "1.59.0" "1.59"
+        "1.60.0" "1.60" "1.61.0" "1.61" "1.62.0" "1.62" "1.63.0" "1.63" "1.64.0" "1.64"
+        "1.65.0" "1.65" "1.66.0" "1.66" "1.67.0" "1.67" "1.68.0" "1.68" "1.69.0" "1.69"
+    )
+    find_package(Boost COMPONENTS thread)
+
+    if(Boost_FOUND)
+        list(APPEND THERON_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
+        list(APPEND THERON_LIBRARY_DIRS ${Boost_LIBRARY_DIRS})
+        list(APPEND THERON_LIBRARIES ${Boost_LIBRARIES})
+        list(APPEND THERON_DEFINES -DTHERON_BOOST=1)
+    else()
+        message(FATAL_ERROR "boost threads required to build Theron")
+    endif()
+endif(NOT MSVC)
+
+########################################################################
+# Extra linux specific libraries
+########################################################################
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+
+    find_library(
+        NUMA_LIBRARIES
+        NAMES numa
+        PATHS /usr/lib /usr/lib64
+    )
+
+    if(NUMA_LIBRARIES)
+        list(APPEND THERON_LIBRARIES ${NUMA_LIBRARIES})
+        list(APPEND THERON_DEFINES -DTHERON_NUMA=1)
+    endif()
+
+    find_library(
+        RT_LIBRARIES
+        NAMES rt
+        PATHS /usr/lib /usr/lib64
+    )
+
+    if(RT_LIBRARIES)
+        list(APPEND THERON_LIBRARIES ${RT_LIBRARIES})
+    else()
+        message(FATAL_ERROR "librt required to build Theron")
+    endif()
+
+endif()
