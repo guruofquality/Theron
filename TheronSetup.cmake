@@ -8,6 +8,8 @@
 # Output: THERON_SOURCES
 ########################################################################
 
+list(APPEND CMAKE_MODULE_PATH ${THERON_SOURCE_DIR})
+
 ########################################################################
 # Setup the list of sources
 ########################################################################
@@ -110,4 +112,15 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         message(FATAL_ERROR "librt required to build Theron")
     endif()
 
+endif()
+
+########################################################################
+# Setup Crossroads IO (optional)
+########################################################################
+find_package(XS)
+
+if(XS_FOUND)
+    list(APPEND THERON_LIBRARY_DIRS ${XS_INCLUDE_DIR})
+    list(APPEND THERON_LIBRARIES ${XS_LIBRARIES})
+    list(APPEND THERON_DEFINES -DTHERON_XS=1)
 endif()
