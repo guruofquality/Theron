@@ -267,7 +267,8 @@ inline bool Utils::GetNodeCount(uint32_t &nodeCount)
         return false;
     }
 
-    return static_cast<uint32_t>(numa_max_node() + 1);
+    nodeCount = static_cast<uint32_t>(numa_max_node() + 1);
+    return true;
 
 #endif
 
