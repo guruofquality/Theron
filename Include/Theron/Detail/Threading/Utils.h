@@ -373,6 +373,28 @@ inline bool Utils::SetThreadAffinity(const uint32_t nodeMask, const uint32_t pro
         return false;
     }
 
+    #if defined(LIBNUMA_API_VERSION) && (LIBNUMA_API_VERSION == 1)
+
+    //init a numa nodemask to fill with the bits of nodeMask
+    nodemask_t nm;
+    nodemask_zero(&nm);
+
+    //loop through all nodes to set the bitmask struct
+    for (uint32_t node = 0; node < 32 && node < nodeCount; ++node)
+    {
+        if ((nodeMask & (1UL << node)) != 0)
+        {
+            nodemask_set(&nm, node);
+        }
+    }
+
+    //set the affinity on the nodes set in the bitmask
+    return numa_run_on_node_mask(&nm) == 0;
+
+    #endif //LIBNUMA_API_VERSION == 1
+
+    #if defined(LIBNUMA_API_VERSION) && (LIBNUMA_API_VERSION == 2)
+
     //create a new numa bitmask to fill with the bits of nodeMask
     struct bitmask *bmp = numa_bitmask_alloc(numa_num_configured_cpus());
 
@@ -391,6 +413,8 @@ inline bool Utils::SetThreadAffinity(const uint32_t nodeMask, const uint32_t pro
     //cleanup and return success status
     numa_bitmask_free(bmp);
     return ret == 0;
+
+    #endif //LIBNUMA_API_VERSION == 2
 
 #endif
 
