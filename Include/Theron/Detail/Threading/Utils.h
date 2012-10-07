@@ -372,23 +372,24 @@ inline bool Utils::SetThreadAffinity(const uint32_t nodeMask, const uint32_t pro
         return false;
     }
 
-    // TODO: For now we only run on a single node. The first set bit in the node mask is used.
-    // TODO: For now the processor mask is completely ignored; we run on all processors of the chosen node.
-    uint32_t node(0);
-    while (node < 32)
+    //create a new numa bitmask to fill with the bits of nodeMask
+    struct bitmask *bmp = numa_bitmask_alloc(numa_num_configured_cpus());
+
+    //loop through all nodes to set the bitmask struct
+    for (uint32_t node = 0; node < 32 && node < nodeCount; ++node)
     {
         if ((nodeMask & (1UL << node)) != 0)
         {
-            if (numa_run_on_node(node) != 0)
-            {
-                return false;
-            }
-
-            return true;
+            numa_bitmask_setbit(bmp, node);
         }
-
-        ++node;
     }
+
+    //set the affinity on the nodes set in the bitmask
+    const int ret = numa_run_on_node_mask(bmp);
+
+    //cleanup and return success status
+    numa_bitmask_free(bmp);
+    return ret == 0;
 
 #endif
 
