@@ -375,23 +375,43 @@ inline bool Utils::SetThreadAffinity(const uint32_t nodeMask, const uint32_t pro
 
     #if defined(LIBNUMA_API_VERSION) && (LIBNUMA_API_VERSION > 1)
 
-    //create a new numa bitmask to fill with the bits of nodeMask
-    struct bitmask *bmp = numa_bitmask_alloc(numa_num_configured_cpus());
+    int ret = 0;
 
-    //loop through all nodes to set the bitmask struct
+    //maximum number of CPUs to loop through to calc accumulator mask
+    const uint32_t maxCPUs = static_cast<uint32_t>(numa_num_configured_cpus());
+
+    // Gather the accumulated mask corresponding to the node mask and processor mask.
+    struct bitmask *accumulatedMask = numa_allocate_cpumask();
+    struct bitmask *nodeAffinity = numa_allocate_cpumask();
+    numa_bitmask_clearall(accumulatedMask);
+
+    //loop through each node, determine CPUs available and apply processorMask
     for (uint32_t node = 0; node < 32 && node < nodeCount; ++node)
     {
-        if ((nodeMask & (1UL << node)) != 0)
+        if ((nodeMask & (1UL << node)) == 0) continue;
+
+        numa_bitmask_clearall(nodeAffinity);
+        ret = numa_node_to_cpus(node, nodeAffinity);
+        if (ret != 0) goto numa_cleanup_and_done;
+
+        // Shift the processor mask to match the node processor mask.
+        // This assumes the processors of a node are contiguous.
+        uint32_t procMaskIndex(0);
+        for (uint32_t cpu = 0; cpu < maxCPUs; cpu++)
         {
-            numa_bitmask_setbit(bmp, node);
+            if (numa_bitmask_isbitset(nodeAffinity, cpu) && (processorMask & (1UL << procMaskIndex++)) != 0)
+            {
+                numa_bitmask_setbit(accumulatedMask, cpu);
+            }
         }
     }
 
-    //set the affinity on the nodes set in the bitmask
-    const int ret = numa_run_on_node_mask(bmp);
+    //accumulatedMask determined, this call actually sets the affinity
+    ret = numa_sched_setaffinity(0, accumulatedMask);
 
-    //cleanup and return success status
-    numa_bitmask_free(bmp);
+    numa_cleanup_and_done:
+    numa_free_cpumask(accumulatedMask);
+    numa_free_cpumask(nodeAffinity);
     return ret == 0;
 
     #else //LIBNUMA_API_VERSION == 1
