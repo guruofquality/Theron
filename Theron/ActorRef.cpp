@@ -59,7 +59,7 @@ uint32_t ActorRef::GetNumQueuedMessages() const
 }
 
 
-Detail::ProcessorContext &ActorRef::GetProcessorContext()
+Detail::Processor::Context &ActorRef::GetProcessorContext()
 {
     return mActor->GetFramework().mProcessorContext;
 }

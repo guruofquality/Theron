@@ -31,6 +31,7 @@ An endpoint in a connected network of processes, potentially on remote hosts.
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning (disable:4127)  // conditional expression is constant
+#pragma warning (disable:4324)  // structure was padded due to __declspec(align())
 #endif //_MSC_VER
 
 

@@ -255,6 +255,12 @@ void EndPoint::NetworkThreadProc()
 
     Detail::InputMessage *const inputMessage = new (inputMessageMemory) Detail::InputMessage(mContext);
 
+    // Initialize the input message once outside the loop.
+    if (!inputMessage->Initialize())
+    {
+        THERON_FAIL_MSG("Failed to initialize network input message");
+    }
+
     // Signal the main thread that we've started.
     mStarted = true;
 
@@ -351,12 +357,6 @@ void EndPoint::NetworkThreadProc()
 
         mNetworkLock.Unlock();
 
-        // TODO: Initialize this only once.
-        if (!inputMessage->Initialize())
-        {
-            THERON_FAIL_MSG("Failed to initialize network input message");
-        }
-
         // Read messages from the input socket without blocking.
         while (inputSocket->NonBlockingReceive(inputMessage))
         {
@@ -396,22 +396,14 @@ void EndPoint::NetworkThreadProc()
 
                 if (message)
                 {
-                    // Construct the full 'to' address.
-                    const Address toAddress(toName, toIndex);
-
-                    // Try to deliver the allocated message to an actor in a  local framework.
-                    if (!Detail::MessageSender::DeliverToLocalMailbox(message, toAddress))
+                    // Try to deliver the allocated message to an actor in a local framework.
+                    if (!Detail::MessageSender::DeliverWithinLocalProcess(message, toIndex))
                     {
                         // Destroy the undelivered message using the global allocator.
                         Detail::MessageCreator::Destroy(allocator, message);
                     }
                 }
             }
-        }
-
-        if (!inputMessage->Release())
-        {
-            THERON_FAIL_MSG("Failed to release network input message");
         }
 
         // The network thread spends most of its time asleep.
@@ -437,6 +429,12 @@ void EndPoint::NetworkThreadProc()
     }
 
     mNetworkLock.Unlock();
+
+    // Release the input message used repeatedly within the loop.
+    if (!inputMessage->Release())
+    {
+        THERON_FAIL_MSG("Failed to release network input message");
+    }
 
     // Destroy the output and input messages.
     outputMessage->~OutputMessage();

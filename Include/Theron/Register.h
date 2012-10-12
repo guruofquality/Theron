@@ -13,16 +13,27 @@ Optional type registration for message types.
 
 
 /**
-\def THERON_REGISTER_MESSAGE
+\def THERON_DECLARE_REGISTERED_MESSAGE
 
-\brief Message type registration macro.
+\brief Declaration macro for registered message types.
 
-Registers message types for use within Theron.
+Registers message types for use within Theron. This macro can be used to register
+message types together with \ref THERON_DEFINE_REGISTERED_MESSAGE. Together they
+replace \ref THERON_REGISTER_MESSAGE, which is deprecated.
 
-Registration of message types is optional in Theron. Registering the message
-types used in an application causes Theron to use hand-rolled Runtime Type
-Information (RTTI) explicitly stored with each message type, instead of the
-built-in C++ RTTI.
+Use this macro in combination with THERON_DEFINE_REGISTERED_MESSAGE to separate
+the declaration of message registration from its definition. This avoids multiple
+registrations of the same message type, in builds where the same message type
+header is included into multiple source files. The idea is to use
+THERON_DECLARE_REGISTERED_MESSAGE in the header and THERON_DEFINE_REGISTERED_MESSAGE
+in a single, corresponding, source file.
+
+Registration of message types is optional, in general, but required, for message
+types that are to be sent to remote actors over the network.
+
+Registering the message types used in an application causes Theron to use
+hand-rolled Runtime Type Information (RTTI) explicitly stored with each message
+type, instead of the built-in C++ RTTI.
 
 Doing so allows the built-in C++ RTTI to be turned off, resulting in a memory
 storage saving in all types, not just message types. This saving can be important
@@ -36,10 +47,10 @@ rolls its own type ID system, and its own type ID checking is significantly
 faster than dynamic_cast. (Looking at the compiled code for dynamic_cast in
 Visual Studio, for example, it's hard to imagine how it can be so long).
 
-An important limitation of the message type registration macro is that it
+An important limitation of the message type registration macros is that they
 can only be used from within the global namespace. Furthermore the full
 name of the message type must be given, including all namespace scoping.
-(Unfortunately this means that it isn't generally possible to register
+(This means that it isn't generally possible to register
 messages immediately after their declaration, as we'd often prefer).
 
 \code
@@ -52,7 +63,11 @@ class MyMessage
 
 }
 
-THERON_REGISTER_MESSAGE(MyNamespace::MyMessage);
+THERON_DECLARE_REGISTERED_MESSAGE(MyNamespace::MyMessage);
+
+
+// In the corresponding .cpp file
+THERON_DEFINE_REGISTERED_MESSAGE(MyNamespace::MyMessage);
 \endcode
 
 If message types are registered, then \em all message types
@@ -65,12 +80,65 @@ registration checking, which helps to detect unregistered message types.
 Define \ref THERON_ENABLE_MESSAGE_REGISTRATION_CHECKS as 1 globally in your
 build, ideally via build settings.
 
-\note With message registration, the final type of each message must
-be unique. If two different message types (ie, with different scoped names)
-are actually identical, then the attempt to register the second type will
-fail with a confusing message about a template already having been defined.
-For example, this implies that two structs with identical contents are the
-same message type, even if they have different names.
+\see THERON_DEFINE_REGISTERED_MESSAGE
+*/
+
+
+#ifndef THERON_DECLARE_REGISTERED_MESSAGE
+
+#define THERON_DECLARE_REGISTERED_MESSAGE(MessageType)                      \
+namespace Theron                                                            \
+{                                                                           \
+namespace Detail                                                            \
+{                                                                           \
+template <>                                                                 \
+struct MessageTraits<MessageType>                                           \
+{                                                                           \
+    static const bool HAS_TYPE_NAME = true;                                 \
+    static const char *const TYPE_NAME;                                     \
+};                                                                          \
+}                                                                           \
+}
+
+#endif // THERON_DECLARE_REGISTERED_MESSAGE
+
+
+/**
+\def THERON_DEFINE_REGISTERED_MESSAGE
+
+\brief Definition macro for registered message types.
+
+Registers message types for use within Theron. This macro can be used to register
+message types together with \ref THERON_DECLARE_REGISTERED_MESSAGE. Together they
+replace \ref THERON_REGISTER_MESSAGE, which is deprecated.
+
+\see THERON_DECLARE_REGISTERED_MESSAGE
+*/
+
+
+#ifndef THERON_DEFINE_REGISTERED_MESSAGE
+
+#define THERON_DEFINE_REGISTERED_MESSAGE(MessageType)                       \
+namespace Theron                                                            \
+{                                                                           \
+namespace Detail                                                            \
+{                                                                           \
+const char *const MessageTraits<MessageType>::TYPE_NAME = #MessageType;     \
+}                                                                           \
+}
+
+#endif // THERON_DEFINE_REGISTERED_MESSAGE
+
+
+/**
+\def THERON_REGISTER_MESSAGE
+
+\brief Message type registration macro.
+
+Registers message types for use within Theron.
+
+\note This macro is deprecated: use \ref THERON_DECLARE_REGISTERED_MESSAGE
+and \ref THERON_DEFINE_REGISTERED_MESSAGE instead.
 */
 
 

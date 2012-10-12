@@ -31,6 +31,12 @@ Utility that can receive messages from actors.
 #include <Theron/Detail/Threading/Utils.h>
 
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning (disable:4324)  // structure was padded due to __declspec(align())
+#endif //_MSC_VER
+
+
 namespace Theron
 {
 
@@ -557,6 +563,11 @@ THERON_FORCEINLINE void Receiver::Push(Detail::IMessage *const message)
 
 
 } // namespace Theron
+
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif //_MSC_VER
 
 
 #endif // THERON_RECEIVER_H

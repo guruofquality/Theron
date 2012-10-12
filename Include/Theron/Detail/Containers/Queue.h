@@ -3,9 +3,16 @@
 #define THERON_DETAIL_CONTAINERS_QUEUE_H
 
 
+#include <Theron/Align.h>
 #include <Theron/Assert.h>
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
+
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning (disable:4324)  // structure was padded due to __declspec(align())
+#endif //_MSC_VER
 
 
 namespace Theron
@@ -158,6 +165,11 @@ THERON_FORCEINLINE ItemType *Queue<ItemType>::Pop()
 
 } // namespace Detail
 } // namespace Theron
+
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif //_MSC_VER
 
 
 #endif // THERON_DETAIL_CONTAINERS_QUEUE_H

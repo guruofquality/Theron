@@ -4,12 +4,11 @@
 
 
 #include <stdlib.h>
+#include <string.h>
 
 #include <Theron/Assert.h>
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
-
-#include <Theron/Detail/Network/String.h>
 
 
 #ifdef _MSC_VER
@@ -31,41 +30,40 @@ class NameGenerator
 {
 public:
 
-    inline static String Generate(const uint32_t id)
+    inline static void Generate(
+        char *const buffer,
+        const uint32_t id)
     {
-        char buffer[9];
+        THERON_ASSERT(buffer);
         sprintf(buffer, "%x", id);
-        return String(buffer);
     }
 
-    inline static String Combine(
+    inline static void Combine(
+        char *const buffer,
+        const uint32_t bufferSize,
         const char *const rawName,
         const char *const frameworkName,
         const char *const networkName)
     {
-        // Scope the mailbox name with the framework name.
-        const char *parts[3] = { 0 };
-        String result(rawName);
+        THERON_ASSERT(buffer);
+        THERON_ASSERT(rawName);
 
-        if (frameworkName)
+        if (strlen(rawName) + 1 < bufferSize)
         {
-            parts[0] = result.GetValue();
-            parts[1] = ".";
-            parts[2] = frameworkName;
-
-            result = String(parts, 3);
+            strcpy(buffer, rawName);
         }
 
-        if (networkName)
+        if (frameworkName && strlen(buffer) + strlen(frameworkName) + 2 < bufferSize)
         {
-            parts[0] = result.GetValue();
-            parts[1] = ".";
-            parts[2] = networkName;
-
-            result = String(parts, 3);
+            strcat(buffer, ".");
+            strcat(buffer, frameworkName);
         }
 
-        return result;
+        if (networkName && strlen(buffer) + strlen(networkName) + 2 < bufferSize)
+        {
+            strcat(buffer, ".");
+            strcat(buffer, networkName);
+        }
     }
 };
 

@@ -3,10 +3,14 @@
 #define THERON_DETAIL_MAILBOXPROCESSOR_WORKITEM_H
 
 
-#include <Theron/Address.h>
+#include <Theron/Align.h>
 #include <Theron/Defines.h>
 
-#include <Theron/Detail/Mailboxes/Mailbox.h>
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning (disable:4324)  // structure was padded due to __declspec(align())
+#endif //_MSC_VER
 
 
 namespace Theron
@@ -15,31 +19,35 @@ namespace Detail
 {
 
 
-struct WorkerThreadStore;
-
-
 /**
-Mailbox processor.
+Baseclass that adds link members to node types that derive from it.
 */
-class WorkItem
+class THERON_PREALIGN(THERON_CACHELINE_ALIGNMENT) WorkItem
 {
 public:
 
-    /**
-    Processes the work item, re-adding it to the given work queue if it needs more processing.
-    */
-    static void Process(Mailbox *const mailbox, WorkerThreadStore *const store);
+    inline WorkItem() : mNext(0), mPrev(0)
+    {
+    }
+
+    WorkItem *mNext;                ///< Pointer to the next item in the list.
+    WorkItem *mPrev;                ///< Pointer to the previous item in the list.
 
 private:
 
-    WorkItem();
     WorkItem(const WorkItem &other);
     WorkItem &operator=(const WorkItem &other);
-};
+
+} THERON_POSTALIGN(THERON_CACHELINE_ALIGNMENT);
 
 
 } // namespace Detail
 } // namespace Theron
+
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif //_MSC_VER
 
 
 #endif // THERON_DETAIL_MAILBOXPROCESSOR_WORKITEM_H

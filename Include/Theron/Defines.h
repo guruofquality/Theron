@@ -24,6 +24,19 @@ be easily overridden just by defining the defines yourself globally in your buil
 
 
 /**
+\def THERON_VERSION
+
+\brief Exposes the version number of the Theron release in use.
+
+This define is defined automatically and should always match the version number
+used to characterize the release. Its definition can't be overridden by the user.
+*/
+
+
+#define THERON_VERSION "5.02.00"
+
+
+/**
 \def THERON_WINDOWS
 
 \brief Controls the use of Windows features.
@@ -351,6 +364,37 @@ preprocessor settings in Visual Studio.
 
 
 /**
+\def THERON_ALWAYS_FORCEINLINE
+
+\brief Used to unconditionally force-inline functions within Theron.
+
+This define defines the keyword used to forcibly always inline function definitions.
+It is defined automatically if not predefined by the user. When automatically
+defined, it defaults to forced inlining in MSVC and GCC builds. On all other platforms,
+forced inlining is not currently implemented, and it defaults to just the inline keyword,
+which is required on functions defined within headers.
+
+\note Unlike THERON_FORCEINLINE, the default definition of THERON_ALWAYS_FORCEINLINE forces
+inlining in debug builds as well as in release builds.
+
+The default definition can be overridden by defining it globally in the build - either
+via the makefile command line options, on the GCC command line using -D, or in the project
+preprocessor settings in Visual Studio.
+*/
+
+
+#if !defined(THERON_ALWAYS_FORCEINLINE)
+#if THERON_MSVC
+#define THERON_ALWAYS_FORCEINLINE __forceinline
+#elif THERON_GCC
+#define THERON_ALWAYS_FORCEINLINE inline __attribute__((always_inline))
+#else
+#define THERON_ALWAYS_FORCEINLINE inline
+#endif
+#endif // THERON_ALWAYS_FORCEINLINE
+
+
+/**
 \def THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
 
 \brief Enables debug checking of allocations in the \ref Theron::DefaultAllocator "DefaultAllocator".
@@ -465,6 +509,39 @@ preprocessor settings in Visual Studio.
 
 #if !defined(THERON_ENABLE_UNHANDLED_MESSAGE_CHECKS)
 #define THERON_ENABLE_UNHANDLED_MESSAGE_CHECKS 1
+#endif
+
+
+/**
+\def THERON_ENABLE_BUILD_CHECKS
+
+\brief Enables automatic checking of build consistency between the Theron library and client code.
+
+This define controls the use of automatic checks that compare the build settings used to build the
+Theron library with those used to build any client code in which Framework objects are
+constructed. The checks are performed at framework construction time and compare generated
+strings that characterize the build settings in the library and (inlined within) client code.
+
+Because Theron includes a significant amount of inlined code which gets generated within the
+client executable rather than within the Theron library itself, it is important that Theron
+code is generated consistently across these two potentially different environments. Many of the
+defines defined in Theron/Defines.h affect code generation in non-trivial ways, and it can
+be unsafe to mix code built with different definitions of these defines. In particular, some of
+the most important defines are, by default, defined differently in debug and release builds.
+For example, mixing a debug build of the Theron library with a release build of Theron-based
+client code, or vice versa, will almost always result in hard-to-find errors.
+
+Defaults to 1 (enabled). Set this to 0 to disable the checking if you wish to mix different
+builds and know for certain that it is safe to do so.
+
+The default definition can be overridden by defining it globally in the build - either
+via the makefile command line options, on the GCC command line using -D, or in the project
+preprocessor settings in Visual Studio.
+*/
+
+
+#if !defined(THERON_ENABLE_BUILD_CHECKS)
+#define THERON_ENABLE_BUILD_CHECKS 1
 #endif
 
 

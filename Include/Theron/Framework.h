@@ -8,7 +8,10 @@
 Framework that hosts and executes actors.
 */
 
+
 #include <new>
+#include <string.h>
+#include <stdio.h>
 
 #include <Theron/ActorRef.h>
 #include <Theron/Address.h>
@@ -22,9 +25,7 @@ Framework that hosts and executes actors.
 
 #include <Theron/Detail/Alignment/ActorAlignment.h>
 #include <Theron/Detail/Allocators/CachingAllocator.h>
-#include <Theron/Detail/Allocators/ThreadsafeAllocator.h>
 #include <Theron/Detail/Containers/List.h>
-#include <Theron/Detail/Containers/ThreadSafeQueue.h>
 #include <Theron/Detail/Directory/Directory.h>
 #include <Theron/Detail/Directory/Entry.h>
 #include <Theron/Detail/Handlers/DefaultFallbackHandler.h>
@@ -33,10 +34,8 @@ Framework that hosts and executes actors.
 #include <Theron/Detail/Mailboxes/Mailbox.h>
 #include <Theron/Detail/Messages/MessageCreator.h>
 #include <Theron/Detail/Messages/MessageSender.h>
-#include <Theron/Detail/MailboxProcessor/ProcessorContext.h>
+#include <Theron/Detail/MailboxProcessor/Processor.h>
 #include <Theron/Detail/MailboxProcessor/ThreadPool.h>
-#include <Theron/Detail/MailboxProcessor/WorkerThreadStore.h>
-#include <Theron/Detail/MailboxProcessor/WorkItem.h>
 #include <Theron/Detail/Network/String.h>
 #include <Theron/Detail/Threading/Atomic.h>
 #include <Theron/Detail/Threading/SpinLock.h>
@@ -46,6 +45,7 @@ Framework that hosts and executes actors.
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning (disable:4324)  // structure was padded due to __declspec(align())
+#pragma warning (disable:4996)  // function or variable may be unsafe
 #endif //_MSC_VER
 
 
@@ -121,6 +121,21 @@ public:
     friend class Detail::MessageSender;
 
     /**
+    \enum Theron::Framework::YieldStrategy
+
+    \brief Specifies various worker thread yield strategies.
+
+    More aggressive strategies have lower latency, but may hog the processor.
+    Polite strategies yield the processor to other threads, but may take longer to wake up.
+    */
+    enum YieldStrategy
+    {
+        YIELD_STRATEGY_POLITE,              ///< Threads go to sleep when not in use.
+        YIELD_STRATEGY_STRONG,              ///< Threads yield to other threads but don't go to sleep.
+        YIELD_STRATEGY_AGGRESSIVE           ///< Threads never yield to other threads.
+    };
+
+    /**
     \brief Parameters structure that can be passed to the Framework constructor.
 
     One of the several different \ref Framework::Framework "Framework constructors"
@@ -128,10 +143,7 @@ public:
 
     \note Support for node and processor affinity masks is currently limited and somewhat untested.
     On Windows builds, both the node mask and processor mask are supported. In GCC builds, NUMA support
-    requires libnuma-dev and must be explicitly enabled via THERON_NUMA (or numa=on in the makefile).
-    Also, in GCC builds, only one NUMA node is supported per Framework, so the node mask is expected
-    to only contain a single 1 bit, with all other bits cleared to 0. The processor affinity mask is
-    ignored.
+    requires libnuma-dev and must be explicitly enabled via \ref THERON_NUMA (or numa=on in the makefile).
     */
     struct Parameters
     {
@@ -142,7 +154,8 @@ public:
         inline Parameters() :
           mThreadCount(16),
           mNodeMask(1),
-          mProcessorMask(0xFFFFFFFF)
+          mProcessorMask(0xFFFFFFFF),
+          mYieldStrategy(YIELD_STRATEGY_POLITE)
         {
         }
 
@@ -153,7 +166,8 @@ public:
         inline explicit Parameters(const uint32_t threadCount) :
           mThreadCount(threadCount),
           mNodeMask(1),
-          mProcessorMask(0xFFFFFFFF)
+          mProcessorMask(0xFFFFFFFF),
+          mYieldStrategy(YIELD_STRATEGY_POLITE)
         {
         }
 
@@ -163,14 +177,13 @@ public:
 
         \note Support for node and processor affinity masks is currently limited and somewhat untested.
         On Windows builds, the node mask is supported. In GCC builds, NUMA support requires libnuma-dev
-        and must be explicitly enabled via THERON_NUMA (or numa=on in the makefile). Also, in GCC builds,
-        only one NUMA node is supported per Framework, so the node mask is expected to only contain a
-        single 1 bit, with all other bits cleared to 0.
+        and must be explicitly enabled via \ref THERON_NUMA (or numa=on in the makefile).
         */
         inline Parameters(const uint32_t threadCount, const uint32_t nodeMask) :
           mThreadCount(threadCount),
           mNodeMask(nodeMask),
-          mProcessorMask(0xFFFFFFFF)
+          mProcessorMask(0xFFFFFFFF),
+          mYieldStrategy(YIELD_STRATEGY_POLITE)
         {
         }
 
@@ -181,21 +194,20 @@ public:
 
         \note Support for node and processor affinity masks is currently limited and somewhat untested.
         On Windows builds, both the node mask and processor mask are supported. In GCC builds, NUMA support
-        requires libnuma-dev and must be explicitly enabled via THERON_NUMA (or numa=on in the makefile).
-        Also, in GCC builds, only one NUMA node is supported per Framework, so the node mask is expected
-        to only contain a single 1 bit, with all other bits cleared to 0. The processor affinity mask is
-        ignored.
+        requires libnuma-dev and must be explicitly enabled via \ref THERON_NUMA (or numa=on in the makefile).
         */
         inline Parameters(const uint32_t threadCount, const uint32_t nodeMask, const uint32_t processorMask) :
           mThreadCount(threadCount),
           mNodeMask(nodeMask),
-          mProcessorMask(processorMask)
+          mProcessorMask(processorMask),
+          mYieldStrategy(YIELD_STRATEGY_POLITE)
         {
         }
 
-        uint32_t mThreadCount;      ///< The initial number of worker threads to create within the framework.
-        uint32_t mNodeMask;         ///< Specifies the NUMA processor nodes upon which the framework may execute.
-        uint32_t mProcessorMask;    ///< Specifies the subset of the processors in each NUMA processor node upon which the framework may execute.
+        uint32_t mThreadCount;          ///< The initial number of worker threads to create within the framework.
+        uint32_t mNodeMask;             ///< Specifies the NUMA processor nodes upon which the framework may execute.
+        uint32_t mProcessorMask;        ///< Specifies the subset of the processors in each NUMA processor node upon which the framework may execute.
+        YieldStrategy mYieldStrategy;   ///< Yield strategy employed by the worker threads in the framework.
     };
 
     /**
@@ -222,7 +234,7 @@ public:
     MyActor actorTwo(frameworkTwo);
     \endcode
     */
-    explicit Framework(const uint32_t threadCount);
+    inline explicit Framework(const uint32_t threadCount);
 
     /**
     \brief Constructor.
@@ -249,7 +261,7 @@ public:
 
     \note In distributed applications, use the constructor variant that accepts an \ref EndPoint.
     */
-    explicit Framework(const Parameters &params = Parameters());
+    inline explicit Framework(const Parameters &params = Parameters());
 
     /**
     \brief Constructor.
@@ -281,7 +293,7 @@ public:
 
     \note The name string parameter is copied, so can be destroyed after the call.
     */
-    Framework(EndPoint &endPoint, const char *const name = 0, const Parameters &params = Parameters());
+    inline Framework(EndPoint &endPoint, const char *const name = 0, const Parameters &params = Parameters());
 
     /**
     \brief Destructor.
@@ -315,7 +327,7 @@ public:
     \note If a Framework instance is allowed to be destructed before actors created within
     it, the actors will not be correctly destroyed, leading to errors or memory leaks.
     */
-    ~Framework();
+    inline ~Framework();
 
     /**
     \brief Sends a message to the entity (typically an actor, but potentially a Receiver) at the given address.
@@ -766,10 +778,9 @@ public:
 
 private:
 
-    typedef Detail::ThreadSafeQueue<Detail::Mailbox> WorkQueue;
-    typedef Detail::ThreadPool<WorkQueue, Detail::WorkItem, Detail::WorkerThreadStore> ThreadPool;
+    typedef Detail::ThreadPool<Detail::Processor, Detail::Processor::Context> ThreadPool;
     typedef Detail::List<ThreadPool::ThreadContext> ContextList;
-    typedef Detail::CachingAllocator<32> MessageCache;
+    typedef Detail::CachingAllocator<32, Detail::SpinLock> MessageCache;
 
     Framework(const Framework &other);
     Framework &operator=(const Framework &other);
@@ -808,6 +819,26 @@ private:
         const Address &address);
 
     /**
+    Checks whether all work queues in the framework are empty.
+    */
+    bool QueuesEmpty() const;
+
+    /**
+    Compares the build settings of the Theron library and inlined client code to detect mismatches.
+    */
+    inline static void CheckBuildDescriptors();
+
+    /**
+    Gets a string descriptor characterizing the build settings used to build the Theron library.
+    */
+    static void GetLibraryBuildDescriptor(char *const identifier);
+
+    /**
+    Fills a provided buffer with a string descriptor characterizing build settings.
+    */
+    inline static void GenerateBuildDescriptor(char *const identifier);
+
+    /**
     Static entry point function for the manager thread.
     This is a static function that calls the real entry point member function.
     */
@@ -823,12 +854,11 @@ private:
     uint32_t mIndex;                                        ///< Non-zero index of this framework, unique within the local process.
     Detail::String mName;                                   ///< Name of this framework.
     Detail::Directory<Detail::Mailbox> mMailboxes;          ///< Per-framework mailbox array.
-    WorkQueue mWorkQueue;                                   ///< Queue of mailboxes for processing.
     Detail::FallbackHandlerCollection mFallbackHandlers;    ///< Registered message handlers run for unhandled messages.
     Detail::DefaultFallbackHandler mDefaultFallbackHandler; ///< Default handler for unhandled messages.
-    MessageCache mMessageCache;                             ///< Per-framework cache of message memory blocks.
-    Detail::ThreadsafeAllocator mMessageAllocator;          ///< Thread-safe caching message block allocator.
-    Detail::ProcessorContext mProcessorContext;             ///< Per-framework processor context data.
+    mutable Detail::SpinLock mSharedWorkQueueSpinLock;      ///< Protects the work queue shared by the worker threads.
+    MessageCache mMessageAllocator;                         ///< Thread-safe per-framework cache of message memory blocks.
+    Detail::Processor::Context mProcessorContext;           ///< Per-framework processor context.
     Detail::Thread mManagerThread;                          ///< Dynamically creates and destroys the worker threads.
     bool mRunning;                                          ///< Flag used to terminate the manager thread.
     Detail::Atomic::UInt32 mTargetThreadCount;              ///< Desired number of worker threads.
@@ -836,15 +866,91 @@ private:
     Detail::Atomic::UInt32 mThreadCount;                    ///< Actual number of worker threads.
     ContextList mThreadContexts;                            ///< List of worker thread context objects.
     mutable Detail::SpinLock mThreadContextLock;            ///< Protects the thread context list.
-    uint32_t mNodeMask;                                     ///< Worker thread NUMA node affinity mask.
-    uint32_t mProcessorMask;                                ///< Worker thread NUMA node processor affinity mask.
 };
+
+
+THERON_ALWAYS_FORCEINLINE Framework::Framework(const uint32_t threadCount) :
+  mEndPoint(0),
+  mParams(threadCount),
+  mIndex(0),
+  mName(),
+  mMailboxes(),
+  mFallbackHandlers(),
+  mDefaultFallbackHandler(),
+  mSharedWorkQueueSpinLock(),
+  mMessageAllocator(AllocatorManager::Instance().GetAllocator()),
+  mProcessorContext(&mMailboxes, &mSharedWorkQueueSpinLock, &mFallbackHandlers, &mMessageAllocator),
+  mManagerThread(),
+  mRunning(false),
+  mTargetThreadCount(0),
+  mPeakThreadCount(0),
+  mThreadCount(0),
+  mThreadContexts(),
+  mThreadContextLock()
+{
+    CheckBuildDescriptors();
+    Initialize();
+}
+
+
+THERON_ALWAYS_FORCEINLINE Framework::Framework(const Parameters &params) :
+  mEndPoint(0),
+  mParams(params),
+  mIndex(0),
+  mName(),
+  mMailboxes(),
+  mFallbackHandlers(),
+  mDefaultFallbackHandler(),
+  mSharedWorkQueueSpinLock(),
+  mMessageAllocator(AllocatorManager::Instance().GetAllocator()),
+  mProcessorContext(&mMailboxes, &mSharedWorkQueueSpinLock, &mFallbackHandlers, &mMessageAllocator),
+  mManagerThread(),
+  mRunning(false),
+  mTargetThreadCount(0),
+  mPeakThreadCount(0),
+  mThreadCount(0),
+  mThreadContexts(),
+  mThreadContextLock()
+{
+    CheckBuildDescriptors();
+    Initialize();
+}
+
+
+THERON_ALWAYS_FORCEINLINE Framework::Framework(EndPoint &endPoint, const char *const name, const Parameters &params) :
+  mEndPoint(&endPoint),
+  mParams(params),
+  mIndex(0),
+  mName(name),
+  mMailboxes(),
+  mFallbackHandlers(),
+  mDefaultFallbackHandler(),
+  mSharedWorkQueueSpinLock(),
+  mMessageAllocator(AllocatorManager::Instance().GetAllocator()),
+  mProcessorContext(&mMailboxes, &mSharedWorkQueueSpinLock, &mFallbackHandlers, &mMessageAllocator),
+  mManagerThread(),
+  mRunning(false),
+  mTargetThreadCount(0),
+  mPeakThreadCount(0),
+  mThreadCount(0),
+  mThreadContexts(),
+  mThreadContextLock()
+{
+    CheckBuildDescriptors();
+    Initialize();
+}
+
+
+THERON_FORCEINLINE Framework::~Framework()
+{
+    Release();
+}
 
 
 template <typename ValueType>
 THERON_FORCEINLINE bool Framework::Send(const ValueType &value, const Address &from, const Address &address)
 {
-    // We use a per-framework message cache to allocate messages sent from non-actor code.
+    // We use a thread-safe per-framework message cache to allocate messages sent from non-actor code.
     IAllocator *const messageAllocator(&mMessageAllocator);
 
     // Allocate a message. It'll be deleted by the worker thread that handles it.
@@ -1005,6 +1111,56 @@ inline ActorRef Framework::CreateActor(const typename ActorType::Parameters &par
     allocator->Free(entryMemory, sizeof(typename Detail::ActorRegistry::Entry));
 
     return ActorRef(actor);
+}
+
+
+THERON_ALWAYS_FORCEINLINE void Framework::CheckBuildDescriptors()
+{
+#if THERON_ENABLE_BUILD_CHECKS
+
+    char inlineDescriptor[32];
+    GenerateBuildDescriptor(inlineDescriptor);
+
+    char libraryDescriptor[32];
+    GetLibraryBuildDescriptor(libraryDescriptor);
+
+    if (strcmp(inlineDescriptor, libraryDescriptor) != 0)
+    {
+        // Because Theron contains inlined code, it requires that any Theron-based client code
+        // is built with the same build settings as were used to build the Theron library.
+        // In particular the values of the various defines in Theron/Defines.h should match.
+        // That means, for example, that a release build of the Theron library can't be mixed
+        // with a debug build of client code that uses it.
+        fprintf(stderr, "Detected build differences between Theron library and client code\n");
+        fprintf(stderr, "Client build descriptor:  %s\n", inlineDescriptor);
+        fprintf(stderr, "Library build descriptor: %s\n", libraryDescriptor);
+        exit(1);
+    }
+
+#endif // THERON_ENABLE_BUILD_CHECKS
+}
+
+
+THERON_ALWAYS_FORCEINLINE void Framework::GenerateBuildDescriptor(char *const identifier)
+{
+    // Build up a string identifier that characterizes the Theron build settings.
+    identifier[0] = '\0';
+    sprintf(identifier, "%s|%d%d%d%d%d%d%d%d%d%d%d%d%d%d",
+        THERON_VERSION,
+        THERON_MSVC,
+        THERON_GCC,
+        THERON_64BIT,
+        THERON_DEBUG,
+        THERON_BOOST,
+        THERON_CPP11,
+        THERON_POSIX,
+        THERON_ENABLE_DEFAULTALLOCATOR_CHECKS,
+        THERON_ENABLE_MESSAGE_REGISTRATION_CHECKS,
+        THERON_ENABLE_UNHANDLED_MESSAGE_CHECKS,
+        THERON_ENABLE_BUILD_CHECKS,
+        THERON_CACHELINE_ALIGNMENT,
+        THERON_NUMA,
+        THERON_XS);
 }
 
 

@@ -9,10 +9,16 @@
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
 
-#include <Theron/Detail/Containers/Queue.h>
 #include <Theron/Detail/Messages/IMessage.h>
+#include <Theron/Detail/MailboxProcessor/WorkQueue.h>
 #include <Theron/Detail/Network/String.h>
 #include <Theron/Detail/Threading/SpinLock.h>
+
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning (disable:4324)  // structure was padded due to __declspec(align())
+#endif //_MSC_VER
 
 
 namespace Theron
@@ -29,7 +35,7 @@ namespace Detail
 /**
 An individual mailbox with a specific address.
 */
-class THERON_PREALIGN(THERON_CACHELINE_ALIGNMENT) Mailbox : public Queue<Mailbox>::Node
+class THERON_PREALIGN(THERON_CACHELINE_ALIGNMENT) Mailbox : public WorkItem
 {
 public:
 
@@ -249,6 +255,11 @@ THERON_FORCEINLINE bool Mailbox::IsPinned() const
 
 } // namespace Detail
 } // namespace Theron
+
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif //_MSC_VER
 
 
 #endif // THERON_DETAIL_DIRECTORY_MAILBOXES_MAILBOX_H

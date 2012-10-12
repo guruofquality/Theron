@@ -11,8 +11,10 @@
 #include <Theron/IAllocator.h>
 
 #include <Theron/Detail/Directory/StaticDirectory.h>
+#include <Theron/Detail/MailboxProcessor/Processor.h>
 #include <Theron/Detail/Network/Index.h>
 #include <Theron/Detail/Network/NameGenerator.h>
+#include <Theron/Detail/Network/String.h>
 #include <Theron/Detail/Threading/Utils.h>
 
 
@@ -20,98 +22,25 @@ namespace Theron
 {
 
 
-Framework::Framework(const uint32_t threadCount) :
-  mEndPoint(0),
-  mParams(threadCount),
-  mIndex(0),
-  mName(),
-  mMailboxes(),
-  mWorkQueue(),
-  mFallbackHandlers(),
-  mDefaultFallbackHandler(),
-  mMessageCache(AllocatorManager::Instance().GetAllocator()),
-  mMessageAllocator(&mMessageCache),
-  mProcessorContext(&mMailboxes, &mWorkQueue, &mFallbackHandlers, &mMessageAllocator),
-  mManagerThread(),
-  mRunning(false),
-  mTargetThreadCount(0),
-  mPeakThreadCount(0),
-  mThreadCount(0),
-  mThreadContexts(),
-  mThreadContextLock(),
-  mNodeMask(0),
-  mProcessorMask(0)
-{
-    Initialize();
-}
-
-
-Framework::Framework(const Parameters &params) :
-  mEndPoint(0),
-  mParams(params),
-  mIndex(0),
-  mName(),
-  mMailboxes(),
-  mWorkQueue(),
-  mFallbackHandlers(),
-  mDefaultFallbackHandler(),
-  mMessageCache(AllocatorManager::Instance().GetAllocator()),
-  mMessageAllocator(&mMessageCache),
-  mProcessorContext(&mMailboxes, &mWorkQueue, &mFallbackHandlers, &mMessageAllocator),
-  mManagerThread(),
-  mRunning(false),
-  mTargetThreadCount(0),
-  mPeakThreadCount(0),
-  mThreadCount(0),
-  mThreadContexts(),
-  mThreadContextLock(),
-  mNodeMask(0),
-  mProcessorMask(0)
-{
-    Initialize();
-}
-
-
-Framework::Framework(EndPoint &endPoint, const char *const name, const Parameters &params) :
-  mEndPoint(&endPoint),
-  mParams(params),
-  mIndex(0),
-  mName(name),
-  mMailboxes(),
-  mWorkQueue(),
-  mFallbackHandlers(),
-  mDefaultFallbackHandler(),
-  mMessageCache(AllocatorManager::Instance().GetAllocator()),
-  mMessageAllocator(&mMessageCache),
-  mProcessorContext(&mMailboxes, &mWorkQueue, &mFallbackHandlers, &mMessageAllocator),
-  mManagerThread(),
-  mRunning(false),
-  mTargetThreadCount(0),
-  mPeakThreadCount(0),
-  mThreadCount(0),
-  mThreadContexts(),
-  mThreadContextLock(),
-  mNodeMask(0),
-  mProcessorMask(0)
-{
-    Initialize();
-}
-
-
-Framework::~Framework()
-{
-    Release();
-}
-
-
 void Framework::Initialize()
 {
+    // Set up the work queue pointers in the shared, per-framework context.
+    // The per-framework context has no local queue, it's owned queue is the shared queue.
+    mProcessorContext.mSharedWorkQueue = &mProcessorContext.mWorkQueue;
+    mProcessorContext.mLocalWorkQueue = 0;
+
+    // Set up the yield strategy in the per-framework context.
+    switch (mParams.mYieldStrategy)
+    {
+        case YIELD_STRATEGY_POLITE:     mProcessorContext.mYield.SetYieldFunction(&Detail::Processor::YieldPolite);     break;
+        case YIELD_STRATEGY_STRONG:     mProcessorContext.mYield.SetYieldFunction(&Detail::Processor::YieldStrong);     break;
+        case YIELD_STRATEGY_AGGRESSIVE: mProcessorContext.mYield.SetYieldFunction(&Detail::Processor::YieldAggressive); break;
+        default:                        mProcessorContext.mYield.SetYieldFunction(&Detail::Processor::YieldPolite);     break;
+    }
+
     // Set the initial thread count and affinity masks.
     mThreadCount.Store(0);
     mTargetThreadCount.Store(mParams.mThreadCount);
-
-    mNodeMask = mParams.mNodeMask;
-    mProcessorMask = mParams.mProcessorMask;
 
     // Set up the default fallback handler, which catches and reports undelivered messages.
     SetFallbackHandler(&mDefaultFallbackHandler, &Detail::DefaultFallbackHandler::Handle);
@@ -134,7 +63,9 @@ void Framework::Initialize()
     // If the framework name wasn't set explicitly then generate a default name.
     if (mName.IsNull())
     {
-        mName = Detail::NameGenerator::Generate(mIndex);
+        char buffer[16];
+        Detail::NameGenerator::Generate(buffer, mIndex);
+        mName = Detail::String(buffer);
     }
 }
 
@@ -146,7 +77,7 @@ void Framework::Release()
 
     // Wait for the work queue to drain, to avoid memory leaks.
     uint32_t backoff(0);
-    while (!mWorkQueue.Empty())
+    while (!QueuesEmpty())
     {
         Detail::Utils::Backoff(backoff);
     }
@@ -177,9 +108,8 @@ void Framework::RegisterActor(Actor *const actor, const char *const name)
     Detail::String mailboxName(name);
     if (name == 0)
     {
-        // Generate a default string name for the mailbox.
-        // The default name is a composite of the mailbox index, framework index, and endpoint name.
-        Detail::String rawName(Detail::NameGenerator::Generate(mailboxIndex));
+        char rawName[16];
+        Detail::NameGenerator::Generate(rawName, mailboxIndex);
 
         const char *endPointName(0);
         if (mEndPoint)
@@ -187,10 +117,15 @@ void Framework::RegisterActor(Actor *const actor, const char *const name)
             endPointName = mEndPoint->GetName();        
         }
 
-        mailboxName = Detail::NameGenerator::Combine(
-            rawName.GetValue(),
+        char scopedName[256];
+        Detail::NameGenerator::Combine(
+            scopedName,
+            256,
+            rawName,
             mName.GetValue(),
             endPointName);
+
+        mailboxName = Detail::String(scopedName);
     }
 
     // Name the mailbox and register the actor.
@@ -304,6 +239,45 @@ uint32_t Framework::GetPeakThreads() const
 }
 
 
+bool Framework::QueuesEmpty() const
+{
+    bool empty(true);
+
+    mSharedWorkQueueSpinLock.Lock();
+
+    if (!mProcessorContext.mWorkQueue.Empty())
+    {
+        empty = false;
+    }
+
+    mSharedWorkQueueSpinLock.Unlock();
+
+    if (!empty)
+    {
+        return false;
+    }
+
+    mThreadContextLock.Lock();
+    
+    // Check the queues in all worker contexts.
+    ContextList::Iterator contexts(mThreadContexts.GetIterator());
+    while (contexts.Next())
+    {
+        ThreadPool::ThreadContext *const threadContext(contexts.Get());
+
+        if (!threadContext->mWorkerContext->mWorkQueue.Empty())
+        {
+            empty = false;
+            break;
+        }
+    }
+
+    mThreadContextLock.Unlock();
+
+    return empty;
+}
+
+
 void Framework::ResetCounters() const
 {
     mThreadContextLock.Lock();
@@ -316,7 +290,7 @@ void Framework::ResetCounters() const
 
         for (uint32_t index = 0; index < (uint32_t) MAX_COUNTERS; ++index)
         {
-            threadContext->mWorkerContext->mProcessorContext.mCounters[index].Store(0);
+            threadContext->mWorkerContext->mCounters[index].Store(0);
         }
     }
 
@@ -336,7 +310,7 @@ uint32_t Framework::GetCounterValue(const Counter counter) const
     {
         ThreadPool::ThreadContext *const threadContext(contexts.Get());
 
-        total += threadContext->mWorkerContext->mProcessorContext.mCounters[counter].Load();
+        total += threadContext->mWorkerContext->mCounters[counter].Load();
     }
 
     mThreadContextLock.Unlock();
@@ -362,13 +336,20 @@ uint32_t Framework::GetPerThreadCounterValues(
 
         if (ThreadPool::IsRunning(threadContext))
         {
-            perThreadCounts[itemCount++] = threadContext->mWorkerContext->mProcessorContext.mCounters[counter].Load();
+            perThreadCounts[itemCount++] = threadContext->mWorkerContext->mCounters[counter].Load();
         }
     }
 
     mThreadContextLock.Unlock();
 
     return itemCount;
+}
+
+
+// The function must not be inlined.
+void Framework::GetLibraryBuildDescriptor(char *const identifier)
+{
+    GenerateBuildDescriptor(identifier);
 }
 
 
@@ -398,9 +379,8 @@ void Framework::ManagerThreadProc()
             {
                 if (!ThreadPool::StartThread(
                     threadContext,
-                    &mWorkQueue,
-                    mNodeMask,
-                    mProcessorMask))
+                    mParams.mNodeMask,
+                    mParams.mProcessorMask))
                 {
                     break;
                 }
@@ -413,17 +393,31 @@ void Framework::ManagerThreadProc()
         while (mThreadCount.Load() < mTargetThreadCount.Load())
         {
             // Create a worker context for this thread.
-            void *const storeMemory = allocator->AllocateAligned(sizeof(Detail::WorkerThreadStore), THERON_CACHELINE_ALIGNMENT);
+            void *const storeMemory = allocator->AllocateAligned(sizeof(Detail::Processor::Context), THERON_CACHELINE_ALIGNMENT);
             if (storeMemory == 0)
             {
                 continue;
             }
 
-            Detail::WorkerThreadStore *const store = new (storeMemory) Detail::WorkerThreadStore(
+            Detail::Processor::Context *const store = new (storeMemory) Detail::Processor::Context(
                 &mMailboxes,
-                &mWorkQueue,
+                &mSharedWorkQueueSpinLock,
                 &mFallbackHandlers,
-                &mMessageCache);
+                &mMessageAllocator);
+
+            // Set up the work queue pointers in this per-thread context.
+            // The per-thread contexts have pointers to the single shared queue and their own owned queues.
+            store->mSharedWorkQueue = &mProcessorContext.mWorkQueue;
+            store->mLocalWorkQueue = &store->mWorkQueue;
+
+            // Set up the yield strategy in the per-thread context.
+            switch (mParams.mYieldStrategy)
+            {
+                case YIELD_STRATEGY_POLITE:     store->mYield.SetYieldFunction(&Detail::Processor::YieldPolite);        break;
+                case YIELD_STRATEGY_STRONG:     store->mYield.SetYieldFunction(&Detail::Processor::YieldStrong);        break;
+                case YIELD_STRATEGY_AGGRESSIVE: store->mYield.SetYieldFunction(&Detail::Processor::YieldAggressive);    break;
+                default:                        store->mYield.SetYieldFunction(&Detail::Processor::YieldPolite);        break;
+            }
 
             // Create a thread context structure wrapping the worker context.
             void *const contextMemory = allocator->AllocateAligned(sizeof(ThreadPool::ThreadContext), THERON_CACHELINE_ALIGNMENT);
@@ -446,9 +440,8 @@ void Framework::ManagerThreadProc()
             // Start the thread on the given node and processors.
             if (!ThreadPool::StartThread(
                 threadContext,
-                &mWorkQueue,
-                mNodeMask,
-                mProcessorMask))
+                mParams.mNodeMask,
+                mParams.mProcessorMask))
             {
                 allocator->Free(storeMemory);
                 allocator->Free(threadContext);
@@ -494,8 +487,8 @@ void Framework::ManagerThreadProc()
         ThreadPool::DestroyThread(threadContext);
 
         // Destruct and free the per-worker-thread storage.
-        threadContext->mWorkerContext->~WorkerThreadStore();
-        allocator->Free(threadContext->mWorkerContext, sizeof(Detail::WorkerThreadStore));
+        threadContext->mWorkerContext->~Context();
+        allocator->Free(threadContext->mWorkerContext, sizeof(Detail::Processor::Context));
 
         // Destruct and free the per-thread context.
         threadContext->~ThreadContext();

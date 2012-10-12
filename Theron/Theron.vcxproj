@@ -29,8 +29,8 @@
     <ClCompile Include="Framework.cpp" />
     <ClCompile Include="HandlerCollection.cpp" />
     <ClCompile Include="MessageSender.cpp" />
+    <ClCompile Include="Processor.cpp" />
     <ClCompile Include="Receiver.cpp" />
-    <ClCompile Include="WorkItem.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Include\Theron\Actor.h" />
@@ -48,13 +48,10 @@
     <ClInclude Include="..\Include\Theron\Detail\Alignment\MessageAlignment.h" />
     <ClInclude Include="..\Include\Theron\Detail\Allocators\CachingAllocator.h" />
     <ClInclude Include="..\Include\Theron\Detail\Allocators\Pool.h" />
-    <ClInclude Include="..\Include\Theron\Detail\Allocators\PoolAllocator.h" />
-    <ClInclude Include="..\Include\Theron\Detail\Allocators\ThreadsafeAllocator.h" />
     <ClInclude Include="..\Include\Theron\Detail\Allocators\TrivialAllocator.h" />
     <ClInclude Include="..\Include\Theron\Detail\Containers\List.h" />
     <ClInclude Include="..\Include\Theron\Detail\Containers\Map.h" />
     <ClInclude Include="..\Include\Theron\Detail\Containers\Queue.h" />
-    <ClInclude Include="..\Include\Theron\Detail\Containers\ThreadSafeQueue.h" />
     <ClInclude Include="..\Include\Theron\Detail\Directory\Directory.h" />
     <ClInclude Include="..\Include\Theron\Detail\Directory\Entry.h" />
     <ClInclude Include="..\Include\Theron\Detail\Directory\StaticDirectory.h" />
@@ -76,10 +73,10 @@
     <ClInclude Include="..\Include\Theron\Detail\Handlers\ReceiverHandlerCast.h" />
     <ClInclude Include="..\Include\Theron\Detail\Legacy\ActorRegistry.h" />
     <ClInclude Include="..\Include\Theron\Detail\Mailboxes\Mailbox.h" />
-    <ClInclude Include="..\Include\Theron\Detail\MailboxProcessor\ProcessorContext.h" />
+    <ClInclude Include="..\Include\Theron\Detail\MailboxProcessor\Processor.h" />
     <ClInclude Include="..\Include\Theron\Detail\MailboxProcessor\ThreadPool.h" />
-    <ClInclude Include="..\Include\Theron\Detail\MailboxProcessor\WorkerThreadStore.h" />
     <ClInclude Include="..\Include\Theron\Detail\MailboxProcessor\WorkItem.h" />
+    <ClInclude Include="..\Include\Theron\Detail\MailboxProcessor\WorkQueue.h" />
     <ClInclude Include="..\Include\Theron\Detail\Messages\IMessage.h" />
     <ClInclude Include="..\Include\Theron\Detail\Messages\Message.h" />
     <ClInclude Include="..\Include\Theron\Detail\Messages\MessageCast.h" />

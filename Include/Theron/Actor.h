@@ -32,7 +32,7 @@ Actor baseclass.
 #include <Theron/Detail/Messages/MessageCreator.h>
 #include <Theron/Detail/Messages/MessageSender.h>
 #include <Theron/Detail/Mailboxes/Mailbox.h>
-#include <Theron/Detail/MailboxProcessor/ProcessorContext.h>
+#include <Theron/Detail/MailboxProcessor/Processor.h>
 #include <Theron/Detail/Threading/Atomic.h>
 #include <Theron/Detail/Threading/Utils.h>
 
@@ -56,7 +56,7 @@ class Framework;
 
 namespace Detail
 {
-class WorkItem;
+class Processor;
 }
 
 
@@ -90,7 +90,7 @@ public:
 
     friend class ActorRef;
     friend class Framework;
-    friend class Detail::WorkItem;
+    friend class Detail::Processor;
 
     /**
     \brief Default constructor.
@@ -323,6 +323,15 @@ public:
     conventional and general way to send messages to actors. It can be
     called in situations where the caller happens to have a direct reference
     to the target actor (for example by means of a local variable or pointer).
+    
+    \note In general \ref Send should be preferred over Push. When sending messages
+    from inside an actor (for example in a message handler), use Actor::Send.
+    When sending messages to an actor, prefer Framework::Send over Actor::Push,
+    even in situations where you have a direct reference to the receiving actor.
+    Although Push looks like an optimization, it uses the same general message
+    sending mechanism as Send, and moreover is potentially slower in the former
+    case of sending messages from inside an actor message handler, due to not
+    being able to rely on the availability of a worker thread context.
 
     As with \ref Framework::Send, it's necessary to provide a \em from address
     when calling this method, because the address of the sender isn't implicit
@@ -768,26 +777,25 @@ protected:
     default fallback handler, unless it is replaced by a custom user implementation using
     \ref Framework::SetFallbackHandler.
 
+    Messages sent to mailboxes within the local process by the same sender are
+    guaranteed to be delivered to those mailboxes in the order they are sent. Once
+    delivered, they are guaranteed to processed in the order they were received.
+    When messages by different senders or to mailboxes in other processes (potentially
+    on other hosts) the arrival order is not guaranteed.
+
     This method can safely be called within the constructor or destructor of a derived
     actor object, as well as (more typically) within its message handler functions.
+
+    When sending messages from message handlers, use \ref TailSend instead in the
+    common case where the sending of the message is the last action of the message
+    handler. In such cases, using TailSend can result in significantly higher performance.
 
     \tparam ValueType The message type (any copyable class or Plain-Old-Data type).
     \param value The message value to be sent.
     \param address The address of the destination Receiver or Actor mailbox.
     \return True, if the message was delivered, otherwise false.
 
-    \note An important detail of message handling in Theron is that message handling
-    order is guaranteed. That is, if an actor A sends two messages m1 and m2 successively
-    to another actor B, then it's guaranteed that m1 and m2 will arrive at B, and be
-    handled, in that order. Theron is able to guarantee this because it currently only
-    supports actors within the same process, so message transfer is entirely under its
-    control. If Theron is ever extended to support actors across multiple processes, or
-    multiple hosts, then this guarantee may have to be relaxed; nevertheless the arrival
-    order of messages sent between actors in the same process will still be guaranteed.
-    Moreover, messages will still be \em handled by an actor in the order they arrived.
-    Of course the guarantee doesn't apply to messages sent by different actors: If two
-    actors A and B send messages m1 and m2 to a third actor C, there is explicitly no
-    guarantee on the arrival order of m1 and m2 at C.
+    \see TailSend
     */
     template <class ValueType>
     inline bool Send(const ValueType &value, const Address &address) const;
@@ -798,19 +806,21 @@ protected:
     This method sends a message to the entity at a given address, and is functionally
     identical to the similar \ref Send method.
     
-    In principle it differs from \ref Send in that it is potentially more efficient when
-    called as the last operation of a message handler. TailSend causes the recipient of
-    the sent message to be executed by a worker thread that is already active, rather
-    than waking a sleeping thread to process it. This is useful when called as the
-    last operation of a returning message handler, where it is known that the thread
-    executing the message handler is about to become available.
+    TailSend differs from Send in that it is potentially more efficient when
+    called as the last operation of a message handler. TailSend hints to Theron that
+    the message handler sending the message is about to terminate, freeing the worker
+    thread that is currently executing it. As a result Theron may choose to schedule
+    the actor receiving the message on the same thread, rather than dispatching it
+    to an arbitrary, and potentially different, worker thread.
 
-    In the current implementation, threads are not woken by a condition variable so
-    TailSend and Send are identical in performance as well as functionality.
-    The TailSend method is still supported, mainly for backwards compatibility.
-    
-    \note TailSend should not be used from actor constructors or destructors; use
-    \ref Send in those situations instead.
+    \note TailSend is only useful when called from the 'tail' of a message handler
+    (rather than an actor constructor or destructor) and only when the sent message
+    is addressed to an actor within the same \ref Framework. Since the actor receiving
+    the message is typically processed by the worker thread that is executing the
+    current message handler, the two are effectively serialized with no potential
+    for parallelism. For that reason TailSend should not be used to send messages
+    to actors that are intended to handle the message in parallel with the executing
+    handler.
 
     \code
     class Processor : public Theron::Actor
@@ -826,7 +836,10 @@ protected:
 
         void Process(const int &message, const Theron::Address from)
         {
-            // Do some compute-intensive processing using the message value
+            // Use Send when sending messages from non-tail positions.
+            Send(someRequest, someOtherActor);
+
+            // Do some compute-intensive processing using the message value.
             // ...
 
             // Send the result as the last action using TailSend.
@@ -834,12 +847,11 @@ protected:
         }
     };
     \endcode
-
    
     \tparam ValueType The message type (any copyable class or Plain Old Datatype).
     \param value The message value to be sent.
-    \param address The address of the destination Receiver or Actor mailbox.
-    \return True, if the message was delivered, otherwise false.
+    \param address The address of the destination Actor.
+    \return True, if the message was delivered to a mailbox, otherwise false.
 
     \see Send
     */
@@ -876,7 +888,7 @@ private:
     Framework *mFramework;                              ///< Pointer to the framework within which the actor runs.
     Detail::HandlerCollection mMessageHandlers;         ///< The message handlers registered by this actor.
     Detail::DefaultHandlerCollection mDefaultHandlers;  ///< Default message handlers registered by this actor.
-    Detail::ProcessorContext *mProcessorContext;        ///< Remembers the context of the worker thread processing the actor.
+    Detail::Processor::Context *mProcessorContext;      ///< Remembers the context of the worker thread processing the actor.
 
     mutable Detail::Atomic::UInt32 mRefCount;           ///< Reference count to support legacy ActorRef API.
     void *mMemory;                                      ///< Pointer to memory block containing final actor type.
@@ -973,7 +985,7 @@ THERON_FORCEINLINE bool Actor::Send(const ValueType &value, const Address &addre
     // The advantage of using a thread-specific context is that it is only accessed by that
     // single thread so doesn't need to be thread-safe and isn't written by other threads
     // so doesn't cause expensive cache coherency updates between cores.
-    Detail::ProcessorContext *processorContext(mProcessorContext);
+    Detail::Processor::Context *processorContext(mProcessorContext);
     if (mProcessorContext == 0)
     {
         processorContext = &mFramework->mProcessorContext;
@@ -981,7 +993,7 @@ THERON_FORCEINLINE bool Actor::Send(const ValueType &value, const Address &addre
 
     // Allocate a message. It'll be deleted by the worker thread that handles it.
     Detail::IMessage *const message(Detail::MessageCreator::Create(
-        processorContext->mMessageAllocator,
+        &processorContext->mMessageCache,
         value,
         mAddress));
 
@@ -1003,8 +1015,40 @@ THERON_FORCEINLINE bool Actor::Send(const ValueType &value, const Address &addre
 template <class ValueType>
 THERON_FORCEINLINE bool Actor::TailSend(const ValueType &value, const Address &address) const
 {
-    // Currently TailSend is identical to Send.
-    return Send(value, address);
+    // Try to use the processor context owned by a worker thread.
+    // The current thread will be a worker thread if this method has been called from a message
+    // handler. If it was called from an actor constructor or destructor then the current thread
+    // may be an application thread, in which case the stored context pointer will be null.
+    // If it is null we fall back to the per-framework context, which is shared between threads.
+    // The advantage of using a thread-specific context is that it is only accessed by that
+    // single thread so doesn't need to be thread-safe and isn't written by other threads
+    // so doesn't cause expensive cache coherency updates between cores.
+    Detail::Processor::Context *processorContext(mProcessorContext);
+    if (mProcessorContext == 0)
+    {
+        processorContext = &mFramework->mProcessorContext;
+    }
+
+    // Allocate a message. It'll be deleted by the worker thread that handles it.
+    Detail::IMessage *const message(Detail::MessageCreator::Create(
+        &processorContext->mMessageCache,
+        value,
+        mAddress));
+
+    if (message)
+    {
+        // Call the message sending implementation using the acquired processor context.
+        // We schedule the receiving actor, if any, on the local queue of the processing worker thread, if any.
+        return Detail::MessageSender::Send(
+            mFramework->mEndPoint,
+            processorContext,
+            mFramework->GetIndex(),
+            message,
+            address,
+            true);
+    }
+
+    return false;
 }
 
 
@@ -1013,11 +1057,11 @@ THERON_FORCEINLINE bool Actor::Push(const ValueType &value, const Address &from)
 {
     // This method isn't typically called a message handler of this actor, so
     // we need to use the processor context associated with the owning framework.
-    Detail::ProcessorContext *const processorContext(&mFramework->mProcessorContext);
+    Detail::Processor::Context *const processorContext(&mFramework->mProcessorContext);
 
     // Allocate a message. It'll be deleted by the worker thread that handles it.
     Detail::IMessage *const message(Detail::MessageCreator::Create(
-        processorContext->mMessageAllocator,
+        &processorContext->mMessageCache,
         value,
         from));
 

@@ -91,6 +91,7 @@ window.onload = initDynSections;
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1DefaultAllocator_ad0f15268d1f4f5bef6287560d0aab262.html#ad0f15268d1f4f5bef6287560d0aab262">DefaultAllocator</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1DefaultAllocator_a7523faae56bf446cbcc08e92de5902c8.html#a7523faae56bf446cbcc08e92de5902c8">DefaultAllocator</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1DefaultAllocator_af0dab9d5e8c021d3eaf60bbfcbdcb0d9.html#af0dab9d5e8c021d3eaf60bbfcbdcb0d9">Free</a></td></tr>
+          <tr><td class="navtab"><a class="qindex" href="classTheron_1_1DefaultAllocator_a7aa1fb21aa04f2924e30d4eda10e2c43.html#a7aa1fb21aa04f2924e30d4eda10e2c43">GetAllocationCount</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1DefaultAllocator_a368812ccfd6bf1780a9b74360b239826.html#a368812ccfd6bf1780a9b74360b239826">GetBytesAllocated</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1DefaultAllocator_a42b6356c075558e513648eae05df21cb.html#a42b6356c075558e513648eae05df21cb">GetPeakBytesAllocated</a></td></tr>
           <tr><td class="navtab"><a class="qindex" href="classTheron_1_1DefaultAllocator_a9ad5a3063a263e545f3a3c04189b0074.html#a9ad5a3063a263e545f3a3c04189b0074">GUARD_VALUE</a></td></tr>
@@ -126,7 +127,7 @@ window.onload = initDynSections;
 
 <p>Allocates a block of contiguous memory aligned to a given byte-multiple boundary. </p>
 <p>This method supports alignment, and the returned memory is correctly aligned, starting at a memory address that is a multiple of the requested alignment value.</p>
-<p>The support for aligned allocations, as well as guardband checking and tracking of allocated memory when enabled, are implemented by allocating an extra preamble and postamble before and after each allocated memory block. This naturally adds 'hidden' overheads to the size of each allocated memory block, making the actual amount of memory allocated greater than the total amount of memory allocated from the point of view of the caller. The internal layout of each allocated block is illustrated below:</p>
+<p>The support for aligned allocations, as well as guardband checking and tracking of allocated memory when enabled, are implemented by allocating an extra preamble and postamble before and after each allocated memory block. This naturally adds 'hidden' overheads to the size of each allocated memory block, making the actual amount of memory allocated greater than the amount of memory requested by, and available to, the caller. The internal layout of each allocated block is illustrated below:</p>
 <div class="fragment"><pre class="fragment">
     |-----------|--------|--------|--------|---------------------------------|--------|---------|
     |  padding  | offset |  size  | guard  |          caller block           | guard  |  waste  |

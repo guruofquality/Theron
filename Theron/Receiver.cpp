@@ -12,8 +12,9 @@
 #include <Theron/Receiver.h>
 
 #include <Theron/Detail/Directory/StaticDirectory.h>
-#include <Theron/Detail/Network/NameGenerator.h>
 #include <Theron/Detail/Network/Index.h>
+#include <Theron/Detail/Network/NameGenerator.h>
+#include <Theron/Detail/Network/String.h>
 
 
 namespace Theron
@@ -57,19 +58,24 @@ void Receiver::Initialize()
 
     if (mName.IsNull())
     {
-        // Generate a default string name for the receiver.
-        Detail::String rawName(Detail::NameGenerator::Generate(receiverIndex));
+        char rawName[16];
+        Detail::NameGenerator::Generate(rawName, receiverIndex);
 
         const char *endPointName(0);
         if (mEndPoint)
         {
-            endPointName = mEndPoint->GetName();        
+            endPointName = mEndPoint->GetName();
         }
 
-        mName = Detail::NameGenerator::Combine(
-            rawName.GetValue(),
+        char scopedName[256];
+        Detail::NameGenerator::Combine(
+            scopedName,
+            256,
+            rawName,
             0,
             endPointName);
+
+        mName = Detail::String(scopedName);
     }
 
     // Receivers are identified as a receiver by a framework index of zero.
