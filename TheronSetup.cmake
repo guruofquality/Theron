@@ -78,8 +78,6 @@ if(Boost_FOUND)
     list(APPEND THERON_LIBRARY_DIRS ${Boost_LIBRARY_DIRS})
     list(APPEND THERON_LIBRARIES ${Boost_LIBRARIES})
     list(APPEND THERON_DEFINES -DTHERON_BOOST=1)
-else()
-    message(FATAL_ERROR "boost threads required to build Theron")
 endif()
 
 ########################################################################
