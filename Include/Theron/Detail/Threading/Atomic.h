@@ -65,7 +65,7 @@ namespace Atomic
 /**
 Atomic 32-bit unsigned integer synchronization primitive.
 */
-class THERON_PREALIGN(THERON_CACHELINE_ALIGNMENT) UInt32
+class UInt32
 {
 public:
 
@@ -341,7 +341,7 @@ private:
 
 #endif
 
-} THERON_POSTALIGN(THERON_CACHELINE_ALIGNMENT);
+};
 
 
 } // namespace Atomic

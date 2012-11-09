@@ -19,6 +19,12 @@ The allocator used within Theron by default.
 #include <Theron/Detail/Threading/SpinLock.h>
 
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning (disable:4324)  // structure was padded due to __declspec(align())
+#endif //_MSC_VER
+
+
 namespace Theron
 {
 
@@ -127,9 +133,8 @@ public:
     allocated memory when enabled, are implemented by allocating an extra preamble
     and postamble before and after each allocated memory block. This naturally adds
     'hidden' overheads to the size of each allocated memory block, making the actual
-    amount of memory allocated greater than the total amount of memory allocated from
-    the point of view of the caller. The internal layout of each allocated block is
-    illustrated below:
+    amount of memory allocated greater than the amount of memory requested by, and
+    available to, the caller. The internal layout of each allocated block is illustrated below:
 
     \verbatim
     |-----------|--------|--------|--------|---------------------------------|--------|---------|
@@ -147,7 +152,7 @@ public:
     \endverbatim
 
     Where:
-    - The \em caller \em  block starts at an aligned address.
+    - The \em caller \em block starts at an aligned address.
     - \em padding is a padding field of variable size used to ensure that \em caller \em block is aligned.
     - \em offset is a uint32_t recording the offset in bytes of \em caller \em block within the block.
     - \em size is a uint32_t recording the size of \em caller \em block.
@@ -163,7 +168,7 @@ public:
     /**
     \brief Frees a previously allocated block of contiguous memory.
 
-    \ref Free is called by Theron for its internal allocations, unless the
+    \ref Free is called by Theron to deallocate its internal allocations, unless the
     DefaultAllocator is replaced by a custom allocator via \ref AllocatorManager::SetAllocator.
     The DefaultAllocator may also be used for allocations within user application code,
     if desired, in which case it can be accessed via \ref AllocatorManager::GetAllocator.
@@ -190,9 +195,8 @@ public:
     }
     \endcode
 
-    This method is only useful when allocation checking is enabled using \ref
-    THERON_ENABLE_DEFAULTALLOCATOR_CHECKS (enabled, by default, in debug builds).
-    If allocation checking is disabled then GetBytesAllocated returns zero.
+    This method is only useful when allocation checking is enabled using \ref THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
+    (enabled, by default, in debug builds). If allocation checking is disabled then GetBytesAllocated returns zero.
 
     \note This method counts user allocations and doesn't include internal overheads
     introduced by alignment and memory tracking. The actual amount of memory
@@ -218,9 +222,8 @@ public:
     }
     \endcode
 
-    This method is only useful when allocation checking is enabled using \ref
-    THERON_ENABLE_DEFAULTALLOCATOR_CHECKS (enabled, by default, in debug builds).
-    If allocation checking is disabled then GetPeakBytesAllocated returns zero.
+    This method is only useful when allocation checking is enabled using \ref THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
+    (enabled, by default, in debug builds). If allocation checking is disabled then GetPeakBytesAllocated returns zero.
 
     \note This method counts user allocations and doesn't include internal overheads
     introduced by alignment and memory tracking. The actual amount of memory
@@ -230,6 +233,32 @@ public:
     */
     inline uint32_t GetPeakBytesAllocated() const;
 
+    /**
+    \brief Gets the number of distinct allocations performed by the allocator.
+
+    Returns the total number of calls to \ref Allocate or \ref AllocateAligned.
+
+    \code
+    Theron::IAllocator *const allocator = Theron::AllocatorManager::Instance().GetAllocator();
+    Theron::DefaultAllocator *const defaultAllocator = dynamic_cast<Theron::DefaultAllocator *>(allocator);
+
+    if (defaultAllocator)
+    {
+        printf("Default allocator performed %d allocations\n", defaultAllocator->GetAllocationCount());
+    }
+    \endcode
+
+    This method is only useful when allocation checking is enabled using \ref THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
+    (enabled, by default, in debug builds). If allocation checking is disabled then GetBytesAllocated returns zero.
+
+    \note This method counts user allocations and doesn't include internal overheads
+    introduced by alignment and memory tracking. The actual amount of memory
+    allocated via the wrapped lower-level allocator is typically larger.
+
+    \see GetPeakBytesAllocated
+    */
+    inline uint32_t GetAllocationCount() const;
+
 private:
 
     DefaultAllocator(const DefaultAllocator &other);
@@ -238,15 +267,15 @@ private:
     // Internal method which is force-inlined to avoid a function call.
     inline void *AllocateInline(const SizeType size, const SizeType alignment);
 
-    Detail::TrivialAllocator mTrivialAllocator;     ///< Trivial allocator used by default.
-    IAllocator *const mAllocator;                   ///< Pointer to a lower-level allocator wrapped by this allocator.
-
 #if THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
     Detail::SpinLock mSpinLock;                     ///< Synchronization object used to protect access to the allocation counts.
     uint32_t mBytesAllocated;                       ///< Tracks the number of bytes currently allocated not yet freed.
     uint32_t mPeakAllocated;                        ///< Tracks the peak number of bytes allocated but not yet freed.
+    uint32_t mAllocations;                          ///< Tracks the number of distinct allocations.
 #endif // THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
 
+    Detail::TrivialAllocator mTrivialAllocator;     ///< Trivial allocator used by default.
+    IAllocator *const mAllocator;                   ///< Pointer to a lower-level allocator wrapped by this allocator.
 };
 
 
@@ -260,6 +289,7 @@ inline DefaultAllocator::DefaultAllocator() :
 
     mBytesAllocated = 0;
     mPeakAllocated = 0;
+    mAllocations = 0;
 
     mSpinLock.Unlock();
 #endif // THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
@@ -277,6 +307,7 @@ inline DefaultAllocator::DefaultAllocator(IAllocator *const allocator) :
 
     mBytesAllocated = 0;
     mPeakAllocated = 0;
+    mAllocations = 0;
 
     mSpinLock.Unlock();
 #endif // THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
@@ -301,7 +332,7 @@ inline DefaultAllocator::~DefaultAllocator()
 
 inline void *DefaultAllocator::Allocate(const SizeType size)
 {
-    // Default to 4-byte alignment in 32-bit builds.
+    // Default to 4-byte alignment in this lowest-level allocator.
     // This call is force-inlined.
     return AllocateInline(size, sizeof(int));
 }
@@ -379,6 +410,18 @@ THERON_FORCEINLINE uint32_t DefaultAllocator::GetPeakBytesAllocated() const
 }
 
 
+THERON_FORCEINLINE uint32_t DefaultAllocator::GetAllocationCount() const
+{
+
+#if THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
+    return mAllocations;
+#else
+    return 0;
+#endif // THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
+
+}
+
+
 THERON_FORCEINLINE void *DefaultAllocator::AllocateInline(const SizeType size, const SizeType alignment)
 {
     // Minimum allocation size is 4 bytes.
@@ -386,7 +429,7 @@ THERON_FORCEINLINE void *DefaultAllocator::AllocateInline(const SizeType size, c
 
     // Alignment values are expected to be powers of two greater than or equal to four bytes.
     // This ensures that the size, offset, and guard fields are 4-byte aligned.
-    THERON_ASSERT_MSG(alignment >= 4, "Actor and message alignments must be at least 4 bytes");
+    THERON_ASSERT_MSG(alignment >= 4, "Actor and message memory alignments must be at least 4 bytes");
     THERON_ASSERT_MSG((alignment & (alignment - 1)) == 0, "Actor and message alignments must be powers of two");
 
     // Allocation sizes are expected to be non-zero multiples of four bytes.
@@ -436,6 +479,8 @@ THERON_FORCEINLINE void *DefaultAllocator::AllocateInline(const SizeType size, c
             mPeakAllocated = mBytesAllocated;
         }
 
+        ++mAllocations;
+
         mSpinLock.Unlock();
 
 #else
@@ -446,7 +491,7 @@ THERON_FORCEINLINE void *DefaultAllocator::AllocateInline(const SizeType size, c
         const uint32_t callerBlockOffset(static_cast<uint32_t>(callerBlock - reinterpret_cast<uint8_t *>(block)));
         *offsetField = callerBlockOffset;
 
-        // Caller gets the address of the caller block, which is expected to be aligned.
+        // Caller gets back the address of the caller block, which is expected to be aligned.
         THERON_ASSERT(THERON_ALIGNED(callerBlock, alignment));
         return callerBlock;
     }
@@ -457,6 +502,11 @@ THERON_FORCEINLINE void *DefaultAllocator::AllocateInline(const SizeType size, c
 
 
 } // namespace Theron
+
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif //_MSC_VER
 
 
 #endif // THERON_DEFAULTALLOCATOR_H

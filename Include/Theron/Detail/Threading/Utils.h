@@ -3,6 +3,7 @@
 #define THERON_DETAIL_THREADING_UTILS_H
 
 
+#include <Theron/Assert.h>
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
 
@@ -73,6 +74,21 @@ public:
     inline static void Backoff(uint32_t &backoff);
 
     /**
+    Yield execution of the calling thread to another hyperthread on the same core.
+    */
+    inline static void YieldToHyperthread();
+
+    /**
+    Yield execution of the calling thread to any available thread on the same core.
+    */
+    inline static void YieldToLocalThread();
+
+    /**
+    Yield execution of the calling thread to any other available thread.
+    */
+    inline static void YieldToAnyThread();
+
+    /**
     Put the calling thread to sleep for a given number of milliseconds.
     */
     inline static void SleepThread(const uint32_t milliseconds);
@@ -87,6 +103,8 @@ public:
     the memory is serviced by a local memory controller or a distant one. In the context
     of a NUMA system, a node is a set of processors whose view of memory is the same,
     ie. equivalent from a performance point of view.
+
+    \return True, if NUMA support is detected and the returned node count is valid.
     */
     inline static bool GetNodeCount(uint32_t &nodeCount);
 
@@ -106,21 +124,6 @@ private:
 
     Utils(const Utils &other);
     Utils &operator=(const Utils &other);
-
-    /**
-    Yield execution of the calling thread to another hyperthread on the same core.
-    */
-    inline static void YieldToHyperthread();
-
-    /**
-    Yield execution of the calling thread to any available thread on the same core.
-    */
-    inline static void YieldToLocalThread();
-
-    /**
-    Yield execution of the calling thread to any other available thread.
-    */
-    inline static void YieldToAnyThread();
 };
 
 
@@ -262,12 +265,11 @@ inline bool Utils::GetNodeCount(uint32_t &nodeCount)
 
 #elif THERON_GCC
 
-    if ((numa_available() < 0))
+    if (numa_available() >= 0)
     {
-        return false;
+        nodeCount = static_cast<uint32_t>(numa_max_node() + 1);
+        return true;
     }
-
-    return static_cast<uint32_t>(numa_max_node() + 1);
 
 #endif
 
@@ -365,30 +367,74 @@ inline bool Utils::SetThreadAffinity(const uint32_t nodeMask, const uint32_t pro
         return true;
     }
 
-#elif THERON_GCC
+#elif THERON_GCC && defined(LIBNUMA_API_VERSION) && (LIBNUMA_API_VERSION > 1)
 
     if (numa_available() < 0)
     {
         return false;
     }
 
-    // TODO: For now we only run on a single node. The first set bit in the node mask is used.
-    // TODO: For now the processor mask is completely ignored; we run on all processors of the chosen node.
-    uint32_t node(0);
-    while (node < 32)
+    int ret = 0;
+
+    // Maximum number of CPUs to loop through to calc accumulator mask
+    const uint32_t maxCPUs = static_cast<uint32_t>(numa_num_configured_cpus());
+
+    // Gather the accumulated mask corresponding to the node mask and processor mask.
+    struct bitmask *accumulatedMask = numa_allocate_cpumask();
+    struct bitmask *nodeAffinity = numa_allocate_cpumask();
+    numa_bitmask_clearall(accumulatedMask);
+
+    // Loop through each node, determine CPUs available and apply processorMask
+    for (uint32_t node = 0; node < 32 && node < nodeCount; ++node)
+    {
+        if ((nodeMask & (1UL << node)) == 0) continue;
+
+        numa_bitmask_clearall(nodeAffinity);
+        ret = numa_node_to_cpus(node, nodeAffinity);
+        if (ret != 0) goto numa_cleanup_and_done;
+
+        // Shift the processor mask to match the node processor mask.
+        // This assumes the processors of a node are contiguous.
+        uint32_t procMaskIndex(0);
+        for (uint32_t cpu = 0; cpu < maxCPUs; cpu++)
+        {
+            if (numa_bitmask_isbitset(nodeAffinity, cpu) && (processorMask & (1UL << procMaskIndex++)) != 0)
+            {
+                numa_bitmask_setbit(accumulatedMask, cpu);
+            }
+        }
+    }
+
+    // AccumulatedMask determined, this call actually sets the affinity
+    ret = numa_sched_setaffinity(0, accumulatedMask);
+
+numa_cleanup_and_done:
+    numa_free_cpumask(accumulatedMask);
+    numa_free_cpumask(nodeAffinity);
+    return ret == 0;
+
+#elif THERON_GCC && defined(LIBNUMA_API_VERSION)
+
+    if (numa_available() < 0)
+    {
+        return false;
+    }
+
+    // Init a numa nodemask to fill with the bits of nodeMask
+    nodemask_t nm;
+    nodemask_zero(&nm);
+
+    // Loop through all nodes to set the bitmask struct
+    for (uint32_t node = 0; node < 32 && node < nodeCount; ++node)
     {
         if ((nodeMask & (1UL << node)) != 0)
         {
-            if (numa_run_on_node(node) != 0)
-            {
-                return false;
-            }
-
-            return true;
+            nodemask_set(&nm, node);
         }
-
-        ++node;
     }
+
+    // Set the affinity on the nodes set in the bitmask
+    return numa_run_on_node_mask(&nm) == 0;
 
 #endif
 

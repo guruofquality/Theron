@@ -9,6 +9,12 @@
 #include <Theron/Detail/Threading/SpinLock.h>
 
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning (disable:4324)  // structure was padded due to __declspec(align())
+#endif //_MSC_VER
+
+
 // A simple linear allocator implementing Theron::IAllocator.
 // It allocates from a memory buffer, never freeing, until it runs out.
 class LinearAllocator : public Theron::IAllocator
@@ -16,10 +22,10 @@ class LinearAllocator : public Theron::IAllocator
 public:
 
     LinearAllocator(void *const buffer, const SizeType size) :
+      mSpinLock(),
       mBuffer(static_cast<unsigned char *>(buffer)),
       mOffset(mBuffer),
-      mEnd(mBuffer + size),
-      mSpinLock()
+      mEnd(mBuffer + size)
     {
     }
 
@@ -75,10 +81,10 @@ private:
     LinearAllocator(const LinearAllocator &other);
     LinearAllocator &operator=(const LinearAllocator &other);
 
+    Theron::Detail::SpinLock mSpinLock;     // Used to ensure thread-safe access.
     unsigned char *mBuffer;                 // Base address of referenced memory buffer.
     unsigned char *mOffset;                 // Current place within referenced memory buffer.
     unsigned char *mEnd;                    // End of referenced memory buffer (exclusive).
-    Theron::Detail::SpinLock mSpinLock;     // Used to ensure thread-safe access.
 };
 
 
@@ -133,4 +139,9 @@ int main()
 
     delete [] buffer;
 }
+
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif //_MSC_VER
 

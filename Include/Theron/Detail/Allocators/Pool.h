@@ -9,6 +9,12 @@
 #include <Theron/Defines.h>
 
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning (disable:4324)  // structure was padded due to __declspec(align())
+#endif //_MSC_VER
+
+
 namespace Theron
 {
 namespace Detail
@@ -18,7 +24,8 @@ namespace Detail
 /**
 A list of free memory blocks.
 */
-class Pool
+template <class LockType>
+class THERON_PREALIGN(THERON_CACHELINE_ALIGNMENT) Pool
 {
 public:
 
@@ -26,6 +33,16 @@ public:
     Constructor.
     */
     inline Pool();
+
+    /**
+    Locks the pool for exclusive access, if the lock type supports it.
+    */
+    inline void Lock() const;
+
+    /**
+    UnlLocks a previously locked pool.
+    */
+    inline void Unlock() const;
 
     /**
     Returns true if the pool contains no memory blocks.
@@ -66,26 +83,46 @@ private:
 
     static const uint32_t MAX_BLOCKS = 16;  ///< Maximum number of memory blocks stored per pool.
 
+    mutable LockType mLock;                 ///< Synchronization primitive for thread-safe access to state.
     Node mHead;                             ///< Dummy node at head of a linked list of nodes in the pool.
     uint32_t mBlockCount;                   ///< Number of blocks currently cached in the pool.
-};
+
+} THERON_POSTALIGN(THERON_CACHELINE_ALIGNMENT);
 
 
-THERON_FORCEINLINE Pool::Pool() :
+template <class LockType>
+THERON_FORCEINLINE Pool<LockType>::Pool() :
+  mLock(),
   mHead(),
   mBlockCount(0)
 {
 }
 
 
-THERON_FORCEINLINE bool Pool::Empty() const
+template <class LockType>
+THERON_FORCEINLINE void Pool<LockType>::Lock() const
+{
+    mLock.Lock();
+}
+
+
+template <class LockType>
+THERON_FORCEINLINE void Pool<LockType>::Unlock() const
+{
+    mLock.Unlock();
+}
+
+
+template <class LockType>
+THERON_FORCEINLINE bool Pool<LockType>::Empty() const
 {
     THERON_ASSERT((mBlockCount == 0 && mHead.mNext == 0) || (mBlockCount != 0 && mHead.mNext != 0));
     return (mBlockCount == 0);
 }
 
-    
-THERON_FORCEINLINE bool Pool::Add(void *const memory)
+
+template <class LockType>
+THERON_FORCEINLINE bool Pool<LockType>::Add(void *const memory)
 {
     THERON_ASSERT(memory);
 
@@ -105,7 +142,8 @@ THERON_FORCEINLINE bool Pool::Add(void *const memory)
 }
 
 
-THERON_FORCEINLINE void *Pool::FetchAligned(const uint32_t alignment)
+template <class LockType>
+THERON_FORCEINLINE void *Pool<LockType>::FetchAligned(const uint32_t alignment)
 {
     Node *previous(&mHead);
     const uint32_t alignmentMask(alignment - 1);
@@ -135,7 +173,8 @@ THERON_FORCEINLINE void *Pool::FetchAligned(const uint32_t alignment)
 }
 
 
-THERON_FORCEINLINE void *Pool::Fetch()
+template <class LockType>
+THERON_FORCEINLINE void *Pool<LockType>::Fetch()
 {
     // Grab first block in the list if the list isn't empty.
     Node *const node(mHead.mNext);
@@ -153,6 +192,11 @@ THERON_FORCEINLINE void *Pool::Fetch()
 
 } // namespace Detail
 } // namespace Theron
+
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif //_MSC_VER
 
 
 #endif // THERON_DETAIL_ALLOCATORS_POOL_H

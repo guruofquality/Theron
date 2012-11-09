@@ -34,9 +34,6 @@
 #include <stdlib.h>
 #include <vector>
 
-// Enable checking for unregistered message types.
-#define THERON_ENABLE_MESSAGE_REGISTRATION_CHECKS 1
-
 #include <Theron/Theron.h>
 
 #include "../Common/Timer.h"
@@ -82,8 +79,11 @@ private:
 
 
 // Register the message types so that registered names are used instead of dynamic_cast.
-THERON_REGISTER_MESSAGE(int);
-THERON_REGISTER_MESSAGE(Theron::Address);
+THERON_DECLARE_REGISTERED_MESSAGE(int);
+THERON_DEFINE_REGISTERED_MESSAGE(int);
+
+THERON_DECLARE_REGISTERED_MESSAGE(Theron::Address);
+THERON_DEFINE_REGISTERED_MESSAGE(Theron::Address);
 
 
 int main(int argc, char *argv[])
@@ -149,7 +149,9 @@ int main(int argc, char *argv[])
 
 #if THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
     Theron::IAllocator *const allocator(Theron::AllocatorManager::Instance().GetAllocator());
+    const int allocationCount(static_cast<Theron::DefaultAllocator *>(allocator)->GetAllocationCount());
     const int peakBytesAllocated(static_cast<Theron::DefaultAllocator *>(allocator)->GetPeakBytesAllocated());
+    printf("Total number of allocations: %d calls\n", allocationCount);
     printf("Peak memory usage in bytes: %d bytes\n", peakBytesAllocated);
 #endif // THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
 

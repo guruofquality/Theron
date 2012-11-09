@@ -55,22 +55,9 @@ public:
         if (str)
         {
             IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
-            void *const bodyMemory(allocator->Allocate(sizeof(Body)));
+            void *const bodyMemory(allocator->AllocateAligned(sizeof(Body), THERON_CACHELINE_ALIGNMENT));
             mBody = new (bodyMemory) Body(str);
         }
-
-        Reference();
-    }
-
-    /**
-    Concatenating constructor.
-    */
-    THERON_FORCEINLINE String(const char *parts[], const uint32_t partCount) : mBody(0)
-    {
-        // Create and reference a new body.
-        IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
-        void *const bodyMemory(allocator->Allocate(sizeof(Body)));
-        mBody = new (bodyMemory) Body(parts, partCount);
 
         Reference();
     }
@@ -185,19 +172,25 @@ private:
 
         THERON_FORCEINLINE Body(const char *const str) :
           mRefCount(0),
-          mValue(CopyString(str))
+          mValue(0)
         {
-        }
-
-          THERON_FORCEINLINE Body(const char *parts[], const uint32_t partCount) :
-          mRefCount(0),
-          mValue(JoinStrings(parts, partCount))
-        {
+            if (strlen(str) + 1 < DATA_SIZE)
+            {
+                strcpy(mData, str);
+                mValue = mData;
+            }
+            else
+            {
+                mValue = CopyString(str);
+            }            
         }
 
         THERON_FORCEINLINE ~Body()
         {
-            DestroyString(mValue);
+            if (mValue != mData)
+            {
+                DestroyString(mValue);
+            }
         }
 
         THERON_FORCEINLINE void Reference() const
@@ -255,8 +248,16 @@ private:
         Body(const Body &other);
         Body &operator=(const Body &other);
 
+        static const uint32_t DATA_SIZE = 48;
+
+        //
+        // The total size of this member data should fit in a cache line
+        // We've assumed here that a cache line is 64 bytes and a pointer is 8 bytes.
+        //
+
         mutable Detail::Atomic::UInt32 mRefCount;   ///< Counts the number of String objects referencing this Body.
-        char *const mValue;                         ///< Actual value of the string.
+        char *mValue;                               ///< Pointer to a buffer containing the value of the string.
+        char mData[DATA_SIZE];                      ///< Local data buffer used to hold small string values.
     };
     
     THERON_FORCEINLINE void Reference()
@@ -304,40 +305,6 @@ private:
         IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
         THERON_ASSERT(str);
         allocator->Free(str);
-    }
-
-    THERON_FORCEINLINE static char *JoinStrings(const char *parts[], const uint32_t partCount)
-    {
-        IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
-
-        THERON_ASSERT(parts);
-        THERON_ASSERT(partCount);
-
-        uint32_t totalLength(0);
-        for (uint32_t i = 0; i < partCount; ++i)
-        {
-            THERON_ASSERT(parts[i]);
-            totalLength += strlen(parts[i]);
-        }
-
-        const uint32_t totalSize(totalLength + 1);
-        const uint32_t roundedStringSize(THERON_ROUNDUP(totalSize, 4));
-
-        void *const stringMemory(allocator->Allocate(roundedStringSize));
-        char *const newStr(reinterpret_cast<char *>(stringMemory));
-
-        if (newStr)
-        {
-            newStr[0] = '\0';
-
-            for (uint32_t i = 0; i < partCount; ++i)
-            {
-                THERON_ASSERT(parts[i]);
-                strcat(newStr, parts[i]);
-            }
-        }
-
-        return newStr;
     }
 
     THERON_FORCEINLINE static uint32_t RoundedStringSize(const char *const str)

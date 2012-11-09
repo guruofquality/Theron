@@ -16,7 +16,7 @@ Legacy support for actor references, which were deprecated in version 4.0.
 #include <Theron/Detail/Messages/IMessage.h>
 #include <Theron/Detail/Messages/MessageCreator.h>
 #include <Theron/Detail/Messages/MessageSender.h>
-#include <Theron/Detail/MailboxProcessor/ProcessorContext.h>
+#include <Theron/Detail/MailboxProcessor/Processor.h>
 
 
 namespace Theron
@@ -223,7 +223,7 @@ private:
     /// Dereferences the actor previously referenced by the actor reference.
     void Dereference();
 
-    Detail::ProcessorContext &GetProcessorContext();
+    Detail::Processor::Context &GetProcessorContext();
     uint32_t GetFrameworkIndex() const;
 
     Actor *mActor;      ///< Pointer to the referenced actor.
@@ -279,11 +279,11 @@ template <class ValueType>
 THERON_FORCEINLINE bool ActorRef::Push(const ValueType &value, const Address &from)
 {
     // Use the per-framework context, which is shared between threads.
-    Detail::ProcessorContext &processorContext(GetProcessorContext());
+    Detail::Processor::Context &processorContext(GetProcessorContext());
 
     // Allocate a message. It'll be deleted by the worker thread that handles it.
     Detail::IMessage *const message(Detail::MessageCreator::Create(
-        processorContext.mMessageAllocator,
+        &processorContext.mMessageCache,
         value,
         from));
 

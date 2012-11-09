@@ -245,12 +245,9 @@ THERON_HEADERS = \
 	Include/Theron/Detail/Alignment/MessageAlignment.h \
 	Include/Theron/Detail/Allocators/CachingAllocator.h \
 	Include/Theron/Detail/Allocators/Pool.h \
-	Include/Theron/Detail/Allocators/PoolAllocator.h \
 	Include/Theron/Detail/Allocators/TrivialAllocator.h \
-	Include/Theron/Detail/Allocators/ThreadsafeAllocator.h \
 	Include/Theron/Detail/Containers/List.h \
 	Include/Theron/Detail/Containers/Map.h \
-	Include/Theron/Detail/Containers/ThreadSafeQueue.h \
 	Include/Theron/Detail/Containers/Queue.h \
 	Include/Theron/Detail/Directory/Entry.h \
 	Include/Theron/Detail/Directory/Directory.h \
@@ -273,10 +270,10 @@ THERON_HEADERS = \
     Include/Theron/Detail/Handlers/ReceiverHandlerCast.h \
 	Include/Theron/Detail/Legacy/ActorRegistry.h \
 	Include/Theron/Detail/Mailboxes/Mailbox.h \
-	Include/Theron/Detail/MailboxProcessor/ProcessorContext.h \
+	Include/Theron/Detail/MailboxProcessor/Processor.h \
 	Include/Theron/Detail/MailboxProcessor/ThreadPool.h \
-	Include/Theron/Detail/MailboxProcessor/WorkerThreadStore.h \
 	Include/Theron/Detail/MailboxProcessor/WorkItem.h \
+	Include/Theron/Detail/MailboxProcessor/WorkQueue.h \
 	Include/Theron/Detail/Messages/IMessage.h \
 	Include/Theron/Detail/Messages/Message.h \
 	Include/Theron/Detail/Messages/MessageCast.h \
@@ -323,13 +320,13 @@ THERON_SOURCES = \
 	Theron/ActorRegistry.cpp \
 	Theron/AllocatorManager.cpp \
 	Theron/DefaultHandlerCollection.cpp \
+	Theron/EndPoint.cpp \
 	Theron/FallbackHandlerCollection.cpp \
 	Theron/Framework.cpp \
 	Theron/HandlerCollection.cpp \
 	Theron/MessageSender.cpp \
-	Theron/Receiver.cpp \
-	Theron/EndPoint.cpp \
-	Theron/WorkItem.cpp
+	Theron/Processor.cpp \
+	Theron/Receiver.cpp
 
 THERON_OBJECTS = \
 	${BUILD}/Actor.o \
@@ -337,13 +334,13 @@ THERON_OBJECTS = \
 	${BUILD}/ActorRegistry.o \
 	${BUILD}/AllocatorManager.o \
 	${BUILD}/DefaultHandlerCollection.o \
+	${BUILD}/EndPoint.o \
 	${BUILD}/FallbackHandlerCollection.o \
 	${BUILD}/Framework.o \
 	${BUILD}/HandlerCollection.o \
 	${BUILD}/MessageSender.o \
-	${BUILD}/Receiver.o \
-	${BUILD}/EndPoint.o \
-	${BUILD}/WorkItem.o
+	${BUILD}/Processor.o \
+	${BUILD}/Receiver.o
 
 $(THERON_LIB): $(THERON_OBJECTS)
 	${AR} ${ARFLAGS} ${THERON_LIB} $(THERON_OBJECTS)
@@ -363,6 +360,9 @@ ${BUILD}/AllocatorManager.o: Theron/AllocatorManager.cpp ${THERON_HEADERS}
 ${BUILD}/DefaultHandlerCollection.o: Theron/DefaultHandlerCollection.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/DefaultHandlerCollection.cpp -o ${BUILD}/DefaultHandlerCollection.o ${INCLUDE_FLAGS}
 
+${BUILD}/EndPoint.o: Theron/EndPoint.cpp ${THERON_HEADERS}
+	$(CC) $(CFLAGS) Theron/EndPoint.cpp -o ${BUILD}/EndPoint.o ${INCLUDE_FLAGS}
+
 ${BUILD}/FallbackHandlerCollection.o: Theron/FallbackHandlerCollection.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/FallbackHandlerCollection.cpp -o ${BUILD}/FallbackHandlerCollection.o ${INCLUDE_FLAGS}
 
@@ -375,14 +375,11 @@ ${BUILD}/HandlerCollection.o: Theron/HandlerCollection.cpp ${THERON_HEADERS}
 ${BUILD}/MessageSender.o: Theron/MessageSender.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/MessageSender.cpp -o ${BUILD}/MessageSender.o ${INCLUDE_FLAGS}
 
+${BUILD}/Processor.o: Theron/Processor.cpp ${THERON_HEADERS}
+	$(CC) $(CFLAGS) Theron/Processor.cpp -o ${BUILD}/Processor.o ${INCLUDE_FLAGS}
+
 ${BUILD}/Receiver.o: Theron/Receiver.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/Receiver.cpp -o ${BUILD}/Receiver.o ${INCLUDE_FLAGS}
-
-${BUILD}/EndPoint.o: Theron/EndPoint.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Theron/EndPoint.cpp -o ${BUILD}/EndPoint.o ${INCLUDE_FLAGS}
-
-${BUILD}/WorkItem.o: Theron/WorkItem.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Theron/WorkItem.cpp -o ${BUILD}/WorkItem.o ${INCLUDE_FLAGS}
 
 
 #

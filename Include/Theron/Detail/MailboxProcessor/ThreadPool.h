@@ -24,7 +24,7 @@ namespace Detail
 /**
 A pool of worker threads that process a queue of work items.
 */
-template <class WorkQueue, class WorkProcessor, class WorkerContext>
+template <class WorkProcessor, class WorkerContext>
 class ThreadPool
 {
 public:
@@ -43,7 +43,6 @@ public:
         */
         inline explicit ThreadContext(WorkerContext *const workerContext) :
           mWorkerContext(workerContext),
-          mWorkQueue(0),
           mNodeMask(0),
           mProcessorMask(0),
           mRunning(false),
@@ -56,7 +55,6 @@ public:
         WorkerContext *mWorkerContext;          ///< Pointer to user-defined context object.
 
         // Internal
-        WorkQueue *mWorkQueue;                  ///< Pointer to the work queue processed by the thread.
         uint32_t mNodeMask;                     ///< Bit-field NUMA node affinity mask for the created thread.
         uint32_t mProcessorMask;                ///< Bit-field processor affinity mask within specified nodes.
         bool mRunning;                          ///< Indicates whether the thread is running; used to stop running threads.
@@ -79,7 +77,6 @@ public:
     */
     inline static bool StartThread(
         ThreadContext *const threadContext,
-        WorkQueue *const workQueue,
         const uint32_t nodeMask,
         const uint32_t processorMask);
 
@@ -117,8 +114,8 @@ private:
 };
 
 
-template <class WorkQueue, class WorkProcessor, class WorkerContext>
-inline bool ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::CreateThread(ThreadContext *const threadContext)
+template <class WorkProcessor, class WorkerContext>
+inline bool ThreadPool<WorkProcessor, WorkerContext>::CreateThread(ThreadContext *const threadContext)
 {
     // Allocate a new thread, aligning the memory to a cache-line boundary to reduce false-sharing of cache-lines.
     void *const threadMemory = AllocatorManager::Instance().GetAllocator()->AllocateAligned(sizeof(Thread), THERON_CACHELINE_ALIGNMENT);
@@ -139,10 +136,9 @@ inline bool ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::CreateThread(Th
 }
 
 
-template <class WorkQueue, class WorkProcessor, class WorkerContext>
-inline bool ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::StartThread(
+template <class WorkProcessor, class WorkerContext>
+inline bool ThreadPool<WorkProcessor, WorkerContext>::StartThread(
     ThreadContext *const threadContext,
-    WorkQueue *const workQueue,
     const uint32_t nodeMask,
     const uint32_t processorMask)
 {
@@ -150,7 +146,6 @@ inline bool ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::StartThread(
     THERON_ASSERT(threadContext->mThread);
     THERON_ASSERT(threadContext->mThread->Running() == false);
 
-    threadContext->mWorkQueue = workQueue;
     threadContext->mNodeMask = nodeMask;
     threadContext->mProcessorMask = processorMask;
     threadContext->mRunning = true;
@@ -162,8 +157,8 @@ inline bool ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::StartThread(
 }
 
 
-template <class WorkQueue, class WorkProcessor, class WorkerContext>
-inline bool ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::StopThread(ThreadContext *const threadContext)
+template <class WorkProcessor, class WorkerContext>
+inline bool ThreadPool<WorkProcessor, WorkerContext>::StopThread(ThreadContext *const threadContext)
 {
     THERON_ASSERT(threadContext->mThread);
     THERON_ASSERT(threadContext->mThread->Running());
@@ -179,8 +174,8 @@ inline bool ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::StopThread(Thre
 }
 
 
-template <class WorkQueue, class WorkProcessor, class WorkerContext>
-inline bool ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::DestroyThread(ThreadContext *const threadContext)
+template <class WorkProcessor, class WorkerContext>
+inline bool ThreadPool<WorkProcessor, WorkerContext>::DestroyThread(ThreadContext *const threadContext)
 {
     THERON_ASSERT(threadContext->mRunning == false);
     THERON_ASSERT(threadContext->mThread);
@@ -197,22 +192,22 @@ inline bool ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::DestroyThread(T
 }
 
 
-template <class WorkQueue, class WorkProcessor, class WorkerContext>
-THERON_FORCEINLINE bool ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::IsRunning(ThreadContext *const threadContext)
+template <class WorkProcessor, class WorkerContext>
+THERON_FORCEINLINE bool ThreadPool<WorkProcessor, WorkerContext>::IsRunning(ThreadContext *const threadContext)
 {
     return threadContext->mRunning;
 }
 
 
-template <class WorkQueue, class WorkProcessor, class WorkerContext>
-THERON_FORCEINLINE bool ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::IsStarted(ThreadContext *const threadContext)
+template <class WorkProcessor, class WorkerContext>
+THERON_FORCEINLINE bool ThreadPool<WorkProcessor, WorkerContext>::IsStarted(ThreadContext *const threadContext)
 {
     return threadContext->mStarted;
 }
 
 
-template <class WorkQueue, class WorkProcessor, class WorkerContext>
-inline void ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::ThreadEntryPoint(void *const context)
+template <class WorkProcessor, class WorkerContext>
+inline void ThreadPool<WorkProcessor, WorkerContext>::ThreadEntryPoint(void *const context)
 {
     // The static entry point function is provided with a pointer to a context structure.
     // The context structure is specific to this worker thread.
@@ -224,20 +219,10 @@ inline void ThreadPool<WorkQueue, WorkProcessor, WorkerContext>::ThreadEntryPoin
     // Mark the thread as started so the caller knows they can start issuing work.
     threadContext->mStarted = true;
 
-    uint32_t backoff(0);
+    // Process until told to stop.
     while (threadContext->mRunning)
     {
-        // Try to get a work item from the work queue.
-        if (typename WorkQueue::ItemType *const item = threadContext->mWorkQueue->Pop())
-        {
-            // Process the item, passing it the user context, and re-schedule it if it needs more processing.
-            WorkProcessor::Process(item, threadContext->mWorkerContext);
-            backoff = 0;
-        }
-        else
-        {
-            Utils::Backoff(backoff);
-        }
+        WorkProcessor::Process(threadContext->mWorkerContext);
     }
 }
 
