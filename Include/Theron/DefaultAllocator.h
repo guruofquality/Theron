@@ -249,11 +249,7 @@ public:
     \endcode
 
     This method is only useful when allocation checking is enabled using \ref THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
-    (enabled, by default, in debug builds). If allocation checking is disabled then GetBytesAllocated returns zero.
-
-    \note This method counts user allocations and doesn't include internal overheads
-    introduced by alignment and memory tracking. The actual amount of memory
-    allocated via the wrapped lower-level allocator is typically larger.
+    (enabled, by default, in debug builds). If allocation checking is disabled then GetAllocationCount returns zero.
 
     \see GetPeakBytesAllocated
     */

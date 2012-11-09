@@ -48,6 +48,9 @@
     <Filter Include="Header Files\Detail\Transport">
       <UniqueIdentifier>{ea9d0121-3f41-48df-90a4-0dbfe7becc95}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Detail\Debug">
+      <UniqueIdentifier>{c2edb279-25ff-4784-be97-1faa9aa0b6b7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Actor.cpp">
@@ -84,6 +87,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Processor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BuildDescriptor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -303,6 +309,9 @@
     </ClInclude>
     <ClInclude Include="..\Include\Theron\Detail\MailboxProcessor\WorkItem.h">
       <Filter>Header Files\Detail\MailboxProcessor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Debug\BuildDescriptor.h">
+      <Filter>Header Files\Detail\Debug</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

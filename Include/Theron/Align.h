@@ -31,7 +31,7 @@ Use of this macro is optional. Using it, users can notify Theron of any
 specialized memory alignment requirements of their custom actor classes.
 If the memory alignment of an actor type is specified using this macro,
 Theron will request correctly aligned memory when allocating instances
-of that actor type in \ref Framework::CreateActor. If not, then a default
+of that actor type in \ref Theron::Framework::CreateActor. If not, then a default
 alignment of four bytes will be used.
 
 \code
@@ -157,9 +157,10 @@ int main()
     AlignedMessage message;  // Aligned to 128 bytes by the compiler
 }
 \endcode
-The reason for using two macros is for portability: GCC and Visual C++
+The reason for using two macros is for portability: some compilers
 differ on whether the alignment decoration comes before or after the
-type definition.
+type definition. At present the supported compilers all accept the
+decoration before the definition.
 
 The THERON_PREALIGN and THERON_POSTALIGN macros don't actually affect
 Theron at all, because Theron never allocates user message types on the
@@ -189,7 +190,7 @@ code before any Theron headers.
 #if THERON_MSVC
 #define THERON_PREALIGN(alignment) __declspec(align(alignment))
 #elif THERON_GCC
-#define THERON_PREALIGN(alignment)
+#define THERON_PREALIGN(alignment) __attribute__ ((__aligned__ (alignment)))
 #else
 #define THERON_PREALIGN(alignment)
 #endif
@@ -213,7 +214,7 @@ Declares an aligned type. Second of two parts, used after the type definition.
 #if THERON_MSVC
 #define THERON_POSTALIGN(alignment)
 #elif THERON_GCC
-#define THERON_POSTALIGN(alignment) __attribute__ ((__aligned__ (alignment)))
+#define THERON_POSTALIGN(alignment)
 #else
 #define THERON_POSTALIGN(alignment)
 #endif

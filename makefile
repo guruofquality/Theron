@@ -249,6 +249,7 @@ THERON_HEADERS = \
 	Include/Theron/Detail/Containers/List.h \
 	Include/Theron/Detail/Containers/Map.h \
 	Include/Theron/Detail/Containers/Queue.h \
+	Include/Theron/Detail/Debug/BuildDescriptor.h \
 	Include/Theron/Detail/Directory/Entry.h \
 	Include/Theron/Detail/Directory/Directory.h \
 	Include/Theron/Detail/Directory/StaticDirectory.h \
@@ -319,6 +320,7 @@ THERON_SOURCES = \
 	Theron/ActorRef.cpp \
 	Theron/ActorRegistry.cpp \
 	Theron/AllocatorManager.cpp \
+	Theron/BuildDescriptor.cpp \
 	Theron/DefaultHandlerCollection.cpp \
 	Theron/EndPoint.cpp \
 	Theron/FallbackHandlerCollection.cpp \
@@ -333,6 +335,7 @@ THERON_OBJECTS = \
 	${BUILD}/ActorRef.o \
 	${BUILD}/ActorRegistry.o \
 	${BUILD}/AllocatorManager.o \
+	${BUILD}/BuildDescriptor.o \
 	${BUILD}/DefaultHandlerCollection.o \
 	${BUILD}/EndPoint.o \
 	${BUILD}/FallbackHandlerCollection.o \
@@ -356,6 +359,9 @@ ${BUILD}/ActorRegistry.o: Theron/ActorRegistry.cpp ${THERON_HEADERS}
 
 ${BUILD}/AllocatorManager.o: Theron/AllocatorManager.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/AllocatorManager.cpp -o ${BUILD}/AllocatorManager.o ${INCLUDE_FLAGS}
+
+${BUILD}/BuildDescriptor.o: Theron/BuildDescriptor.cpp ${THERON_HEADERS}
+	$(CC) $(CFLAGS) Theron/BuildDescriptor.cpp -o ${BUILD}/BuildDescriptor.o ${INCLUDE_FLAGS}
 
 ${BUILD}/DefaultHandlerCollection.o: Theron/DefaultHandlerCollection.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/DefaultHandlerCollection.cpp -o ${BUILD}/DefaultHandlerCollection.o ${INCLUDE_FLAGS}

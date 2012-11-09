@@ -75,6 +75,17 @@ Although derived actors classes can be constructed directly in user code, they a
 always associated with an owning \ref Framework that hosts and executes them.
 The owning Framework is provided to the Actor baseclass on construction.
 
+\code
+class MyActor : public Theron::Actor
+{
+public:
+
+    MyActor(Theron::Framework &framework) : Theron::Actor(framework)
+    {
+    }
+};
+\endcode
+
 \note A fundamental principle of the Actor Model is that actors should communicate
 only by means of messages, both \ref Send "sent by themselves" and \ref RegisterHandler
 "handled by their message handlers". Since Actors in Theron are just vanilla C++
@@ -326,17 +337,16 @@ public:
     
     \note In general \ref Send should be preferred over Push. When sending messages
     from inside an actor (for example in a message handler), use Actor::Send.
-    When sending messages to an actor, prefer Framework::Send over Actor::Push,
-    even in situations where you have a direct reference to the receiving actor.
-    Although Push looks like an optimization, it uses the same general message
-    sending mechanism as Send, and moreover is potentially slower in the former
-    case of sending messages from inside an actor message handler, due to not
-    being able to rely on the availability of a worker thread context.
+    When sending messages to an actor from non-actor code, prefer Framework::Send
+    over Actor::Push, even in situations where you have a direct reference to the
+    receiving actor. Although Push looks like an optimization, it uses the same general
+    message sending mechanism as Send, and in fact is potentially slower in some cases
+    due to there being no thread-specific caches available.
 
     As with \ref Framework::Send, it's necessary to provide a \em from address
     when calling this method, because the address of the sender isn't implicit
     from the context. It's legal to pass Theron::Address() or Theron::Address::Null(),
-    both of which evaluate to the \ref Address::Null "null address".
+    both of which evaluate to the \ref Theron::Address::Null "null address".
 
     \tparam ValueType The message type (any copyable class or Plain Old Datatype).
     \param value The message value, which is copied.
@@ -706,6 +716,10 @@ protected:
     memory with the same value. The copying is performed with the copy-constructor
     of the message class.
     
+    \note The requirements for messages sent to remote actors over a network are
+    different, and significantly stricter. Currently, message types sent to remote
+    actors must be bitwise-copyable via memcpy, so can't contain pointers.
+
     Typically non-POD message classes should be provided with
     a meaningful default constructor, copy constructor, assignment operator and
     destructor. If the message type is derived from a base type (in an inheritance
@@ -786,7 +800,7 @@ protected:
     This method can safely be called within the constructor or destructor of a derived
     actor object, as well as (more typically) within its message handler functions.
 
-    When sending messages from message handlers, use \ref TailSend instead in the
+    \note When sending messages from message handlers, use \ref TailSend instead, in the
     common case where the sending of the message is the last action of the message
     handler. In such cases, using TailSend can result in significantly higher performance.
 

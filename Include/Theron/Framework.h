@@ -10,8 +10,6 @@ Framework that hosts and executes actors.
 
 
 #include <new>
-#include <string.h>
-#include <stdio.h>
 
 #include <Theron/ActorRef.h>
 #include <Theron/Address.h>
@@ -26,6 +24,7 @@ Framework that hosts and executes actors.
 #include <Theron/Detail/Alignment/ActorAlignment.h>
 #include <Theron/Detail/Allocators/CachingAllocator.h>
 #include <Theron/Detail/Containers/List.h>
+#include <Theron/Detail/Debug/BuildDescriptor.h>
 #include <Theron/Detail/Directory/Directory.h>
 #include <Theron/Detail/Directory/Entry.h>
 #include <Theron/Detail/Handlers/DefaultFallbackHandler.h>
@@ -55,6 +54,44 @@ namespace Theron
 
 class Actor;
 class EndPoint;
+
+
+/**
+\brief Enumerates the available worker thread yield strategies.
+
+Each \ref Theron::Framework contains a pool of worker threads that are used to execute
+the actors hosted in the framework. The worker threads service a queue, processing actors that
+have received messages and executing their registered message handlers.
+
+When constructing a Framework, a \ref Theron::Framework::Parameters object may be provided with
+parameters that control the structure and behavior of the the framework's internal threadpool.
+This enum defines the available values of the \ref Theron::Framework::Parameters::mYieldStrategy "mYieldStrategy"
+member of the Parameters structure.
+
+The mYieldStrategy member defines the strategy that the worker threads use to avoid \em busy \em waiting
+on the work queue. The available strategies have different performance characteristics, and are best
+suited to different kinds of applications.
+
+The default strategy, \ref YIELD_STRATEGY_POLITE,
+causes the threads to go to sleep for a short period when they fail to find work on the work queue.
+Going to sleep frees up the processor during quiet periods and so gives other threads on the system
+a chance to be executed. The downside is that if a message arrives after a period of inactivity then
+it may only be processed when one or more threads awake, leading to some small latency.
+
+The more aggressive strategies cause the threads to yield to other threads, or simply spin, without going to
+sleep. These strategies typically have lower worst-case latency. However the reduced latency is at
+the expense of increased CPU usage, increased power consumption, and potentially lower throughput.
+
+When choosing a yield strategy it pays to consider how important immediate responsiveness is to your
+application: in most applications a latency of a few milliseconds is not significant, and the default
+strategy is a reasonable choice.
+*/
+enum YieldStrategy
+{
+    YIELD_STRATEGY_POLITE,              ///< Threads go to sleep when not in use.
+    YIELD_STRATEGY_STRONG,              ///< Threads yield to other threads but don't go to sleep.
+    YIELD_STRATEGY_AGGRESSIVE           ///< Threads never sleep or yield to other threads.
+};
 
 
 /**
@@ -93,9 +130,10 @@ and enumerated by \ref Theron::Counter.
 The worker threads are created and synchronized using underlying threading
 objects. Different implementations of these threading objects are possible,
 allowing Theron to be used in environments with different threading primitives.
-Currently, implementations based on Win32 threads, Boost threads and std::thread
-are provided. Users can define \ref THERON_BOOST or \ref THERON_CPP11
-to enable or disable the use of boost::thread and std::thread, respectively.
+Currently, implementations based on Win32 threads, Boost threads, std::thread
+and POSIX threads are provided. Users can define \ref THERON_BOOST or
+\ref THERON_CPP11 to enable or disable the use of boost::thread and std::thread,
+respectively.
 
 It's possible to construct multiple Framework objects within a single
 application. The actors created within each Framework are processed
@@ -105,12 +143,11 @@ in other frameworks.
 
 Actors created within each Framework are executed only by the worker threads
 in the threadpool of that framework, allowing the threads of a Framework to
-be effectively dedicated to particular actors. See the
-\ref Framework::Framework "constructor" documentation for more information.
+be effectively dedicated to particular actors. See
+\ref Theron::Framework::Parameters for more information.
 
 \note An important point about Framework objects is that they must always
-outlive the actors created within them. See the
-\ref Framework::~Framework "destructor" documentation for more information.
+outlive the actors created within them.
 */
 class Framework : public Detail::Entry::Entity
 {
@@ -121,93 +158,100 @@ public:
     friend class Detail::MessageSender;
 
     /**
-    \enum Theron::Framework::YieldStrategy
-
-    \brief Specifies various worker thread yield strategies.
-
-    More aggressive strategies have lower latency, but may hog the processor.
-    Polite strategies yield the processor to other threads, but may take longer to wake up.
-    */
-    enum YieldStrategy
-    {
-        YIELD_STRATEGY_POLITE,              ///< Threads go to sleep when not in use.
-        YIELD_STRATEGY_STRONG,              ///< Threads yield to other threads but don't go to sleep.
-        YIELD_STRATEGY_AGGRESSIVE           ///< Threads never yield to other threads.
-    };
-
-    /**
     \brief Parameters structure that can be passed to the Framework constructor.
+    
+    When an instance of this structure is passed to the constructor of the Framework class,
+    its members can be used to configure the constructed framework.
 
-    One of the several different \ref Framework::Framework "Framework constructors"
-    takes as a parameter an instance of this parameter class.
+    The members are mainly concerned with configuring the pool of worker threads that is created
+    within the framework, and which is used to execute the actors that are subsequently hosted
+    within it. They allow the user to control the number of threads in the pool, their processor
+    affinities, and their yielding behavior.
+    
+    By choosing appropriate values it's possible to configure specialized frameworks tailored to
+    particular uses. For example, users writing real-time systems might choose to create a separate
+    framework for hosting actors whose execution is time-critical. Such a framework might be configured
+    with the same number of threads as the number of hosted actors, ensuring that a free thread is
+    always available to process actors with queued messages. Also, one might choose to dedicate a
+    number of processor cores entirely to the execution of those threads, using processor
+    affinity masks to limit execution of the worker threads of the framework to only the selected
+    cores (leaving the remaining cores to other frameworks). Finally, since the cores dedicated to
+    time-critical processing are never used for any other processing, one might choose to set the yield
+    strategy of the worker threads to \ref YIELD_STRATEGY_AGGRESSIVE, effectively busy-waiting for
+    the arrival of new messages.
 
-    \note Support for node and processor affinity masks is currently limited and somewhat untested.
-    On Windows builds, both the node mask and processor mask are supported. In GCC builds, NUMA support
-    requires libnuma-dev and must be explicitly enabled via \ref THERON_NUMA (or numa=on in the makefile).
+    As well as setting processor affinities, the members of the Parameters structure allow the
+    node affinities of the worker threads to be controlled. This allows users to restrict
+    the execution of a framework's worker threads to a particular \em node within a NUMA
+    (Non-Uniform Memory Architecture) system.
+
+    A NUMA system is one in which the different logical cores within the physical CPU(s) have
+    different views of memory, typically by virtue of being serviced by different physical memory
+    controllers. In such systems, memory may be partitioned into areas that are each directly
+    accessed by a single memory controller, with the cores fed by that controller enjoying faster
+    access to that area of memory. Access to other parts of memory is indirectly served by other
+    controllers, so is slower. Within the context of a NUMA system, a 'node' is a group of logical
+    cores that share the same view of memory (typically by virtue of being serviced by the same
+    memory controller).
+    
+    Windows and Linux both provide APIs by which the node topology of a system can be discovered. These
+    APIs allow the processor affinities of threads to be set on a per-node basis, limiting threads
+    to execute only on the processors of a particular nodes (or set of nodes). Finally, they provide
+    methods for allocating memory within the area of memory to which a particular node has first class
+    access.
+
+    The scalability of a multi-threaded application can be improved by restricting threads that access
+    the same memory to execute only on a limited subset of the available cores. Doing so can improve
+    cache coherency due to the same memory being repeatedly accessed via the caches of those cores.
+
+    As threads read and write memory, cached copies of the memory accumulate in the caches local
+    to the cores on which the threads are executed. When a thread writes to memory, any cached copies held
+    in the caches of other cores are invalidated and must be re-fetched from memory. If other threads
+    also write to the same piece of memory (known as \em shared \em writes), then the repeated cache
+    invalidations and refreshes can cause significant overheads. These overheads can be especially
+    severe, and can limit scalability, if the threads in question are allowed to execute on different
+    NUMA nodes.
+
+    In Theron, Frameworks serve as the mechanism by which worker threads are grouped. Accordingly,
+    Theron allows the node and processor affinities of worker threads to be set on a per-framework
+    basis. The expectation is that the actors within a single framework will mainly message
+    each other, with messages being sent between frameworks far less frequently.
+
+    \note Support for node and processor affinity masks is currently somewhat limited.
+    Supported is implemented with Windows NUMA API in windows builds, and with libnuma under linux.
+    In GCC builds, NUMA support requires libnuma-dev and must be explicitly enabled via \ref THERON_NUMA
+    (or numa=on in the makefile). The \ref mNodeMask member is supported with both version 1 and version 2
+    of the libnuma API, but the \ref mProcessorMask member is supported only with version 2. Under Windows
+    both members are supported.
     */
     struct Parameters
     {
-        /**
-        \brief Default constructor.
-        Constructs a parameters object with a default initial thread count of 16.
-        */
-        inline Parameters() :
-          mThreadCount(16),
-          mNodeMask(1),
-          mProcessorMask(0xFFFFFFFF),
-          mYieldStrategy(YIELD_STRATEGY_POLITE)
-        {
-        }
-
-        /**
-        \brief Explicit constructor.
-        Constructs a parameters object with a specified initial thread count.
-        */
-        inline explicit Parameters(const uint32_t threadCount) :
-          mThreadCount(threadCount),
-          mNodeMask(1),
-          mProcessorMask(0xFFFFFFFF),
-          mYieldStrategy(YIELD_STRATEGY_POLITE)
-        {
-        }
-
-        /**
-        \brief Constructor.
-        Constructs a parameters object with a specified initial thread count, running on a specified set of NUMA processor nodes.
-
-        \note Support for node and processor affinity masks is currently limited and somewhat untested.
-        On Windows builds, the node mask is supported. In GCC builds, NUMA support requires libnuma-dev
-        and must be explicitly enabled via \ref THERON_NUMA (or numa=on in the makefile).
-        */
-        inline Parameters(const uint32_t threadCount, const uint32_t nodeMask) :
-          mThreadCount(threadCount),
-          mNodeMask(nodeMask),
-          mProcessorMask(0xFFFFFFFF),
-          mYieldStrategy(YIELD_STRATEGY_POLITE)
-        {
-        }
-
         /**
         \brief Constructor.
         Constructs a parameters object with a specified initial thread count, running on a specified
         subset of the processors of each of a specified set of NUMA processor nodes.
 
-        \note Support for node and processor affinity masks is currently limited and somewhat untested.
-        On Windows builds, both the node mask and processor mask are supported. In GCC builds, NUMA support
-        requires libnuma-dev and must be explicitly enabled via \ref THERON_NUMA (or numa=on in the makefile).
+        \param threadCount Number of worker threads to create initially within the framework.
+        \param nodeMask Bitfield mask specifying the NUMA node affinity of the created worker threads.
+        \param processorMask Bitfield mask specifying the processor affinity of the created worker threads within each enabled NUMA node.
+        \param yieldStrategy Enum value specifying how freely worker threads yield to other system threads.
         */
-        inline Parameters(const uint32_t threadCount, const uint32_t nodeMask, const uint32_t processorMask) :
+        inline explicit Parameters(
+            const uint32_t threadCount = 16,
+            const uint32_t nodeMask = 0x1,
+            const uint32_t processorMask = 0xFFFFFFFF,
+            const YieldStrategy yieldStrategy = YIELD_STRATEGY_POLITE) :
           mThreadCount(threadCount),
           mNodeMask(nodeMask),
           mProcessorMask(processorMask),
-          mYieldStrategy(YIELD_STRATEGY_POLITE)
+          mYieldStrategy(yieldStrategy)
         {
         }
 
         uint32_t mThreadCount;          ///< The initial number of worker threads to create within the framework.
         uint32_t mNodeMask;             ///< Specifies the NUMA processor nodes upon which the framework may execute.
         uint32_t mProcessorMask;        ///< Specifies the subset of the processors in each NUMA processor node upon which the framework may execute.
-        YieldStrategy mYieldStrategy;   ///< Yield strategy employed by the worker threads in the framework.
+        YieldStrategy mYieldStrategy;   ///< Strategy that defines how freely worker threads yield to other system threads.
     };
 
     /**
@@ -824,21 +868,6 @@ private:
     bool QueuesEmpty() const;
 
     /**
-    Compares the build settings of the Theron library and inlined client code to detect mismatches.
-    */
-    inline static void CheckBuildDescriptors();
-
-    /**
-    Gets a string descriptor characterizing the build settings used to build the Theron library.
-    */
-    static void GetLibraryBuildDescriptor(char *const identifier);
-
-    /**
-    Fills a provided buffer with a string descriptor characterizing build settings.
-    */
-    inline static void GenerateBuildDescriptor(char *const identifier);
-
-    /**
     Static entry point function for the manager thread.
     This is a static function that calls the real entry point member function.
     */
@@ -869,7 +898,7 @@ private:
 };
 
 
-THERON_ALWAYS_FORCEINLINE Framework::Framework(const uint32_t threadCount) :
+inline Framework::Framework(const uint32_t threadCount) :
   mEndPoint(0),
   mParams(threadCount),
   mIndex(0),
@@ -888,12 +917,13 @@ THERON_ALWAYS_FORCEINLINE Framework::Framework(const uint32_t threadCount) :
   mThreadContexts(),
   mThreadContextLock()
 {
-    CheckBuildDescriptors();
+    Detail::BuildDescriptor::Check();
+
     Initialize();
 }
 
 
-THERON_ALWAYS_FORCEINLINE Framework::Framework(const Parameters &params) :
+inline Framework::Framework(const Parameters &params) :
   mEndPoint(0),
   mParams(params),
   mIndex(0),
@@ -912,12 +942,13 @@ THERON_ALWAYS_FORCEINLINE Framework::Framework(const Parameters &params) :
   mThreadContexts(),
   mThreadContextLock()
 {
-    CheckBuildDescriptors();
+    Detail::BuildDescriptor::Check();
+
     Initialize();
 }
 
 
-THERON_ALWAYS_FORCEINLINE Framework::Framework(EndPoint &endPoint, const char *const name, const Parameters &params) :
+inline Framework::Framework(EndPoint &endPoint, const char *const name, const Parameters &params) :
   mEndPoint(&endPoint),
   mParams(params),
   mIndex(0),
@@ -936,12 +967,13 @@ THERON_ALWAYS_FORCEINLINE Framework::Framework(EndPoint &endPoint, const char *c
   mThreadContexts(),
   mThreadContextLock()
 {
-    CheckBuildDescriptors();
+    Detail::BuildDescriptor::Check();
+
     Initialize();
 }
 
 
-THERON_FORCEINLINE Framework::~Framework()
+inline Framework::~Framework()
 {
     Release();
 }
@@ -1111,56 +1143,6 @@ inline ActorRef Framework::CreateActor(const typename ActorType::Parameters &par
     allocator->Free(entryMemory, sizeof(typename Detail::ActorRegistry::Entry));
 
     return ActorRef(actor);
-}
-
-
-THERON_ALWAYS_FORCEINLINE void Framework::CheckBuildDescriptors()
-{
-#if THERON_ENABLE_BUILD_CHECKS
-
-    char inlineDescriptor[32];
-    GenerateBuildDescriptor(inlineDescriptor);
-
-    char libraryDescriptor[32];
-    GetLibraryBuildDescriptor(libraryDescriptor);
-
-    if (strcmp(inlineDescriptor, libraryDescriptor) != 0)
-    {
-        // Because Theron contains inlined code, it requires that any Theron-based client code
-        // is built with the same build settings as were used to build the Theron library.
-        // In particular the values of the various defines in Theron/Defines.h should match.
-        // That means, for example, that a release build of the Theron library can't be mixed
-        // with a debug build of client code that uses it.
-        fprintf(stderr, "Detected build differences between Theron library and client code\n");
-        fprintf(stderr, "Client build descriptor:  %s\n", inlineDescriptor);
-        fprintf(stderr, "Library build descriptor: %s\n", libraryDescriptor);
-        exit(1);
-    }
-
-#endif // THERON_ENABLE_BUILD_CHECKS
-}
-
-
-THERON_ALWAYS_FORCEINLINE void Framework::GenerateBuildDescriptor(char *const identifier)
-{
-    // Build up a string identifier that characterizes the Theron build settings.
-    identifier[0] = '\0';
-    sprintf(identifier, "%s|%d%d%d%d%d%d%d%d%d%d%d%d%d%d",
-        THERON_VERSION,
-        THERON_MSVC,
-        THERON_GCC,
-        THERON_64BIT,
-        THERON_DEBUG,
-        THERON_BOOST,
-        THERON_CPP11,
-        THERON_POSIX,
-        THERON_ENABLE_DEFAULTALLOCATOR_CHECKS,
-        THERON_ENABLE_MESSAGE_REGISTRATION_CHECKS,
-        THERON_ENABLE_UNHANDLED_MESSAGE_CHECKS,
-        THERON_ENABLE_BUILD_CHECKS,
-        THERON_CACHELINE_ALIGNMENT,
-        THERON_NUMA,
-        THERON_XS);
 }
 
 

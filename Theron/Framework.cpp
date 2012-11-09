@@ -6,6 +6,7 @@
 #include <Theron/Actor.h>
 #include <Theron/Assert.h>
 #include <Theron/AllocatorManager.h>
+#include <Theron/Defines.h>
 #include <Theron/EndPoint.h>
 #include <Theron/Framework.h>
 #include <Theron/IAllocator.h>
@@ -16,6 +17,12 @@
 #include <Theron/Detail/Network/NameGenerator.h>
 #include <Theron/Detail/Network/String.h>
 #include <Theron/Detail/Threading/Utils.h>
+
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning (disable:4996)  // function or variable may be unsafe
+#endif //_MSC_VER
 
 
 namespace Theron
@@ -346,13 +353,6 @@ uint32_t Framework::GetPerThreadCounterValues(
 }
 
 
-// The function must not be inlined.
-void Framework::GetLibraryBuildDescriptor(char *const identifier)
-{
-    GenerateBuildDescriptor(identifier);
-}
-
-
 void Framework::ManagerThreadEntryPoint(void *const context)
 {
     // The static entry point function is passed the object pointer as context.
@@ -498,3 +498,8 @@ void Framework::ManagerThreadProc()
 
 
 } // namespace Theron
+
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif //_MSC_VER

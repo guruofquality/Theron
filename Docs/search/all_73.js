@@ -1,0 +1,10 @@
+var searchData=
+[
+  ['send',['Send',['../classTheron_1_1Actor_a47c64d58a7a683b34101002989d7de0a.html#a47c64d58a7a683b34101002989d7de0a',1,'Theron::Actor::Send()'],['../classTheron_1_1Framework_a2d5f7f6508227d578dfcedf40dc0b9d0.html#a2d5f7f6508227d578dfcedf40dc0b9d0',1,'Theron::Framework::Send()']]],
+  ['setallocator',['SetAllocator',['../classTheron_1_1AllocatorManager_a581bf1417a5f401caaa019b03fdb90c2.html#a581bf1417a5f401caaa019b03fdb90c2',1,'Theron::AllocatorManager']]],
+  ['setdefaulthandler',['SetDefaultHandler',['../classTheron_1_1Actor_a752faea0ecbb7f9525c02ed1ef19cbaf.html#a752faea0ecbb7f9525c02ed1ef19cbaf',1,'Theron::Actor::SetDefaultHandler(ActorType *const actor, void(ActorType::*handler)(const Address from))'],['../classTheron_1_1Actor_ab8806dfed72869b22d966968340268c3.html#ab8806dfed72869b22d966968340268c3',1,'Theron::Actor::SetDefaultHandler(ActorType *const actor, void(ActorType::*handler)(const void *const data, const uint32_t size, const Address from))']]],
+  ['setfallbackhandler',['SetFallbackHandler',['../classTheron_1_1Framework_a43f84e854ced9bc9df593ffcd61d2ffd.html#a43f84e854ced9bc9df593ffcd61d2ffd',1,'Theron::Framework::SetFallbackHandler(ObjectType *const actor, void(ObjectType::*handler)(const Address from))'],['../classTheron_1_1Framework_a1b85e4455eb0d9f7e2e9a5163a14e119.html#a1b85e4455eb0d9f7e2e9a5163a14e119',1,'Theron::Framework::SetFallbackHandler(ObjectType *const actor, void(ObjectType::*handler)(const void *const data, const uint32_t size, const Address from))']]],
+  ['setmaxthreads',['SetMaxThreads',['../classTheron_1_1Framework_af3932db00a7bcf189bec9798980e8252.html#af3932db00a7bcf189bec9798980e8252',1,'Theron::Framework']]],
+  ['setminthreads',['SetMinThreads',['../classTheron_1_1Framework_ad7bd43e200620c216338340db1477d0a.html#ad7bd43e200620c216338340db1477d0a',1,'Theron::Framework']]],
+  ['sizetype',['SizeType',['../classTheron_1_1IAllocator_ab4f937fc8550c316305fc830ad779974.html#ab4f937fc8550c316305fc830ad779974',1,'Theron::IAllocator']]]
+];

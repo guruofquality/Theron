@@ -23,6 +23,7 @@
     <ClCompile Include="ActorRef.cpp" />
     <ClCompile Include="ActorRegistry.cpp" />
     <ClCompile Include="AllocatorManager.cpp" />
+    <ClCompile Include="BuildDescriptor.cpp" />
     <ClCompile Include="DefaultHandlerCollection.cpp" />
     <ClCompile Include="EndPoint.cpp" />
     <ClCompile Include="FallbackHandlerCollection.cpp" />
@@ -52,6 +53,7 @@
     <ClInclude Include="..\Include\Theron\Detail\Containers\List.h" />
     <ClInclude Include="..\Include\Theron\Detail\Containers\Map.h" />
     <ClInclude Include="..\Include\Theron\Detail\Containers\Queue.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Debug\BuildDescriptor.h" />
     <ClInclude Include="..\Include\Theron\Detail\Directory\Directory.h" />
     <ClInclude Include="..\Include\Theron\Detail\Directory\Entry.h" />
     <ClInclude Include="..\Include\Theron\Detail\Directory\StaticDirectory.h" />

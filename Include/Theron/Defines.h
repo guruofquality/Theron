@@ -10,9 +10,7 @@
 This file defines, in one place, all the defines which can be defined in order
 to override default options within Theron. Some of them enable or disable debugging
 functionality, others abstract away platform-specific detail such as code inlining
-and variable alignment, and still others control the operation of Theron such as
-the limits on the number of threads per \ref Framework and the total number of \ref Actor
-"Actors" and \ref Receiver "Receivers" that can be created in an application.
+and variable alignment, and still others control aspects of the operation of Theron.
 
 \note The intention is that most users will be able to leave these defines at their default
 values, hardly knowing they're there. But if you do need to override one of them then
@@ -28,12 +26,12 @@ be easily overridden just by defining the defines yourself globally in your buil
 
 \brief Exposes the version number of the Theron release in use.
 
-This define is defined automatically and should always match the version number
-used to characterize the release. Its definition can't be overridden by the user.
+This define is defined automatically and matches the major and minor version numbers
+used to name official releases. Its definition can't be overridden by the user.
 */
 
 
-#define THERON_VERSION "5.02.00"
+#define THERON_VERSION "5.01"
 
 
 /**
@@ -272,9 +270,10 @@ If THERON_POSIX is defined as 1 then POSIX features may be used, including using
 (pthreads) as the underlying thread support.
 
 This define is defined automatically if not predefined by the user. When automatically
-defined, it is defined as 1, enabling the use of POSIX features as a fallback if no more advanced
-API is available. Note that the pthreads support is slow due to emulating atomic operations with
-locks, therefore it is preferable to use Boost or C++11 if available.
+defined, it is defined as 1 unless \ref THERON_MSVC is enabled, enabling the use of POSIX features
+as a fallback with non-MSVC compilers if no alternative API is available. Note that the pthreads
+support is slow due to emulating atomic operations with locks, therefore it is preferable to use
+Boost or C++11 features if available.
 
 The default definition can be overridden by defining it globally in the build - either
 via the makefile command line options, on the GCC command line using -D, or in the project
@@ -298,11 +297,17 @@ preprocessor settings in Visual Studio.
 #if !defined(THERON_BOOST)
 #define THERON_BOOST 0
 #endif
+
 #if !defined(THERON_CPP11)
 #define THERON_CPP11 0
 #endif
+
 #if !defined(THERON_POSIX)
+#if THERON_MSVC
+#define THERON_POSIX 0
+#else
 #define THERON_POSIX 1
+#endif
 #endif
 
 
@@ -364,18 +369,9 @@ preprocessor settings in Visual Studio.
 
 
 /**
-\def THERON_ALWAYS_FORCEINLINE
+\def THERON_NOINLINE
 
-\brief Used to unconditionally force-inline functions within Theron.
-
-This define defines the keyword used to forcibly always inline function definitions.
-It is defined automatically if not predefined by the user. When automatically
-defined, it defaults to forced inlining in MSVC and GCC builds. On all other platforms,
-forced inlining is not currently implemented, and it defaults to just the inline keyword,
-which is required on functions defined within headers.
-
-\note Unlike THERON_FORCEINLINE, the default definition of THERON_ALWAYS_FORCEINLINE forces
-inlining in debug builds as well as in release builds.
+\brief Used to prevent functions from being inlined.
 
 The default definition can be overridden by defining it globally in the build - either
 via the makefile command line options, on the GCC command line using -D, or in the project
@@ -383,15 +379,15 @@ preprocessor settings in Visual Studio.
 */
 
 
-#if !defined(THERON_ALWAYS_FORCEINLINE)
+#if !defined(THERON_NOINLINE)
 #if THERON_MSVC
-#define THERON_ALWAYS_FORCEINLINE __forceinline
+#define THERON_NOINLINE __declspec(noinline)
 #elif THERON_GCC
-#define THERON_ALWAYS_FORCEINLINE inline __attribute__((always_inline))
+#define THERON_NOINLINE __attribute__((noinline))
 #else
-#define THERON_ALWAYS_FORCEINLINE inline
+#define THERON_NOINLINE
 #endif
-#endif // THERON_ALWAYS_FORCEINLINE
+#endif // THERON_NOINLINE
 
 
 /**
