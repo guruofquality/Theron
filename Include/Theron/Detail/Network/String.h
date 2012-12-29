@@ -311,7 +311,7 @@ private:
     {
         THERON_ASSERT(str);
 
-        const uint32_t stringLength(strlen(str));
+        const uint32_t stringLength(static_cast<uint32_t>(strlen(str)));
         const uint32_t stringSize(stringLength + 1);
         const uint32_t roundedStringSize(THERON_ROUNDUP(stringSize, 4));
 

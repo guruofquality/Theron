@@ -26,7 +26,7 @@ add_definitions(${THERON_DEFINES})
 ########################################################################
 add_library(theron STATIC ${THERON_SOURCES})
 target_link_libraries(theron ${THERON_LIBRARIES})
-set_target_properties(theron PROPERTIES VERSION "5.01.00")
+set_target_properties(theron PROPERTIES VERSION "5.01.01")
 
 ########################################################################
 # Build unittests

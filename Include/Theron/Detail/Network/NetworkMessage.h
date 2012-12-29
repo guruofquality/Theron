@@ -102,16 +102,16 @@ inline uint32_t NetworkMessage::GetSize(
     uint32_t fromNameSize(0);
     if (fromName)
     {
-        fromNameSize = strlen(fromName) + 1;
+        fromNameSize = static_cast<uint32_t>(strlen(fromName) + 1);
     }
 
     uint32_t toNameSize(0);
     if (toName)
     {
-        toNameSize = strlen(toName) + 1;
+        toNameSize = static_cast<uint32_t>(strlen(toName) + 1);
     }
 
-    const uint32_t messageNameSize(strlen(messageName) + 1);
+    const uint32_t messageNameSize(static_cast<uint32_t>(strlen(messageName) + 1));
 
     size += sizeof(NetworkMessage);
     size += fromNameSize;
@@ -138,16 +138,16 @@ inline NetworkMessage *NetworkMessage::Initialize(
     uint32_t fromNameSize(0);
     if (fromName)
     {
-        fromNameSize = strlen(fromName) + 1;
+        fromNameSize = static_cast<uint32_t>(strlen(fromName) + 1);
     }
 
     uint32_t toNameSize(0);
     if (toName)
     {
-        toNameSize = strlen(toName) + 1;
+        toNameSize = static_cast<uint32_t>(strlen(toName) + 1);
     }
 
-    const uint32_t messageNameSize(strlen(messageName) + 1);
+    const uint32_t messageNameSize(static_cast<uint32_t>(strlen(messageName) + 1));
 
     // Initialize the instance members.
     // The offset to the 'from' name is implicit since it's just the size of the class.
