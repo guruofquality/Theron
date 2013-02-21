@@ -8,6 +8,12 @@
 
 #include <boost/config.hpp>
 
+//provide memory_order_consume enum for older boosts
+#include <boost/version.hpp>
+#if BOOST_VERSION < 104200
+#define memory_order_consume memory_order(8)
+#endif
+
 #if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
 
 	#include <boost/atomic/detail/gcc-x86.hpp>
