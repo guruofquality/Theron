@@ -78,6 +78,9 @@ if(Boost_FOUND)
     list(APPEND THERON_LIBRARY_DIRS ${Boost_LIBRARY_DIRS})
     list(APPEND THERON_LIBRARIES ${Boost_LIBRARIES})
     list(APPEND THERON_DEFINES -DTHERON_BOOST=1)
+    if(${Boost_VERSION} LESS 104200)
+        list(APPEND THERON_DEFINES "-Dmemory_order_consume=memory_order(8)")
+    endif()
 endif()
 
 ########################################################################
