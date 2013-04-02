@@ -220,8 +220,11 @@ inline void ThreadPool<WorkProcessor, WorkerContext>::ThreadEntryPoint(void *con
     threadContext->mStarted = true;
 
     // Process until told to stop.
+    boost::unique_lock<boost::recursive_mutex> lock(threadContext->mWorkerContext->mutex);
     while (threadContext->mRunning)
     {
+        const bool r = threadContext->mWorkerContext->cond.timed_wait(lock, boost::posix_time::milliseconds(1));
+        if (r) std::cout << "sucessful non timeout\n";
         WorkProcessor::Process(threadContext->mWorkerContext);
     }
 }

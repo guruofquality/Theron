@@ -32,6 +32,7 @@ bool MessageSender::Send(
     const Address &address,
     const bool localQueue)
 {
+    boost::unique_lock<boost::recursive_mutex> lock(processorContext->mutex);
     Index index(address.mIndex);
 
     // Index of zero implies the actor is addressed only by name and may be remote.
@@ -48,7 +49,9 @@ bool MessageSender::Send(
         if (!endPoint->Lookup(name, index))
         {
             // If there isn't a local match we send the message out onto the network.
-            return endPoint->RequestSend(message, name);
+            const bool r = endPoint->RequestSend(message, name);
+            processorContext->cond.notify_one();
+            return r;
         }
     }
 
@@ -90,6 +93,7 @@ bool MessageSender::Send(
 
         mailbox.Unlock();
 
+            processorContext->cond.notify_one();
         return true;
     }
 
@@ -97,6 +101,7 @@ bool MessageSender::Send(
     // sending Framework. In this less common case we pay the hit of an extra call.
     if (DeliverWithinLocalProcess(message, index))
     {
+            processorContext->cond.notify_one();
         return true;
     }
 
@@ -104,6 +109,7 @@ bool MessageSender::Send(
     processorContext->mFallbackHandlers->Handle(message);
     Detail::MessageCreator::Destroy(&processorContext->mMessageCache, message);
 
+            processorContext->cond.notify_one();
     return false;
 }
 

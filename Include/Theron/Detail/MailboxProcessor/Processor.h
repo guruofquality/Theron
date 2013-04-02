@@ -16,7 +16,8 @@
 #include <Theron/Detail/MailboxProcessor/WorkQueue.h>
 #include <Theron/Detail/Threading/Atomic.h>
 #include <Theron/Detail/Threading/SpinLock.h>
-
+#include <boost/thread.hpp>
+#include <iostream>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -106,6 +107,9 @@ public:
         CachingAllocator<32> mMessageCache;                     ///< Per-thread cache of free message memory blocks.
         YieldImplementation mYield;                             ///< Thread yield strategy implementation.
         Atomic::UInt32 mCounters[MAX_COUNTERS];                 ///< Event counters.
+
+        boost::recursive_mutex mutex;
+        boost::condition_variable_any cond;
 
     private:
 

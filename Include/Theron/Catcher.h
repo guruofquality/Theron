@@ -169,6 +169,7 @@ inline void Catcher<MessageType>::Push(const MessageType &message, const Address
     // Push the entry onto the queue, locking for thread-safety.
     mSpinLock.Lock();
     mQueue.Push(entry);
+    std::cout << __FILE__ << ":" << __LINE__ << std::endl;
     mSpinLock.Unlock();
 }
 
