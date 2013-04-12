@@ -6,9 +6,9 @@
 #include <Theron/Defines.h>
 
 
-#ifdef THERON_MSVC
+#ifdef _MSC_VER
 #pragma warning(push,0)
-#endif // THERON_MSVC
+#endif // _MSC_VER
 
 #if THERON_WINDOWS
 
@@ -32,9 +32,9 @@
 
 #endif
 
-#ifdef THERON_MSVC
+#ifdef _MSC_VER
 #pragma warning(pop)
-#endif // THERON_MSVC
+#endif // _MSC_VER
 
 
 namespace Theron

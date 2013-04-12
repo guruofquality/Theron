@@ -7,9 +7,9 @@
 
 #include <Theron/Detail/Threading/Mutex.h>
 
-#ifdef THERON_MSVC
+#ifdef _MSC_VER
 #pragma warning(push,0)
-#endif // THERON_MSVC
+#endif // _MSC_VER
 
 #if THERON_WINDOWS
 #elif THERON_BOOST
@@ -31,9 +31,9 @@
 
 #endif
 
-#ifdef THERON_MSVC
+#ifdef _MSC_VER
 #pragma warning(pop)
-#endif // THERON_MSVC
+#endif // _MSC_VER
 
 
 namespace Theron
