@@ -77,6 +77,7 @@ void BlockingScheduler::Push(Mailbox *const mailbox, const bool localQueue)
         Lock lock(mSharedWorkQueueCondition->GetMutex());
 
         mSharedWorkQueue->Push(mailbox);
+        lock.Unlock();
         mSharedWorkQueueCondition->Pulse();
     }
 }
