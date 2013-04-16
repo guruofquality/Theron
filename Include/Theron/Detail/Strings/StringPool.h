@@ -73,8 +73,8 @@ private:
         inline explicit Entry(const char *const str) : mValue(0)
         {
             IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
-            const uint32_t length(static_cast<uint32_t>(strlen(str)));
-            const uint32_t roundedLength(THERON_ROUNDUP(length + 1, 4));
+            const uint32_t length(static_cast<uint32_t>(strlen(str))+1);
+            const uint32_t roundedLength(THERON_ROUNDUP(length, 4));
 
             mValue = reinterpret_cast<char *>(allocator->Allocate(roundedLength));
 

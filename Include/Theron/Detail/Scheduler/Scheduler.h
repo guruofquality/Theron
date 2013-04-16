@@ -103,8 +103,8 @@ public:
 private:
 
     typedef typename QueueType::ContextType QueueContext;
-    typedef ThreadPool<QueueType, WorkerContext, MailboxProcessor> ThreadPool;
-    typedef typename ThreadPool::ThreadContext ThreadContext;
+    typedef ThreadPool<QueueType, WorkerContext, MailboxProcessor> SchedThreadPool;
+    typedef typename SchedThreadPool::ThreadContext ThreadContext;
     typedef List<ThreadContext> ContextList;
 
     Scheduler(const Scheduler &other);
@@ -322,7 +322,7 @@ inline bool Scheduler<QueueType>::QueuesEmpty() const
     mThreadContextLock.Lock();
     
     // Check the worker thread queue contexts.
-    ContextList::Iterator contexts(mThreadContexts.GetIterator());
+    typename ContextList::Iterator contexts(mThreadContexts.GetIterator());
     while (contexts.Next())
     {
         ThreadContext *const threadContext(contexts.Get());
@@ -345,7 +345,7 @@ inline void Scheduler<QueueType>::ResetCounters() const
     mThreadContextLock.Lock();
 
     // Reset the counters in all thread contexts.
-    ContextList::Iterator contexts(mThreadContexts.GetIterator());
+    typename ContextList::Iterator contexts(mThreadContexts.GetIterator());
     while (contexts.Next())
     {
         ThreadContext *const threadContext(contexts.Get());
@@ -367,7 +367,7 @@ inline uint32_t Scheduler<QueueType>::GetCounterValue(const Counter counter) con
     mThreadContextLock.Lock();
 
     // Accumulate the counter values from all thread contexts.
-    ContextList::Iterator contexts(mThreadContexts.GetIterator());
+    typename ContextList::Iterator contexts(mThreadContexts.GetIterator());
     while (contexts.Next())
     {
         ThreadContext *const threadContext(contexts.Get());
@@ -391,11 +391,11 @@ inline uint32_t Scheduler<QueueType>::GetPerThreadCounterValues(
     mThreadContextLock.Lock();
 
     // Read the per-thread counter values into the provided array, skipping non-running contexts.
-    ContextList::Iterator contexts(mThreadContexts.GetIterator());
+    typename ContextList::Iterator contexts(mThreadContexts.GetIterator());
     while (itemCount < maxCounts && contexts.Next())
     {
         ThreadContext *const threadContext(contexts.Get());
-        if (ThreadPool::IsRunning(threadContext))
+        if (SchedThreadPool::IsRunning(threadContext))
         {
             perThreadCounts[itemCount++] = threadContext->mUserContext.mMailboxContext.mCounters[counter].Load();
         }
@@ -426,13 +426,13 @@ inline void Scheduler<QueueType>::ManagerThreadProc()
         mThreadContextLock.Lock();
 
         // Re-start stopped worker threads while the thread count is too low.
-        ContextList::Iterator contexts(mThreadContexts.GetIterator());
+        typename ContextList::Iterator contexts(mThreadContexts.GetIterator());
         while (mThreadCount.Load() < mTargetThreadCount.Load() && contexts.Next())
         {
             ThreadContext *const threadContext(contexts.Get());
-            if (!ThreadPool::IsRunning(threadContext))
+            if (!SchedThreadPool::IsRunning(threadContext))
             {
-                if (!ThreadPool::StartThread(
+                if (!SchedThreadPool::StartThread(
                     threadContext,
                     mNodeMask,
                     mProcessorMask))
@@ -464,13 +464,13 @@ inline void Scheduler<QueueType>::ManagerThreadProc()
             threadContext->mUserContext.mMailboxContext.mQueueContext = &threadContext->mQueueContext;
 
             // Create a worker thread with the created context.
-            if (!ThreadPool::CreateThread(threadContext))
+            if (!SchedThreadPool::CreateThread(threadContext))
             {
                 THERON_FAIL_MSG("Failed to create worker thread");
             }
 
             // Start the thread on the given node and processors.
-            if (!ThreadPool::StartThread(
+            if (!SchedThreadPool::StartThread(
                 threadContext,
                 mNodeMask,
                 mProcessorMask))
@@ -494,14 +494,14 @@ inline void Scheduler<QueueType>::ManagerThreadProc()
         while (mThreadCount.Load() > mTargetThreadCount.Load() && contexts.Next())
         {
             ThreadContext *const threadContext(contexts.Get());
-            if (ThreadPool::IsRunning(threadContext))
+            if (SchedThreadPool::IsRunning(threadContext))
             {
                 // Mark the thread as stopped and wake all the waiting threads.
-                ThreadPool::StopThread(threadContext);
+                SchedThreadPool::StopThread(threadContext);
                 mQueue.WakeAll();
 
                 // Wait for the stopped thread to actually terminate.
-                ThreadPool::JoinThread(threadContext);
+                SchedThreadPool::JoinThread(threadContext);
 
                 mThreadCount.Decrement();
             }
@@ -520,7 +520,7 @@ inline void Scheduler<QueueType>::ManagerThreadProc()
         mThreadContexts.Remove(threadContext);
 
         // Wait for the thread to stop and then destroy it.
-        ThreadPool::DestroyThread(threadContext);
+        SchedThreadPool::DestroyThread(threadContext);
 
         // Destruct and free the per-thread context.
         threadContext->~ThreadContext();
