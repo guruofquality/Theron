@@ -335,7 +335,7 @@ private:
 
 #elif defined(THERON_POSIX)
 
-    // With POSIX threads we emulate atomics using a mutex (ie. slow but works).
+    // With POSIX threads we emulate atomics using a spinlock (ie. slow but works).
     volatile uint32_t mValue;
     mutable pthread_spinlock_t mSpinLock;
 

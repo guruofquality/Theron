@@ -15,7 +15,6 @@ The allocator used within Theron by default.
 #include <Theron/Defines.h>
 #include <Theron/IAllocator.h>
 
-#include <Theron/Detail/Allocators/TrivialAllocator.h>
 #include <Theron/Detail/Threading/SpinLock.h>
 
 
@@ -33,9 +32,7 @@ namespace Theron
 \brief A simple general purpose memory allocator used by default.
 
 This is the allocator implementation used by default within Theron.
-It is a simple wrapper around a lower-level allocator (which is by default
-itself a trivial wrapper around global new and delete). The purpose of DefaultAllocator
-is to extend the lower-level allocator with support for aligned allocations,
+It extends the native C++ new and delete with support for aligned allocations,
 allocation counting, and guardband checking.
 
 The DefaultAllocator is used by Theron for its internal allocations, unless it
@@ -79,24 +76,10 @@ public:
     /**
     \brief Default constructor.
 
-    Constructs a DefaultAllocator around an internally owned Detail::TrivialAllocator.
-    The TrivialAllocator acts as a trivial wrapper around global new and delete. The
+    Constructs a DefaultAllocator around global new and delete. The
     DefaultAllocator adds support for alignment and tracking of allocations.
     */
     inline DefaultAllocator();
-
-    /**
-    \brief Explicit constructor.
-    
-    Constructs a DefaultAllocator around an explicitly provided lower-level allocator.
-    Constructed like this, the DefaultAllocator wraps the provided allocator, adding
-    support for alignment and tracking of allocations.
-
-    \note The provided allocator is expected to always align to at least 4-byte boundaries.
-
-    \param allocator Pointer to an allocator to be wrapped by the constructed DefaultAllocator.
-    */
-    inline explicit DefaultAllocator(IAllocator *const allocator);
 
     /**
     \brief Virtual destructor.
@@ -270,32 +253,10 @@ private:
     uint32_t mAllocations;                          ///< Tracks the number of distinct allocations.
 #endif // THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
 
-    Detail::TrivialAllocator mTrivialAllocator;     ///< Trivial allocator used by default.
-    IAllocator *const mAllocator;                   ///< Pointer to a lower-level allocator wrapped by this allocator.
 };
 
 
-inline DefaultAllocator::DefaultAllocator() :
-  mTrivialAllocator(),
-  mAllocator(&mTrivialAllocator)
-{
-
-#if THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
-    mSpinLock.Lock();
-
-    mBytesAllocated = 0;
-    mPeakAllocated = 0;
-    mAllocations = 0;
-
-    mSpinLock.Unlock();
-#endif // THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
-
-}
-
-
-inline DefaultAllocator::DefaultAllocator(IAllocator *const allocator) :
-  mTrivialAllocator(),
-  mAllocator(allocator)
+inline DefaultAllocator::DefaultAllocator()
 {
 
 #if THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
@@ -378,7 +339,9 @@ inline void DefaultAllocator::Free(void *const memory)
     const uint32_t callerBlockOffset(*offsetField);
     uint8_t *const block(reinterpret_cast<uint8_t *>(callerBlock) - callerBlockOffset);
 
-    delete [] block;
+    // Free the memory block using global delete.
+    THERON_ASSERT(block);
+    delete [] reinterpret_cast<uint8_t *>(block);
 }
 
 
@@ -447,8 +410,11 @@ THERON_FORCEINLINE void *DefaultAllocator::AllocateInline(const SizeType size, c
     const uint32_t postambleSize(numPostFields * sizeof(uint32_t));
     const uint32_t internalSize(preambleSize + blockSize + postambleSize);
 
-    uint32_t *const block = reinterpret_cast<uint32_t *>(mAllocator->Allocate(internalSize));
-    THERON_ASSERT_MSG(THERON_ALIGNED(block, 4), "Wrapped allocator is assumed to always align to 4-byte boundaries");
+    // Allocate the memory block using global new.
+    uint32_t *const block = reinterpret_cast<uint32_t *>(new uint8_t[internalSize]);
+
+    THERON_ASSERT_MSG(internalSize >= 4, "Unexpected request to allocate less than 4 bytes");
+    THERON_ASSERT_MSG(THERON_ALIGNED(block, 4), "Global new is assumed to always align to 4-byte boundaries");
 
     if (block)
     {

@@ -13,7 +13,7 @@ Address object by which messages are addressed.
 #include <Theron/Defines.h>
 
 #include <Theron/Detail/Network/Index.h>
-#include <Theron/Detail/Network/String.h>
+#include <Theron/Detail/Strings/String.h>
 
 
 namespace Theron

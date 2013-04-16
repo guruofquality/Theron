@@ -21,7 +21,7 @@ namespace Detail
 
 
 // This function must not be inlined because it should be generated in the Theron library.
-    // NOTE: This must match the similar code in GenerateInline!
+// NOTE: This must match the similar code in GenerateInline!
 THERON_NOINLINE void BuildDescriptor::GenerateInLibrary(char *const identifier)
 {
     char buffer[16];

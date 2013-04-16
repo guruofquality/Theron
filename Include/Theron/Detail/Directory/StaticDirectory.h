@@ -13,7 +13,7 @@
 
 #include <Theron/Detail/Directory/Directory.h>
 #include <Theron/Detail/Directory/Entry.h>
-#include <Theron/Detail/Threading/SpinLock.h>
+#include <Theron/Detail/Threading/Mutex.h>
 
 
 namespace Theron
@@ -33,12 +33,12 @@ public:
     /**
     Registers an entity and returns its allocated index.
     */
-    static uint32_t Register(Entry::Entity *const entity);
+    inline static uint32_t Register(Entry::Entity *const entity);
 
     /**
     Deregisters a previously registered entity.
     */
-    static void Deregister(const uint32_t index);
+    inline static void Deregister(const uint32_t index);
 
     /**
     Gets a reference to the entry with the given index.
@@ -51,7 +51,7 @@ private:
     typedef Directory<Entry> DirectoryType;
 
     static DirectoryType *smDirectory;          ///< Pointer to the allocated instance.
-    static SpinLock smSpinLock;                 ///< SpinLock object protecting access.
+    static Mutex smMutex;                       ///< Synchronization object protecting access.
     static uint32_t smReferenceCount;           ///< Counts the number of entities registered.
 };
 
@@ -60,16 +60,16 @@ template <class Entity>
 typename StaticDirectory<Entity>::DirectoryType *StaticDirectory<Entity>::smDirectory = 0;
 
 template <class Entity>
-SpinLock StaticDirectory<Entity>::smSpinLock;
+Mutex StaticDirectory<Entity>::smMutex;
 
 template <class Entity>
 uint32_t StaticDirectory<Entity>::smReferenceCount = 0;
 
 
 template <class Entity>
-uint32_t StaticDirectory<Entity>::Register(Entry::Entity *const entity)
+inline uint32_t StaticDirectory<Entity>::Register(Entry::Entity *const entity)
 {
-    smSpinLock.Lock();
+    smMutex.Lock();
 
     // Create the singleton instance if this is the first reference.
     if (smReferenceCount++ == 0)
@@ -98,16 +98,16 @@ uint32_t StaticDirectory<Entity>::Register(Entry::Entity *const entity)
         entry.Unlock();
     }
 
-    smSpinLock.Unlock();
+    smMutex.Unlock();
 
     return index;
 }
 
 
 template <class Entity>
-void StaticDirectory<Entity>::Deregister(const uint32_t index)
+inline void StaticDirectory<Entity>::Deregister(const uint32_t index)
 {
-    smSpinLock.Lock();
+    smMutex.Lock();
 
     THERON_ASSERT(smDirectory);
     THERON_ASSERT(index);
@@ -138,7 +138,7 @@ void StaticDirectory<Entity>::Deregister(const uint32_t index)
         allocator->Free(smDirectory, sizeof(DirectoryType));
     }
 
-    smSpinLock.Unlock();
+    smMutex.Unlock();
 }
 
 

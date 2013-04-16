@@ -38,10 +38,15 @@
 # Alternatively you may wish to copy your built or downloaded libraries to these paths.
 #
 
-BOOST_INCLUDE_PATH = /usr/include/
-BOOST_RELEASE_LIB_PATH = /usr/lib/
-BOOST_DEBUG_LIB_PATH = /usr/lib/debug/usr/lib/
+BOOST_INCLUDE_PATH = /home/amason/boost_1_49_0/
+BOOST_RELEASE_LIB_PATH = /home/amason/boost_1_49_0/stage/lib/
+BOOST_DEBUG_LIB_PATH = /home/amason/boost_1_49_0/stage/lib/
 BOOST_LIB = boost_thread
+
+#BOOST_INCLUDE_PATH = /usr/include/
+#BOOST_RELEASE_LIB_PATH = /usr/lib/
+#BOOST_DEBUG_LIB_PATH = /usr/lib/debug/usr/lib/
+#BOOST_LIB = boost_thread
 
 XS_INCLUDE_PATH = /usr/include/
 XS_RELEASE_LIB_PATH = /usr/lib/
@@ -245,7 +250,6 @@ THERON_HEADERS = \
 	Include/Theron/Detail/Alignment/MessageAlignment.h \
 	Include/Theron/Detail/Allocators/CachingAllocator.h \
 	Include/Theron/Detail/Allocators/Pool.h \
-	Include/Theron/Detail/Allocators/TrivialAllocator.h \
 	Include/Theron/Detail/Containers/List.h \
 	Include/Theron/Detail/Containers/Map.h \
 	Include/Theron/Detail/Containers/Queue.h \
@@ -271,13 +275,14 @@ THERON_HEADERS = \
     Include/Theron/Detail/Handlers/ReceiverHandlerCast.h \
 	Include/Theron/Detail/Legacy/ActorRegistry.h \
 	Include/Theron/Detail/Mailboxes/Mailbox.h \
+	Include/Theron/Detail/Scheduler/BlockingQueue.h \
 	Include/Theron/Detail/Scheduler/IScheduler.h \
 	Include/Theron/Detail/Scheduler/MailboxContext.h \
 	Include/Theron/Detail/Scheduler/MailboxProcessor.h \
-	Include/Theron/Detail/Scheduler/BlockingScheduler.h \
+	Include/Theron/Detail/Scheduler/NonBlockingQueue.h \
+	Include/Theron/Detail/Scheduler/Scheduler.h \
 	Include/Theron/Detail/Scheduler/ThreadPool.h \
-	Include/Theron/Detail/Scheduler/WorkItem.h \
-	Include/Theron/Detail/Scheduler/WorkQueue.h \
+	Include/Theron/Detail/Scheduler/WorkerContext.h \
 	Include/Theron/Detail/Scheduler/YieldImplementation.h \
 	Include/Theron/Detail/Scheduler/YieldPolicy.h \
 	Include/Theron/Detail/Messages/IMessage.h \
@@ -293,7 +298,8 @@ THERON_HEADERS = \
 	Include/Theron/Detail/Network/NameGenerator.h \
 	Include/Theron/Detail/Network/NameMap.h \
 	Include/Theron/Detail/Network/NetworkMessage.h \
-	Include/Theron/Detail/Network/String.h \
+	Include/Theron/Detail/Strings/String.h \
+	Include/Theron/Detail/Strings/StringPool.h \
 	Include/Theron/Detail/Threading/Atomic.h \
 	Include/Theron/Detail/Threading/Condition.h \
 	Include/Theron/Detail/Threading/Lock.h \
@@ -330,7 +336,6 @@ THERON_SOURCES = \
 	Theron/ActorRef.cpp \
 	Theron/ActorRegistry.cpp \
 	Theron/AllocatorManager.cpp \
-	Theron/BlockingScheduler.cpp \
 	Theron/BuildDescriptor.cpp \
 	Theron/DefaultHandlerCollection.cpp \
 	Theron/EndPoint.cpp \
@@ -339,8 +344,8 @@ THERON_SOURCES = \
 	Theron/HandlerCollection.cpp \
 	Theron/MailboxProcessor.cpp \
 	Theron/MessageSender.cpp \
-	Theron/NonBlockingScheduler.cpp \
 	Theron/Receiver.cpp \
+	Theron/StringPool.cpp
 	Theron/YieldPolicy.cpp
 
 THERON_OBJECTS = \
@@ -348,7 +353,6 @@ THERON_OBJECTS = \
 	${BUILD}/ActorRef.o \
 	${BUILD}/ActorRegistry.o \
 	${BUILD}/AllocatorManager.o \
-	${BUILD}/BlockingScheduler.o \
 	${BUILD}/BuildDescriptor.o \
 	${BUILD}/DefaultHandlerCollection.o \
 	${BUILD}/EndPoint.o \
@@ -357,8 +361,8 @@ THERON_OBJECTS = \
 	${BUILD}/HandlerCollection.o \
 	${BUILD}/MailboxProcessor.o \
 	${BUILD}/MessageSender.o \
-	${BUILD}/NonBlockingScheduler.o \
 	${BUILD}/Receiver.o \
+	${BUILD}/StringPool.o \
 	${BUILD}/YieldPolicy.o
 
 $(THERON_LIB): $(THERON_OBJECTS)
@@ -375,9 +379,6 @@ ${BUILD}/ActorRegistry.o: Theron/ActorRegistry.cpp ${THERON_HEADERS}
 
 ${BUILD}/AllocatorManager.o: Theron/AllocatorManager.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/AllocatorManager.cpp -o ${BUILD}/AllocatorManager.o ${INCLUDE_FLAGS}
-
-${BUILD}/BlockingScheduler.o: Theron/BlockingScheduler.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Theron/BlockingScheduler.cpp -o ${BUILD}/BlockingScheduler.o ${INCLUDE_FLAGS}
 
 ${BUILD}/BuildDescriptor.o: Theron/BuildDescriptor.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/BuildDescriptor.cpp -o ${BUILD}/BuildDescriptor.o ${INCLUDE_FLAGS}
@@ -403,11 +404,11 @@ ${BUILD}/MailboxProcessor.o: Theron/MailboxProcessor.cpp ${THERON_HEADERS}
 ${BUILD}/MessageSender.o: Theron/MessageSender.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/MessageSender.cpp -o ${BUILD}/MessageSender.o ${INCLUDE_FLAGS}
 
-${BUILD}/NonBlockingScheduler.o: Theron/NonBlockingScheduler.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Theron/NonBlockingScheduler.cpp -o ${BUILD}/NonBlockingScheduler.o ${INCLUDE_FLAGS}
-
 ${BUILD}/Receiver.o: Theron/Receiver.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/Receiver.cpp -o ${BUILD}/Receiver.o ${INCLUDE_FLAGS}
+
+${BUILD}/StringPool.o: Theron/StringPool.cpp ${THERON_HEADERS}
+	$(CC) $(CFLAGS) Theron/StringPool.cpp -o ${BUILD}/StringPool.o ${INCLUDE_FLAGS}
 
 ${BUILD}/YieldPolicy.o: Theron/YieldPolicy.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/YieldPolicy.cpp -o ${BUILD}/YieldPolicy.o ${INCLUDE_FLAGS}

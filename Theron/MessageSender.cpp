@@ -12,11 +12,10 @@
 #include <Theron/Framework.h>
 
 #include <Theron/Detail/Directory/StaticDirectory.h>
-#include <Theron/Detail/Scheduler/NonBlockingScheduler.h>
 #include <Theron/Detail/Messages/MessageCreator.h>
 #include <Theron/Detail/Messages/MessageSender.h>
 #include <Theron/Detail/Network/Index.h>
-#include <Theron/Detail/Network/String.h>
+#include <Theron/Detail/Strings/String.h>
 
 
 namespace Theron
@@ -72,7 +71,7 @@ bool MessageSender::Send(
 
         if (schedule)
         {
-            mailboxContext->mScheduler->Push(&mailbox, localQueue);
+            mailboxContext->mScheduler->Schedule(mailboxContext->mQueueContext, &mailbox, localQueue);
         }
 
         mailbox.Unlock();
@@ -89,7 +88,7 @@ bool MessageSender::Send(
 
     // Destroy the undelivered message.
     mailboxContext->mFallbackHandlers->Handle(message);
-    Detail::MessageCreator::Destroy(&mailboxContext->mMessageCache, message);
+    Detail::MessageCreator::Destroy(mailboxContext->mMessageAllocator, message);
 
     return false;
 }

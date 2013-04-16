@@ -24,7 +24,6 @@ Framework that hosts and executes actors.
 
 #include <Theron/Detail/Alignment/ActorAlignment.h>
 #include <Theron/Detail/Allocators/CachingAllocator.h>
-#include <Theron/Detail/Containers/List.h>
 #include <Theron/Detail/Debug/BuildDescriptor.h>
 #include <Theron/Detail/Directory/Directory.h>
 #include <Theron/Detail/Directory/Entry.h>
@@ -36,13 +35,10 @@ Framework that hosts and executes actors.
 #include <Theron/Detail/Messages/MessageSender.h>
 #include <Theron/Detail/Scheduler/MailboxContext.h>
 #include <Theron/Detail/Scheduler/IScheduler.h>
-#include <Theron/Detail/Scheduler/ThreadPool.h>
-#include <Theron/Detail/Scheduler/WorkQueue.h>
-#include <Theron/Detail/Network/String.h>
+#include <Theron/Detail/Strings/String.h>
+#include <Theron/Detail/Strings/StringPool.h>
 #include <Theron/Detail/Threading/Atomic.h>
-#include <Theron/Detail/Threading/Condition.h>
 #include <Theron/Detail/Threading/SpinLock.h>
-#include <Theron/Detail/Threading/Thread.h>
 
 
 #ifdef _MSC_VER
@@ -206,7 +202,7 @@ public:
             const uint32_t threadCount = 16,
             const uint32_t nodeMask = 0x1,
             const uint32_t processorMask = 0xFFFFFFFF,
-            const YieldStrategy yieldStrategy = YIELD_STRATEGY_POLITE) :
+            const YieldStrategy yieldStrategy = YIELD_STRATEGY_BLOCKING) :
           mThreadCount(threadCount),
           mNodeMask(nodeMask),
           mProcessorMask(processorMask),
@@ -425,7 +421,7 @@ public:
 
     \see SetMinThreads
     */
-    void SetMaxThreads(const uint32_t count);
+    inline void SetMaxThreads(const uint32_t count);
 
     /**
     \brief Specifies a minimum limit on the number of worker threads enabled in this framework.
@@ -453,7 +449,7 @@ public:
 
     \see SetMaxThreads
     */
-    void SetMinThreads(const uint32_t count);
+    inline void SetMinThreads(const uint32_t count);
 
     /**
     \brief Returns the current maximum limit on the number of worker threads in this framework.
@@ -469,7 +465,7 @@ public:
 
     \see GetMinThreads
     */
-    uint32_t GetMaxThreads() const;
+    inline uint32_t GetMaxThreads() const;
 
     /**
     \brief Returns the current minimum limit on the number of worker threads in this framework.
@@ -481,7 +477,7 @@ public:
 
     \see GetMaxThreads
     */
-    uint32_t GetMinThreads() const;
+    inline uint32_t GetMinThreads() const;
 
     /**
     \brief Gets the actual number of worker threads currently in this framework.
@@ -498,7 +494,7 @@ public:
 
     \see GetPeakThreads
     */
-    uint32_t GetNumThreads() const;
+    inline uint32_t GetNumThreads() const;
 
     /**
     \brief Gets the peak number of worker threads ever active in the framework.
@@ -512,7 +508,7 @@ public:
     multiple frameworks are created then each has its own threadpool with an independently
     managed thread count.
     */
-    uint32_t GetPeakThreads() const;
+    inline uint32_t GetPeakThreads() const;
 
     /**
     \brief Resets the \ref Counter "internal event counters".
@@ -520,7 +516,7 @@ public:
     \see Counter
     \see GetCounterValue
     */
-    void ResetCounters() const;
+    inline void ResetCounters() const;
 
     /**
     \brief Gets the current value of a specified event counter.
@@ -534,7 +530,7 @@ public:
     \see GetPerThreadCounterValues
     \see ResetCounters
     */
-    uint32_t GetCounterValue(const Counter counter) const;
+    inline uint32_t GetCounterValue(const Counter counter) const;
 
     /**
     \brief Gets the current per-thread values of a specified event counter.
@@ -550,7 +546,7 @@ public:
     \see GetCounterValue
     \see ResetCounters
     */
-    uint32_t GetPerThreadCounterValues(const Counter counter, uint32_t *const perThreadCounts, const uint32_t maxCounts) const;
+    inline uint32_t GetPerThreadCounterValues(const Counter counter, uint32_t *const perThreadCounts, const uint32_t maxCounts) const;
 
     /**
     \brief Sets the fallback message handler executed for unhandled messages.
@@ -788,8 +784,7 @@ public:
 
 private:
 
-    typedef Detail::List<Detail::ThreadPool::ThreadContext> ContextList;
-    typedef Detail::CachingAllocator<32, Detail::SpinLock> MessageCache;
+    typedef Detail::CachingAllocator<8, 16, Detail::SpinLock> MessageCache;
 
     Framework(const Framework &other);
     Framework &operator=(const Framework &other);
@@ -806,34 +801,14 @@ private:
     void Release();
 
     /**
-    Creates a new work queue.
+    Allocates and initializes an owned scheduler object.
     */
-    Detail::WorkQueue *CreateWorkQueue();
+    Detail::IScheduler *CreateScheduler();
 
     /**
-    Destroys a previously created work queue.
+    Destroys a previously created scheduler object.
     */
-    void DestroyWorkQueue(Detail::WorkQueue *const workQueue);
-
-    /**
-    Creates a new mailbox context.
-    */
-    Detail::MailboxContext *CreateMailboxContext();
-
-    /**
-    Destroys a previously created mailbox context.
-    */
-    void DestroyMailboxContext(Detail::MailboxContext *const mailboxContext);
-
-    /**
-    Creates a new scheduler context.
-    */
-    Detail::IScheduler *CreateSchedulerContext();
-
-    /**
-    Destroys a previously created scheduler context.
-    */
-    void DestroySchedulerContext(Detail::IScheduler *const scheduler);
+    void DestroyScheduler(Detail::IScheduler *const scheduler);
 
     /**
     Gets the non-zero index of this framework, unique within the local process.
@@ -858,21 +833,11 @@ private:
         const Address &address);
 
     /**
-    Checks whether all work queues in the framework are empty.
+    Returns a pointer to the shared mailbox context not associated with a specific worker thread.
     */
-    bool QueuesEmpty() const;
+    inline Detail::MailboxContext *GetSharedMailboxContext();
 
-    /**
-    Static entry point function for the manager thread.
-    This is a static function that calls the real entry point member function.
-    */
-    static void ManagerThreadEntryPoint(void *const context);
-
-    /**
-    Entry point member function for the manager thread.
-    */
-    void ManagerThreadProc();
-
+    Detail::StringPool::Ref mStringPoolRef;                 ///< Ensures that the StringPool is created.
     EndPoint *const mEndPoint;                              ///< Pointer to the network endpoint, if any, to which this framework is tied.
     const Parameters mParams;                               ///< Copy of parameters struct provided on construction.
     uint32_t mIndex;                                        ///< Non-zero index of this framework, unique within the local process.
@@ -880,23 +845,13 @@ private:
     Detail::Directory<Detail::Mailbox> mMailboxes;          ///< Per-framework mailbox array.
     Detail::FallbackHandlerCollection mFallbackHandlers;    ///< Registered message handlers run for unhandled messages.
     Detail::DefaultFallbackHandler mDefaultFallbackHandler; ///< Default handler for unhandled messages.
-    mutable Detail::SpinLock mSharedWorkQueueSpinLock;      ///< Protects the work queue shared by the worker threads.
-    mutable Detail::Condition mSharedWorkQueueCondition;    ///< Signals threads waiting for work on the shared work queue.
     MessageCache mMessageAllocator;                         ///< Thread-safe per-framework cache of message memory blocks.
-    Detail::WorkQueue *mSharedWorkQueue;                    ///< Pointer to owned per-framework work queue.
-    Detail::MailboxContext *mSharedMailboxContext;          ///< Pointer to owned per-framework mailbox context.
-    Detail::IScheduler *mSharedScheduler;                   ///< Pointer to owned per-framework scheduler context.
-    Detail::Thread mManagerThread;                          ///< Dynamically creates and destroys the worker threads.
-    bool mRunning;                                          ///< Flag used to terminate the manager thread.
-    Detail::Atomic::UInt32 mTargetThreadCount;              ///< Desired number of worker threads.
-    Detail::Atomic::UInt32 mPeakThreadCount;                ///< Peak number of worker threads.
-    Detail::Atomic::UInt32 mThreadCount;                    ///< Actual number of worker threads.
-    ContextList mThreadContexts;                            ///< List of worker thread context objects.
-    mutable Detail::SpinLock mThreadContextLock;            ///< Protects the thread context list.
+    Detail::IScheduler *mScheduler;                         ///< Pointer to owned scheduler implementation.
 };
 
 
 inline Framework::Framework(const uint32_t threadCount) :
+  mStringPoolRef(),
   mEndPoint(0),
   mParams(threadCount),
   mIndex(0),
@@ -904,19 +859,8 @@ inline Framework::Framework(const uint32_t threadCount) :
   mMailboxes(),
   mFallbackHandlers(),
   mDefaultFallbackHandler(),
-  mSharedWorkQueueSpinLock(),
-  mSharedWorkQueueCondition(),
   mMessageAllocator(AllocatorManager::Instance().GetAllocator()),
-  mSharedWorkQueue(0),
-  mSharedMailboxContext(0),
-  mSharedScheduler(0),
-  mManagerThread(),
-  mRunning(false),
-  mTargetThreadCount(0),
-  mPeakThreadCount(0),
-  mThreadCount(0),
-  mThreadContexts(),
-  mThreadContextLock()
+  mScheduler(0)
 {
     Detail::BuildDescriptor::Check();
 
@@ -925,6 +869,7 @@ inline Framework::Framework(const uint32_t threadCount) :
 
 
 inline Framework::Framework(const Parameters &params) :
+  mStringPoolRef(),
   mEndPoint(0),
   mParams(params),
   mIndex(0),
@@ -932,19 +877,8 @@ inline Framework::Framework(const Parameters &params) :
   mMailboxes(),
   mFallbackHandlers(),
   mDefaultFallbackHandler(),
-  mSharedWorkQueueSpinLock(),
-  mSharedWorkQueueCondition(),
   mMessageAllocator(AllocatorManager::Instance().GetAllocator()),
-  mSharedWorkQueue(0),
-  mSharedMailboxContext(0),
-  mSharedScheduler(0),
-  mManagerThread(),
-  mRunning(false),
-  mTargetThreadCount(0),
-  mPeakThreadCount(0),
-  mThreadCount(0),
-  mThreadContexts(),
-  mThreadContextLock()
+  mScheduler(0)
 {
     Detail::BuildDescriptor::Check();
 
@@ -953,6 +887,7 @@ inline Framework::Framework(const Parameters &params) :
 
 
 inline Framework::Framework(EndPoint &endPoint, const char *const name, const Parameters &params) :
+  mStringPoolRef(),
   mEndPoint(&endPoint),
   mParams(params),
   mIndex(0),
@@ -960,19 +895,8 @@ inline Framework::Framework(EndPoint &endPoint, const char *const name, const Pa
   mMailboxes(),
   mFallbackHandlers(),
   mDefaultFallbackHandler(),
-  mSharedWorkQueueSpinLock(),
-  mSharedWorkQueueCondition(),
   mMessageAllocator(AllocatorManager::Instance().GetAllocator()),
-  mSharedWorkQueue(0),
-  mSharedMailboxContext(0),
-  mSharedScheduler(0),
-  mManagerThread(),
-  mRunning(false),
-  mTargetThreadCount(0),
-  mPeakThreadCount(0),
-  mThreadCount(0),
-  mThreadContexts(),
-  mThreadContextLock()
+  mScheduler(0)
 {
     Detail::BuildDescriptor::Check();
 
@@ -1003,10 +927,67 @@ THERON_FORCEINLINE bool Framework::Send(const ValueType &value, const Address &f
     // When messages are sent using Framework::Send there's no obvious worker thread.
     return Detail::MessageSender::Send(
         mEndPoint,
-        mSharedMailboxContext,
+        mScheduler->GetSharedMailboxContext(),
         mIndex,
         message,
         address);
+}
+
+
+THERON_FORCEINLINE void Framework::SetMaxThreads(const uint32_t count)
+{
+    mScheduler->SetMaxThreads(count);
+}
+
+
+THERON_FORCEINLINE void Framework::SetMinThreads(const uint32_t count)
+{
+    mScheduler->SetMinThreads(count);
+}
+
+
+THERON_FORCEINLINE uint32_t Framework::GetMaxThreads() const
+{
+    return mScheduler->GetMaxThreads();
+}
+
+
+THERON_FORCEINLINE uint32_t Framework::GetMinThreads() const
+{
+    return mScheduler->GetMinThreads();
+}
+
+
+THERON_FORCEINLINE uint32_t Framework::GetNumThreads() const
+{
+    return mScheduler->GetNumThreads();
+}
+
+
+THERON_FORCEINLINE uint32_t Framework::GetPeakThreads() const
+{
+    return mScheduler->GetPeakThreads();
+}
+
+
+THERON_FORCEINLINE void Framework::ResetCounters() const
+{
+    mScheduler->ResetCounters();
+}
+
+
+THERON_FORCEINLINE uint32_t Framework::GetCounterValue(const Counter counter) const
+{
+    return mScheduler->GetCounterValue(counter);
+}
+
+
+THERON_FORCEINLINE uint32_t Framework::GetPerThreadCounterValues(
+    const Counter counter,
+    uint32_t *const perThreadCounts,
+    const uint32_t maxCounts) const
+{
+    return mScheduler->GetPerThreadCounterValues(counter, perThreadCounts, maxCounts);
 }
 
 
@@ -1018,10 +999,16 @@ THERON_FORCEINLINE bool Framework::FrameworkReceive(
     // We use our own local context here because we're receiving the message.
     return Detail::MessageSender::Send(
         mEndPoint,
-        mSharedMailboxContext,
+        mScheduler->GetSharedMailboxContext(),
         mIndex,
         message,
         address);
+}
+
+
+THERON_FORCEINLINE Detail::MailboxContext *Framework::GetSharedMailboxContext()
+{
+    return mScheduler->GetSharedMailboxContext();
 }
 
 

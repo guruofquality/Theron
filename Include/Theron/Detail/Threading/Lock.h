@@ -7,9 +7,9 @@
 
 #include <Theron/Detail/Threading/Mutex.h>
 
-#ifdef _MSC_VER
+#if THERON_MSVC
 #pragma warning(push,0)
-#endif // _MSC_VER
+#endif // THERON_MSVC
 
 #if THERON_WINDOWS
 #elif THERON_BOOST
@@ -31,9 +31,9 @@
 
 #endif
 
-#ifdef _MSC_VER
+#if THERON_MSVC
 #pragma warning(pop)
-#endif // _MSC_VER
+#endif // THERON_MSVC
 
 
 namespace Theron
@@ -59,7 +59,7 @@ public:
 #if THERON_WINDOWS
       mMutex(mutex)
 #elif THERON_BOOST
-      mLock(mutex.GetMutex())
+      mLock(mutex.mMutex)
 #elif THERON_CPP11
 #elif defined(THERON_POSIX)
 #endif
@@ -139,18 +139,6 @@ private:
 
     Lock(const Lock &other);
     Lock &operator=(const Lock &other);
-
-#if THERON_BOOST
-
-    /**
-    Returns a reference to the wrapped boost::unique_lock.
-    */
-    THERON_FORCEINLINE boost::unique_lock<boost::mutex> &GetLock()
-    {
-        return mLock;
-    }
-
-#endif
 
 #if THERON_WINDOWS
 

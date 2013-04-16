@@ -11,10 +11,6 @@
 #include <Theron/Defines.h>
 
 #include <Theron/Detail/Containers/List.h>
-#include <Theron/Detail/Mailboxes/Mailbox.h>
-#include <Theron/Detail/Scheduler/IScheduler.h>
-#include <Theron/Detail/Scheduler/MailboxContext.h>
-#include <Theron/Detail/Scheduler/MailboxProcessor.h>
 #include <Theron/Detail/Threading/Thread.h>
 #include <Theron/Detail/Threading/Utils.h>
 
@@ -28,36 +24,37 @@ namespace Detail
 /**
 A pool of worker threads that process a queue of work mailboxes.
 */
+template <class QueueType, class ContextType, class ProcessorType>
 class ThreadPool
 {
 public:
+
+    typedef typename QueueType::ItemType ItemType;
+    typedef typename QueueType::ContextType QueueContext;
 
     /**
     User-allocated per-thread context structure.
     The client must allocate one of these for each thread it creates.
     The context structure derives from List<ThreadContext>::Node so can be stored in lists.
     */
-    struct ThreadContext : public List<ThreadContext>::Node
+    class ThreadContext : public List<ThreadContext>::Node
     {
     public:
 
         /**
         Constructor. Creates a ThreadContext wrapping a pointer to a per-thread scheduler object.
         */
-        inline explicit ThreadContext(MailboxContext *const mailboxContext, IScheduler *const scheduler) :
-          mMailboxContext(mailboxContext),
-          mScheduler(scheduler),
+        inline explicit ThreadContext(QueueType *const queue) :
           mNodeMask(0),
           mProcessorMask(0),
           mRunning(false),
           mStarted(false),
-          mThread(0)
+          mThread(0),
+          mQueue(queue),
+          mQueueContext(),
+          mUserContext()
         {
         }
-
-        // Public
-        MailboxContext *mMailboxContext;        ///< Pointer to non-owned thread-specific mailbox processing context.
-        IScheduler *mScheduler;                 ///< Pointer to non-owned thread-specific mailbox scheduler.
 
         // Internal
         uint32_t mNodeMask;                     ///< Bit-field NUMA node affinity mask for the created thread.
@@ -65,6 +62,16 @@ public:
         bool mRunning;                          ///< Indicates whether the thread is running; used to stop running threads.
         bool mStarted;                          ///< Indicates whether the thread has started.
         Thread *mThread;                        ///< Pointer to the thread object.
+
+        // Client
+        QueueType *const mQueue;                ///< Pointer to the queue serviced by the worker threads.
+        QueueContext mQueueContext;             ///< Queue context associated with the worker thread.
+        ContextType mUserContext;               ///< User context data associated with the worker thread.
+
+    private:
+
+        ThreadContext(const ThreadContext &other);
+        ThreadContext &operator=(const ThreadContext &other);
     };
 
     /**
@@ -96,7 +103,7 @@ public:
     inline static bool JoinThread(ThreadContext *const threadContext);
 
     /**
-    Destroys the given thread, which must have been stopped with StopThread.
+    Destroys the given thread, which must have been stopped with StopThread and JoinThread.
     */
     inline static bool DestroyThread(ThreadContext *const threadContext);
 
@@ -124,7 +131,8 @@ private:
 };
 
 
-inline bool ThreadPool::CreateThread(ThreadContext *const threadContext)
+template <class QueueType, class ContextType, class ProcessorType>
+inline bool ThreadPool<QueueType, ContextType, ProcessorType>::CreateThread(ThreadContext *const threadContext)
 {
     // Allocate a new thread, aligning the memory to a cache-line boundary to reduce false-sharing of cache-lines.
     void *const threadMemory = AllocatorManager::Instance().GetAllocator()->AllocateAligned(sizeof(Thread), THERON_CACHELINE_ALIGNMENT);
@@ -145,7 +153,8 @@ inline bool ThreadPool::CreateThread(ThreadContext *const threadContext)
 }
 
 
-inline bool ThreadPool::StartThread(
+template <class QueueType, class ContextType, class ProcessorType>
+inline bool ThreadPool<QueueType, ContextType, ProcessorType>::StartThread(
     ThreadContext *const threadContext,
     const uint32_t nodeMask,
     const uint32_t processorMask)
@@ -165,7 +174,8 @@ inline bool ThreadPool::StartThread(
 }
 
 
-inline bool ThreadPool::StopThread(ThreadContext *const threadContext)
+template <class QueueType, class ContextType, class ProcessorType>
+inline bool ThreadPool<QueueType, ContextType, ProcessorType>::StopThread(ThreadContext *const threadContext)
 {
     THERON_ASSERT(threadContext->mThread);
     THERON_ASSERT(threadContext->mThread->Running());
@@ -178,7 +188,8 @@ inline bool ThreadPool::StopThread(ThreadContext *const threadContext)
 }
 
 
-inline bool ThreadPool::JoinThread(ThreadContext *const threadContext)
+template <class QueueType, class ContextType, class ProcessorType>
+inline bool ThreadPool<QueueType, ContextType, ProcessorType>::JoinThread(ThreadContext *const threadContext)
 {
     THERON_ASSERT(threadContext->mThread);
     THERON_ASSERT(threadContext->mThread->Running());
@@ -190,7 +201,8 @@ inline bool ThreadPool::JoinThread(ThreadContext *const threadContext)
 }
 
 
-inline bool ThreadPool::DestroyThread(ThreadContext *const threadContext)
+template <class QueueType, class ContextType, class ProcessorType>
+inline bool ThreadPool<QueueType, ContextType, ProcessorType>::DestroyThread(ThreadContext *const threadContext)
 {
     THERON_ASSERT(threadContext->mRunning == false);
     THERON_ASSERT(threadContext->mThread);
@@ -207,28 +219,34 @@ inline bool ThreadPool::DestroyThread(ThreadContext *const threadContext)
 }
 
 
-THERON_FORCEINLINE bool ThreadPool::IsRunning(ThreadContext *const threadContext)
+template <class QueueType, class ContextType, class ProcessorType>
+THERON_FORCEINLINE bool ThreadPool<QueueType, ContextType, ProcessorType>::IsRunning(ThreadContext *const threadContext)
 {
     return threadContext->mRunning;
 }
 
 
-THERON_FORCEINLINE bool ThreadPool::IsStarted(ThreadContext *const threadContext)
+template <class QueueType, class ContextType, class ProcessorType>
+THERON_FORCEINLINE bool ThreadPool<QueueType, ContextType, ProcessorType>::IsStarted(ThreadContext *const threadContext)
 {
     return threadContext->mStarted;
 }
 
 
-inline void ThreadPool::ThreadEntryPoint(void *const context)
+template <class QueueType, class ContextType, class ProcessorType>
+inline void ThreadPool<QueueType, ContextType, ProcessorType>::ThreadEntryPoint(void *const context)
 {
     // The static entry point function is provided with a pointer to a context structure.
     // The context structure is specific to this worker thread.
     ThreadContext *const threadContext(reinterpret_cast<ThreadContext *>(context));
+    QueueType *const queue(threadContext->mQueue);
+    QueueContext *const queueContext(&threadContext->mQueueContext);
+    ContextType *const userContext(&threadContext->mUserContext);
 
     // Set the NUMA node and processor affinity for the running thread.
     Utils::SetThreadAffinity(threadContext->mNodeMask, threadContext->mProcessorMask);
 
-    threadContext->mScheduler->Initialize();
+    queue->InitializeWorkerContext(queueContext);
 
     // Mark the thread as started so the caller knows they can start issuing work.
     threadContext->mStarted = true;
@@ -236,14 +254,13 @@ inline void ThreadPool::ThreadEntryPoint(void *const context)
     // Process until told to stop.
     while (threadContext->mRunning)
     {
-        if (Mailbox *const mailbox = threadContext->mScheduler->Pop())
+        if (ItemType *const item = queue->Pop(queueContext))
         {
-            // Non-inlined call.
-            MailboxProcessor::ProcessMailbox(threadContext->mMailboxContext, mailbox);
+            queue->Process<ContextType, ProcessorType>(queueContext, userContext, item);
         }
     }
 
-    threadContext->mScheduler->Teardown();
+    queue->ReleaseWorkerContext(queueContext);
 }
 
 

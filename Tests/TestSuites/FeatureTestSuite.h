@@ -904,9 +904,9 @@ public:
         }
 
         // Check that the undelivered message was handled by the registered fallback handler.
-        Check(fallbackHandler.mValue == 42, "Blind fallback handler failed");
-        Check(fallbackHandler.mSize == sizeof(Theron::uint32_t), "Blind fallback handler failed");
-        Check(fallbackHandler.mAddress == receiver.GetAddress(), "Blind fallback handler failed");
+        Check(fallbackHandler.mValue == 42, "Blind fallback handler collected bad value");
+        Check(fallbackHandler.mSize == sizeof(Theron::uint32_t), "Blind fallback handler collected bad size");
+        Check(fallbackHandler.mAddress == receiver.GetAddress(), "Blind fallback handler collected bad address");
     }
 
     inline static void HandleMessageSentToStaleFrameworkInFunction()

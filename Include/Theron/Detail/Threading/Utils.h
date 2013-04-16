@@ -146,13 +146,9 @@ inline void Utils::Backoff(uint32_t &backoff)
     {
         YieldToLocalThread();
     }
-    else if (backoff < 24)
-    {
-        YieldToAnyThread();
-    }
     else
     {
-        SleepThread(1UL);
+        YieldToAnyThread();
     }
 }
 

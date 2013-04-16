@@ -23,7 +23,6 @@
     <ClCompile Include="ActorRef.cpp" />
     <ClCompile Include="ActorRegistry.cpp" />
     <ClCompile Include="AllocatorManager.cpp" />
-    <ClCompile Include="BlockingScheduler.cpp" />
     <ClCompile Include="BuildDescriptor.cpp" />
     <ClCompile Include="DefaultHandlerCollection.cpp" />
     <ClCompile Include="EndPoint.cpp" />
@@ -32,8 +31,8 @@
     <ClCompile Include="HandlerCollection.cpp" />
     <ClCompile Include="MailboxProcessor.cpp" />
     <ClCompile Include="MessageSender.cpp" />
-    <ClCompile Include="NonBlockingScheduler.cpp" />
     <ClCompile Include="Receiver.cpp" />
+    <ClCompile Include="StringPool.cpp" />
     <ClCompile Include="YieldPolicy.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -52,7 +51,6 @@
     <ClInclude Include="..\Include\Theron\Detail\Alignment\MessageAlignment.h" />
     <ClInclude Include="..\Include\Theron\Detail\Allocators\CachingAllocator.h" />
     <ClInclude Include="..\Include\Theron\Detail\Allocators\Pool.h" />
-    <ClInclude Include="..\Include\Theron\Detail\Allocators\TrivialAllocator.h" />
     <ClInclude Include="..\Include\Theron\Detail\Containers\List.h" />
     <ClInclude Include="..\Include\Theron\Detail\Containers\Map.h" />
     <ClInclude Include="..\Include\Theron\Detail\Containers\Queue.h" />
@@ -91,17 +89,18 @@
     <ClInclude Include="..\Include\Theron\Detail\Network\NameGenerator.h" />
     <ClInclude Include="..\Include\Theron\Detail\Network\NameMap.h" />
     <ClInclude Include="..\Include\Theron\Detail\Network\NetworkMessage.h" />
-    <ClInclude Include="..\Include\Theron\Detail\Network\String.h" />
-    <ClInclude Include="..\Include\Theron\Detail\Scheduler\BlockingScheduler.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Scheduler\BlockingQueue.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\IScheduler.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\MailboxContext.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\MailboxProcessor.h" />
-    <ClInclude Include="..\Include\Theron\Detail\Scheduler\NonBlockingScheduler.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Scheduler\NonBlockingQueue.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Scheduler\Scheduler.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\ThreadPool.h" />
-    <ClInclude Include="..\Include\Theron\Detail\Scheduler\WorkItem.h" />
-    <ClInclude Include="..\Include\Theron\Detail\Scheduler\WorkQueue.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Scheduler\WorkerContext.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\YieldImplementation.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\YieldPolicy.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Strings\String.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Strings\StringPool.h" />
     <ClInclude Include="..\Include\Theron\Detail\Threading\Atomic.h" />
     <ClInclude Include="..\Include\Theron\Detail\Threading\Condition.h" />
     <ClInclude Include="..\Include\Theron\Detail\Threading\Lock.h" />

@@ -17,7 +17,7 @@
 #include <Theron/Detail/Containers/Map.h>
 #include <Theron/Detail/Network/Hash.h>
 #include <Theron/Detail/Network/Index.h>
-#include <Theron/Detail/Network/String.h>
+#include <Theron/Detail/Strings/String.h>
 #include <Theron/Detail/Threading/SpinLock.h>
 
 

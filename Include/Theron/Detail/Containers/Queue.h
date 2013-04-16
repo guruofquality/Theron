@@ -22,8 +22,13 @@ namespace Detail
 
 
 /**
-Class template describing a generic queue.
-\note The item type is the node type and is expected to derive from Node.
+A fast unbounded queue.
+
+The queue is unbounded and internally is a doubly-linked, intrusive linked list.
+The head and tail are stored as 'dummy' nodes to simplify insertion and removal.
+The head and tail are separate nodes to separate the concerns of pushers and poppers.
+
+\note The queue is intrusive and the item type is expected to derive from Queue<ItemType>::Node.
 */
 template <class ItemType>
 class Queue
@@ -32,13 +37,23 @@ public:
 
     /**
     Baseclass that adds link members to node types that derive from it.
+    In order to be used with the queue, item classes must derive from Node.
     */
     class Node
     {
     public:
 
-        Node *mFrwd;                ///< Pointer to the next item in the circular list.
-        Node *mBack;                ///< Pointer to the previous item in the circular list.
+        inline Node() : mNext(0), mPrev(0)
+        {
+        }
+
+        Node *mNext;        ///< Pointer to the next item in the list.
+        Node *mPrev;        ///< Pointer to the previous item in the list.
+
+    private:
+
+        Node(const Node &other);
+        Node &operator=(const Node &other);
     };
 
     /**
@@ -53,7 +68,7 @@ public:
 
     /**
     Returns true if the queue contains no items.
-    Call this before calling Pop.
+    Call this before calling Pop or Front.
     */
     inline bool Empty() const;
 
@@ -64,13 +79,13 @@ public:
 
     /**
     Peeks at the item at the front of the queue without removing it.
-    \note Returns a null pointer if the queue is empty.
+    \note It's illegal to call Front when the queue is empty.
     */
     inline ItemType *Front() const;
 
     /**
     Removes and returns the item at the front of the queue.
-    \note Returns a null pointer if the queue is empty.
+    \note It's illegal to call Pop when the queue is empty.
     */
     inline ItemType *Pop();
 
@@ -79,15 +94,19 @@ private:
     Queue(const Queue &other);
     Queue &operator=(const Queue &other);
 
-    Node mHead;                 ///< Dummy node that is always the head and tail of the circular list.
+    Node mHead;     ///< Dummy node that is always the head of the list.
+    Node mTail;     ///< Dummy node that is always the tail of the list.
 };
 
 
 template <class ItemType>
-THERON_FORCEINLINE Queue<ItemType>::Queue() : mHead()
+THERON_FORCEINLINE Queue<ItemType>::Queue() : mHead(), mTail()
 {
-    mHead.mFrwd = &mHead;
-    mHead.mBack = &mHead;
+    mHead.mNext = 0;
+    mHead.mPrev = &mTail;
+
+    mTail.mNext = &mHead;
+    mTail.mPrev = 0;
 }
 
 
@@ -95,71 +114,66 @@ template <class ItemType>
 THERON_FORCEINLINE Queue<ItemType>::~Queue()
 {
     // If the queue hasn't been emptied by the caller we'll leak the nodes.
-    THERON_ASSERT(mHead.mFrwd == &mHead);
-    THERON_ASSERT(mHead.mBack == &mHead);
+    THERON_ASSERT(mHead.mNext == 0);
+    THERON_ASSERT(mHead.mPrev == &mTail);
+
+    THERON_ASSERT(mTail.mNext == &mHead);
+    THERON_ASSERT(mTail.mPrev == 0);
 }
 
 
 template <class ItemType>
 THERON_FORCEINLINE bool Queue<ItemType>::Empty() const
 {
-    return (mHead.mFrwd == &mHead);
+    return (mHead.mPrev == &mTail);
 }
 
 
 template <class ItemType>
 THERON_FORCEINLINE void Queue<ItemType>::Push(ItemType *const item)
 {
-    THERON_ASSERT(item);
 
 #if THERON_DEBUG
 
     // Check that the pushed item isn't already in the queue.
-    for (Node *node(mHead.mFrwd); node != &mHead; node = node->mFrwd)
+    for (Node *node(mHead.mPrev); node != &mTail; node = node->mPrev)
     {
         THERON_ASSERT(node != item);
     }
 
 #endif
 
-    // Circular doubly-linked list insert at back.
-    item->mFrwd = &mHead;
-    item->mBack = mHead.mBack;
+    // Doubly-linked list insert at back, ie. in front of the dummy tail.
+    item->mPrev = &mTail;
+    item->mNext = mTail.mNext;
 
-    mHead.mBack->mFrwd = item;
-    mHead.mBack = item;
+    mTail.mNext->mPrev = item;
+    mTail.mNext = item;
 }
 
 
 template <class ItemType>
 THERON_FORCEINLINE ItemType *Queue<ItemType>::Front() const
 {
-    // It's legal to call Front when the queue is empty.
-    if (mHead.mFrwd != &mHead)
-    {
-        return static_cast<ItemType *>(mHead.mFrwd);
-    }
-
-    return 0;
+    // It's illegal to call Front when the queue is empty.
+    THERON_ASSERT(mHead.mPrev != &mTail);
+    return static_cast<ItemType *>(mHead.mPrev);
 }
 
 
 template <class ItemType>
 THERON_FORCEINLINE ItemType *Queue<ItemType>::Pop()
 {
-    // It's legal to call Pop when the queue is empty.
-    if (mHead.mFrwd != &mHead)
-    {
-        Node *const item(mHead.mFrwd);
+    Node *const item(mHead.mPrev);
 
-        // Circular doubly-linked list remove from front.
-        item->mFrwd->mBack = &mHead;
-        mHead.mFrwd = item->mFrwd;
+    // It's illegal to call Pop when the queue is empty.
+    THERON_ASSERT(item != &mTail);
 
-        return static_cast<ItemType *>(item);
-    }
+    // Doubly-linked list remove from front, ie. behind the dummy head.
+    item->mPrev->mNext = &mHead;
+    mHead.mPrev = item->mPrev;
 
-    return 0;
+    return static_cast<ItemType *>(item);
 }
 
 

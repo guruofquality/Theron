@@ -6,9 +6,9 @@
 #include <Theron/Defines.h>
 
 
-#ifdef _MSC_VER
+#if THERON_MSVC
 #pragma warning(push,0)
-#endif // _MSC_VER
+#endif // THERON_MSVC
 
 #if THERON_WINDOWS
 
@@ -32,9 +32,9 @@
 
 #endif
 
-#ifdef _MSC_VER
+#if THERON_MSVC
 #pragma warning(pop)
-#endif // _MSC_VER
+#endif // THERON_MSVC
 
 
 namespace Theron
@@ -50,6 +50,7 @@ class Mutex
 {
 public:
 
+    friend class Condition;
     friend class Lock;
 
     /**
@@ -123,18 +124,6 @@ private:
 
     Mutex(const Mutex &other);
     Mutex &operator=(const Mutex &other);
-
-#if THERON_BOOST
-
-    /**
-    Returns a reference to the wrapped boost::mutex object.
-    */
-    THERON_FORCEINLINE boost::mutex &GetMutex()
-    {
-        return mMutex;
-    }
-
-#endif
 
 #if THERON_WINDOWS
 

@@ -7,7 +7,7 @@
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
 
-#include <Theron/Detail/Network/String.h>
+#include <Theron/Detail/Strings/String.h>
 
 
 namespace Theron

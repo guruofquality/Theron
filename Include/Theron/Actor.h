@@ -997,12 +997,12 @@ THERON_FORCEINLINE bool Actor::Send(const ValueType &value, const Address &addre
     Detail::MailboxContext *mailboxContext(mMailboxContext);
     if (mMailboxContext == 0)
     {
-        mailboxContext = mFramework->mSharedMailboxContext;
+        mailboxContext = mFramework->GetSharedMailboxContext();
     }
 
     // Allocate a message. It'll be deleted by the worker thread that handles it.
     Detail::IMessage *const message(Detail::MessageCreator::Create(
-        &mailboxContext->mMessageCache,
+        mailboxContext->mMessageAllocator,
         value,
         mAddress));
 
@@ -1035,12 +1035,12 @@ THERON_FORCEINLINE bool Actor::TailSend(const ValueType &value, const Address &a
     Detail::MailboxContext *mailboxContext(mMailboxContext);
     if (mMailboxContext == 0)
     {
-        mailboxContext = mFramework->mSharedMailboxContext;
+        mailboxContext = mFramework->GetSharedMailboxContext();
     }
 
     // Allocate a message. It'll be deleted by the worker thread that handles it.
     Detail::IMessage *const message(Detail::MessageCreator::Create(
-        &mailboxContext->mMessageCache,
+        mailboxContext->mMessageAllocator,
         value,
         mAddress));
 
@@ -1066,11 +1066,11 @@ THERON_FORCEINLINE bool Actor::Push(const ValueType &value, const Address &from)
 {
     // This method isn't typically called a message handler of this actor, so
     // we need to use the processor context associated with the owning framework.
-    Detail::MailboxContext *const mailboxContext(mFramework->mSharedMailboxContext);
+    Detail::MailboxContext *const mailboxContext(mFramework->GetSharedMailboxContext());
 
     // Allocate a message. It'll be deleted by the worker thread that handles it.
     Detail::IMessage *const message(Detail::MessageCreator::Create(
-        &mailboxContext->mMessageCache,
+        mailboxContext->mMessageAllocator,
         value,
         from));
 

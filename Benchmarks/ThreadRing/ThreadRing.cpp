@@ -60,16 +60,14 @@ private:
 
     inline void TokenHandler(const int &token, const Theron::Address /*from*/)
     {
-        int mssg(token);
-        Theron::Address to(mCaller);
-
         if (token > 0)
         {
-            mssg = token - 1;
-            to = mNext;
+            TailSend(token - 1, mNext);
         }
-
-        TailSend(mssg, to);
+        else
+        {
+            TailSend(token, mCaller);
+        }
     }
 
     Theron::Address mNext;

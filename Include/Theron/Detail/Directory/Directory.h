@@ -11,7 +11,7 @@
 #include <Theron/Defines.h>
 #include <Theron/IAllocator.h>
 
-#include <Theron/Detail/Threading/SpinLock.h>
+#include <Theron/Detail/Threading/Mutex.h>
 
 
 namespace Theron
@@ -62,7 +62,7 @@ private:
     Directory(const Directory &other);
     Directory &operator=(const Directory &other);
 
-    mutable SpinLock mSpinLock;                     ///< Ensures thread-safe access to the instance data.
+    mutable Mutex mMutex;                           ///< Ensures thread-safe access to the instance data.
     uint32_t mNextIndex;                            ///< Auto-incremented index to use for next registered entity.
     Page *mPages[MAX_PAGES];                        ///< Pointers to allocated pages.
 };
@@ -70,7 +70,7 @@ private:
 
 template <class EntryType>
 inline Directory<EntryType>::Directory() :
-  mSpinLock(),
+  mMutex(),
   mNextIndex(0)
 {
     // Clear the page table.
@@ -102,7 +102,7 @@ inline Directory<EntryType>::~Directory()
 template <class EntryType>
 inline uint32_t Directory<EntryType>::Allocate(uint32_t index)
 {
-    mSpinLock.Lock();
+    mMutex.Lock();
 
     // Auto-allocate an index if none was specified.
     if (index == 0)
@@ -134,7 +134,7 @@ inline uint32_t Directory<EntryType>::Allocate(uint32_t index)
         }
     }
 
-    mSpinLock.Unlock();
+    mMutex.Unlock();
 
     return index;
 }

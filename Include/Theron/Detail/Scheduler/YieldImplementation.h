@@ -18,7 +18,7 @@ namespace Detail
 A 'yield' function which can be called to yield a waiting thread so that
 other threads also accessing a contested resource can progress.
 */
-typedef void (* YieldFunction)(uint32_t &backoff);
+typedef void (* YieldFunction)(const uint32_t counter);
 
 
 /**
@@ -29,8 +29,8 @@ class YieldImplementation
 public:
 
     inline explicit YieldImplementation() :
-        mCounter(0),
-        mYieldFunction(0)
+      mCounter(0),
+      mYieldFunction(0)
     {
     }
 
@@ -48,6 +48,7 @@ public:
     {
         THERON_ASSERT(mYieldFunction);
         (*mYieldFunction)(mCounter);
+        ++mCounter;
     }
 
 private:

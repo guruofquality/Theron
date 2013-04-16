@@ -9,7 +9,6 @@
 #include <Theron/Detail/Handlers/FallbackHandlerCollection.h>
 #include <Theron/Detail/Mailboxes/Mailbox.h>
 #include <Theron/Detail/Scheduler/MailboxProcessor.h>
-#include <Theron/Detail/Scheduler/WorkQueue.h>
 #include <Theron/Detail/Messages/IMessage.h>
 #include <Theron/Detail/Messages/MessageCreator.h>
 
@@ -20,15 +19,17 @@ namespace Detail
 {
 
 
-void MailboxProcessor::ProcessMailbox(MailboxContext *const context, Mailbox *const mailbox)
+void MailboxProcessor::Process(WorkerContext *const workerContext, Mailbox *const mailbox)
 {
-    // Load the context data from the worker thread's processor context.
+    // Load the context data from the worker thread's mailbox context.
     // Actors that need more processing are always pushed onto the worker thread's local queue.
+    MailboxContext *const context(&workerContext->mMailboxContext);
     FallbackHandlerCollection *const fallbackHandlers(context->mFallbackHandlers);
-    IAllocator *const messageAllocator(&context->mMessageCache);
+    IAllocator *const messageAllocator(context->mMessageAllocator);
 
     THERON_ASSERT(fallbackHandlers);
     THERON_ASSERT(messageAllocator);
+    THERON_ASSERT(!mailbox->Empty());
 
     // Increment the context's message processing event counter.
     context->mCounters[Theron::COUNTER_MESSAGES_PROCESSED].Increment();
@@ -60,27 +61,25 @@ void MailboxProcessor::ProcessMailbox(MailboxContext *const context, Mailbox *co
         actor->mMailboxContext = 0;
     }
 
-    // Unpin the mailbox, allowing the registered actor to be changed by other threads.
-    mailbox->Lock();
-    mailbox->Unpin();
-    mailbox->Unlock();
-
     if (actor == 0 && fallbackHandlers)
     {
         fallbackHandlers->Handle(message);
     }
+
+    mailbox->Lock();
+
+    // Unpin the mailbox, allowing the registered actor to be changed by other threads.
+    mailbox->Unpin();
 
     // Pop the message we just processed from the mailbox, then check whether the
     // mailbox is now empty, and reschedule the mailbox if it's not.
     // The locking of the mailbox here and in the main scheduling ensures that
     // mailboxes are always enqueued if they unprocessed messages, but at most once
     // at any time.
-    mailbox->Lock();
-
     mailbox->Pop();
     if (!mailbox->Empty())
     {
-        context->mScheduler->Push(mailbox, true);
+        context->mScheduler->Schedule(context->mQueueContext, mailbox, true);
     }
 
     mailbox->Unlock();

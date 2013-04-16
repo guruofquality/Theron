@@ -20,9 +20,9 @@ class YieldPolicy
 {
 public:
 
-    static void YieldPolite(uint32_t &counter);
-    static void YieldStrong(uint32_t &counter);
-    static void YieldAggressive(uint32_t &counter);
+    static void YieldPolite(const uint32_t counter);
+    static void YieldStrong(const uint32_t counter);
+    static void YieldAggressive(const uint32_t counter);
 
 private:
 

@@ -20,7 +20,7 @@
 #include <Theron/Detail/Messages/MessageCreator.h>
 #include <Theron/Detail/Messages/MessageSize.h>
 #include <Theron/Detail/Network/Hash.h>
-#include <Theron/Detail/Network/String.h>
+#include <Theron/Detail/Strings/String.h>
 #include <Theron/Detail/Threading/SpinLock.h>
 
 

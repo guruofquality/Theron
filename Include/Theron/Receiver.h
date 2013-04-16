@@ -25,10 +25,12 @@ Utility that can receive messages from actors.
 #include <Theron/Detail/Messages/IMessage.h>
 #include <Theron/Detail/Messages/MessageCreator.h>
 #include <Theron/Detail/Messages/MessageTraits.h>
-#include <Theron/Detail/Network/String.h>
+#include <Theron/Detail/Strings/String.h>
+#include <Theron/Detail/Strings/StringPool.h>
 #include <Theron/Detail/Threading/Atomic.h>
-#include <Theron/Detail/Threading/SpinLock.h>
-#include <Theron/Detail/Threading/Utils.h>
+#include <Theron/Detail/Threading/Condition.h>
+#include <Theron/Detail/Threading/Lock.h>
+#include <Theron/Detail/Threading/Mutex.h>
 
 
 #ifdef _MSC_VER
@@ -371,11 +373,12 @@ private:
     */
     inline void Push(Detail::IMessage *const message);
 
+    Detail::StringPool::Ref mStringPoolRef;             ///< Ensures that the StringPool is created.
     EndPoint *const mEndPoint;                          ///< Pointer to the network endpoint, if any, to which this receiver is tied.
     Detail::String mName;                               ///< Name of the receiver.
     Address mAddress;                                   ///< Unique address of this receiver.
     MessageHandlerList mMessageHandlers;                ///< List of registered message handlers.
-    mutable Detail::SpinLock mSpinLock;                 ///< Synchronizes access to the message handlers.
+    mutable Detail::Condition mCondition;               ///< Signals waiting threads when messages arrive.
     mutable Detail::Atomic::UInt32 mMessagesReceived;   ///< Counts arrived messages not yet waited on.
 };
 
@@ -422,9 +425,9 @@ inline bool Receiver::RegisterHandler(
         return false;
     }
 
-    mSpinLock.Lock();
+    mCondition.GetMutex().Lock();
     mMessageHandlers.Insert(messageHandler);
-    mSpinLock.Unlock();
+    mCondition.GetMutex().Unlock();
     
     return true;
 }
@@ -442,7 +445,7 @@ inline bool Receiver::DeregisterHandler(
     typedef Detail::ReceiverHandler<ClassType, ValueType> MessageHandlerType;
     typedef Detail::ReceiverHandlerCast<ClassType, Detail::MessageTraits<ValueType>::HAS_TYPE_NAME> HandlerCaster;
 
-    mSpinLock.Lock();
+    mCondition.GetMutex().Lock();
 
     // Find the handler in the registered handler list.
     typename MessageHandlerList::Iterator handlers(mMessageHandlers.GetIterator());
@@ -467,7 +470,7 @@ inline bool Receiver::DeregisterHandler(
         }
     }
 
-    mSpinLock.Unlock();
+    mCondition.GetMutex().Unlock();
 
     return false;
 }
@@ -475,12 +478,14 @@ inline bool Receiver::DeregisterHandler(
 
 THERON_FORCEINLINE void Receiver::Reset()
 {
+    Detail::Lock lock(mCondition.GetMutex());
     mMessagesReceived.Store(0);
 }
 
 
 THERON_FORCEINLINE uint32_t Receiver::Count() const
 {
+    Detail::Lock lock(mCondition.GetMutex());
     return static_cast<uint32_t>(mMessagesReceived.Load());
 }
 
@@ -489,49 +494,44 @@ THERON_FORCEINLINE uint32_t Receiver::Wait(const uint32_t max)
 {
     THERON_ASSERT(max > 0);
 
-    // TODO: Support timeout.
+    Detail::Lock lock(mCondition.GetMutex());
+
     // Wait for at least one message to arrive.
     // If messages were received since the last wait (or creation),
     // then we regard those messages as qualifying and early-exit.
-    uint32_t backoff(0);
     while (mMessagesReceived.Load() == 0)
     {
-        Detail::Utils::Backoff(backoff);
+        // Wait to be woken by an arriving message.
+        // This blocks until a message arrives!
+        mCondition.Wait(lock);
     }
 
-    // TODO: Use atomic test-and-decrement.
-    // Consume up to the maximum number of arrived messages.
-    mSpinLock.Lock();
-
-    uint32_t count(0);
-    while (count < max && mMessagesReceived.Load() > 0)
+    uint32_t numConsumed(0);
+    while (mMessagesReceived.Load() > 0 && numConsumed < max)
     {
-        ++count;
         mMessagesReceived.Decrement();
+        ++numConsumed;
     }
 
-    mSpinLock.Unlock();
-
-    return count;
+    return numConsumed;
 }
 
 
 THERON_FORCEINLINE uint32_t Receiver::Consume(const uint32_t max)
 {
-    // TODO: Use atomic test-and-decrement.
     // Consume up to the maximum number of arrived messages.
-    mSpinLock.Lock();
+    THERON_ASSERT(max > 0);
 
-    uint32_t count(0);
-    while (count < max && mMessagesReceived.Load() > 0)
+    Detail::Lock lock(mCondition.GetMutex());
+
+    uint32_t numConsumed(0);
+    while (mMessagesReceived.Load() > 0 && numConsumed < max)
     {
-        ++count;
         mMessagesReceived.Decrement();
+        ++numConsumed;
     }
 
-    mSpinLock.Unlock();
-
-    return count;
+    return numConsumed;
 }
 
 
@@ -539,7 +539,7 @@ THERON_FORCEINLINE void Receiver::Push(Detail::IMessage *const message)
 {
     THERON_ASSERT(message);
 
-    mSpinLock.Lock();
+    mCondition.GetMutex().Lock();
 
     // TODO: Use ReceiverHandlerCollection for thread-safety.
     MessageHandlerList::Iterator handlers(mMessageHandlers.GetIterator());
@@ -551,9 +551,10 @@ THERON_FORCEINLINE void Receiver::Push(Detail::IMessage *const message)
         handler->Handle(message);
     }
 
-    mSpinLock.Unlock();
-
     mMessagesReceived.Increment();
+
+    mCondition.GetMutex().Unlock();
+    mCondition.PulseAll();
 
     // Destroy the message.
     // We use the global allocator to allocate messages sent to receivers.

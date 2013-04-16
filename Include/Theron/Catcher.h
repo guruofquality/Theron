@@ -19,7 +19,8 @@ Utility that catches messages received by a Receiver.
 #include <Theron/Defines.h>
 
 #include <Theron/Detail/Containers/Queue.h>
-#include <Theron/Detail/Threading/SpinLock.h>
+#include <Theron/Detail/Threading/Lock.h>
+#include <Theron/Detail/Threading/Mutex.h>
 
 
 namespace Theron
@@ -103,13 +104,13 @@ private:
         Address mFrom;                      ///< The address of the sender.
     };
 
-    mutable Detail::SpinLock mSpinLock;     ///< Thread synchronization primitive.
+    mutable Detail::Mutex mMutex;           ///< Thread synchronization object.
     Detail::Queue<Entry> mQueue;            ///< Queue of caught messages.
 };
 
 
 template <class MessageType>
-inline Catcher<MessageType>::Catcher() : mSpinLock(), mQueue()
+inline Catcher<MessageType>::Catcher() : mMutex(), mQueue()
 {
 }
 
@@ -118,8 +119,7 @@ template <class MessageType>
 inline Catcher<MessageType>::~Catcher()
 {
     IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
-
-    mSpinLock.Lock();
+    Detail::Lock lock(mMutex);
 
     // Free any left-over entries on the queue.
     while (!mQueue.Empty())
@@ -130,21 +130,14 @@ inline Catcher<MessageType>::~Catcher()
         entry->~Entry();
         allocator->Free(entry, sizeof(Entry));
     }
-
-    mSpinLock.Unlock();
 }
 
 
 template <class MessageType>
 THERON_FORCEINLINE bool Catcher<MessageType>::Empty() const
 {
-    bool empty(false);
-
-    mSpinLock.Lock();
-    empty = mQueue.Empty();
-    mSpinLock.Unlock();
-
-    return empty;
+    Detail::Lock lock(mMutex);
+    return mQueue.Empty();
 }
 
 
@@ -167,9 +160,8 @@ inline void Catcher<MessageType>::Push(const MessageType &message, const Address
     Entry *const entry = new (memory) Entry(message, from);
 
     // Push the entry onto the queue, locking for thread-safety.
-    mSpinLock.Lock();
+    Detail::Lock lock(mMutex);
     mQueue.Push(entry);
-    mSpinLock.Unlock();
 }
 
 
@@ -179,9 +171,12 @@ inline bool Catcher<MessageType>::Front(MessageType &message, Address &from)
     Entry *entry(0);
 
     // Pop an entry off the queue, locking for thread-safety.
-    mSpinLock.Lock();
-    entry = mQueue.Front();
-    mSpinLock.Unlock();
+    mMutex.Lock();
+    if (!mQueue.Empty())
+    {
+        entry = mQueue.Front();
+    }
+    mMutex.Unlock();
 
     if (entry)
     {
@@ -203,9 +198,12 @@ inline bool Catcher<MessageType>::Pop(MessageType &message, Address &from)
     Entry *entry(0);
 
     // Pop an entry off the queue, locking for thread-safety.
-    mSpinLock.Lock();
-    entry = mQueue.Pop();
-    mSpinLock.Unlock();
+    mMutex.Lock();
+    if (!mQueue.Empty())
+    {
+        entry = mQueue.Pop();
+    }
+    mMutex.Unlock();
 
     if (entry)
     {

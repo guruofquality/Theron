@@ -61,7 +61,7 @@ uint32_t ActorRef::GetNumQueuedMessages() const
 
 Detail::MailboxContext *ActorRef::GetMailboxContext()
 {
-    return mActor->GetFramework().mSharedMailboxContext;
+    return mActor->GetFramework().GetSharedMailboxContext();
 }
 
 

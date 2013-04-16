@@ -1,17 +1,16 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-#ifndef THERON_DETAIL_DIRECTORY_MAILBOXES_MAILBOX_H
-#define THERON_DETAIL_DIRECTORY_MAILBOXES_MAILBOX_H
+#ifndef THERON_DETAIL_MAILBOXES_MAILBOX_H
+#define THERON_DETAIL_MAILBOXES_MAILBOX_H
 
 
-#include <Theron/Address.h>
 #include <Theron/Align.h>
 #include <Theron/Assert.h>
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
 
+#include <Theron/Detail/Containers/Queue.h>
 #include <Theron/Detail/Messages/IMessage.h>
-#include <Theron/Detail/Scheduler/WorkQueue.h>
-#include <Theron/Detail/Network/String.h>
+#include <Theron/Detail/Strings/String.h>
 #include <Theron/Detail/Threading/SpinLock.h>
 
 
@@ -35,7 +34,7 @@ namespace Detail
 /**
 An individual mailbox with a specific address.
 */
-class THERON_PREALIGN(THERON_CACHELINE_ALIGNMENT) Mailbox : public WorkItem
+class THERON_PREALIGN(THERON_CACHELINE_ALIGNMENT) Mailbox : public Queue<Mailbox>::Node
 {
 public:
 
@@ -79,13 +78,13 @@ public:
     /**
     Peeks at the first message in the mailbox.
     The message is inspected without actually being removed from the mailbox.
-    \return Pointer to a message, if the mailbox is non-empty, otherwise zero.
+    \note It's illegal to call this method when the mailbox is empty.
     */
     inline IMessage *Front() const;
 
     /**
     Pops the first message from the mailbox.
-    \return Pointer to a message, if the mailbox is non-empty, otherwise zero.
+    \note It's illegal to call this method when the mailbox is empty.
     */
     inline IMessage *Pop();
 
@@ -96,16 +95,18 @@ public:
 
     /**
     Registers an actor with this mailbox.
+    \note This can't be called while the mailbox is pinned.
     */
     inline void RegisterActor(Actor *const actor);
 
     /**
     Deregisters the actor registered with this mailbox.
+    \note This can't be called while the mailbox is pinned.
     */
     inline void DeregisterActor();
 
     /**
-    Gets a pointer to the actor registered at this entry, if any.
+    Gets a pointer to the actor registered at this mailbox, if any.
     \return A pointer to the registered entity, or zero if no entity is registered.
     */
     inline Actor *GetActor() const;
@@ -206,7 +207,6 @@ THERON_FORCEINLINE uint32_t Mailbox::Count() const
 }
 
 
-
 THERON_FORCEINLINE void Mailbox::RegisterActor(Actor *const actor)
 {
     // Can't register actors while the mailbox is pinned.
@@ -262,5 +262,5 @@ THERON_FORCEINLINE bool Mailbox::IsPinned() const
 #endif //_MSC_VER
 
 
-#endif // THERON_DETAIL_DIRECTORY_MAILBOXES_MAILBOX_H
+#endif // THERON_DETAIL_MAILBOXES_MAILBOX_H
 

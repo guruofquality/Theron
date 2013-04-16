@@ -31,7 +31,7 @@ namespace Theron
 {
 
 
-Detail::SpinLock EndPoint::smContextLock;
+Detail::Mutex EndPoint::smContextMutex;
 uint32_t EndPoint::smContextRefCount(0);
 Detail::Context *EndPoint::smContext(0);
 
@@ -40,7 +40,7 @@ Detail::Context *EndPoint::InitializeContext()
 {
     IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
 
-    smContextLock.Lock();
+    smContextMutex.Lock();
 
     if (smContext == 0)
     {
@@ -55,7 +55,7 @@ Detail::Context *EndPoint::InitializeContext()
 
     ++smContextRefCount;
 
-    smContextLock.Unlock();
+    smContextMutex.Unlock();
 
     THERON_ASSERT(smContext);
     return smContext;
@@ -69,7 +69,7 @@ void EndPoint::ReleaseContext()
     THERON_ASSERT(smContext);
     THERON_ASSERT(smContextRefCount);
 
-    smContextLock.Lock();
+    smContextMutex.Lock();
 
     if (--smContextRefCount == 0)
     {
@@ -78,11 +78,12 @@ void EndPoint::ReleaseContext()
         smContext = 0;
     }
 
-    smContextLock.Unlock();
+    smContextMutex.Unlock();
 }
 
 
 EndPoint::EndPoint(const char *const name, const char *const location, const Parameters /*params*/) :
+  mStringPoolRef(),
   mName(name),
   mLocation(location),
   mContext(0),
@@ -91,7 +92,7 @@ EndPoint::EndPoint(const char *const name, const char *const location, const Par
   mNetworkThread(),
   mRunning(false),
   mStarted(false),
-  mNetworkLock(),
+  mNetworkMutex(),
   mConnectQueue(),
   mSendQueue()
 {
@@ -158,9 +159,9 @@ bool EndPoint::Connect(const char *const address)
     ConnectRequest *const request = new (requestMemory) ConnectRequest(address);
 
     // Push it onto the queue to be serviced by the network thread.
-    mNetworkLock.Lock();
+    mNetworkMutex.Lock();
     mConnectQueue.Push(request);
-    mNetworkLock.Unlock();
+    mNetworkMutex.Unlock();
 
     return true;
 }
@@ -185,9 +186,9 @@ bool EndPoint::RequestSend(Detail::IMessage *const message, const Detail::String
     SendRequest *const request = new (requestMemory) SendRequest(message, name);
 
     // Push it onto the queue to be serviced by the network thread.
-    mNetworkLock.Lock();
+    mNetworkMutex.Lock();
     mSendQueue.Push(request);
-    mNetworkLock.Unlock();
+    mNetworkMutex.Unlock();
 
     return true;
 }
@@ -266,7 +267,7 @@ void EndPoint::NetworkThreadProc()
 
     while (mRunning)
     {
-        mNetworkLock.Lock();
+        mNetworkMutex.Lock();
 
         // Service connection requests.
         while (!mConnectQueue.Empty())
@@ -274,7 +275,7 @@ void EndPoint::NetworkThreadProc()
             ConnectRequest *const request(mConnectQueue.Pop());
             const char *const address(request->mLocation.GetValue());
 
-            mNetworkLock.Unlock();
+            mNetworkMutex.Unlock();
 
             // Connect the input socket to the remote host.
             // The same socket can be connected to multiple remote endpoints.
@@ -283,7 +284,7 @@ void EndPoint::NetworkThreadProc()
                 THERON_FAIL_MSG("Failed to connect input socket to remote endpoint");
             }
 
-            mNetworkLock.Lock();
+            mNetworkMutex.Lock();
 
             request->~ConnectRequest();
             allocator->Free(request, sizeof(ConnectRequest));
@@ -294,7 +295,7 @@ void EndPoint::NetworkThreadProc()
         {
             SendRequest *const request(mSendQueue.Pop());
 
-            mNetworkLock.Unlock();
+            mNetworkMutex.Unlock();
 
             THERON_ASSERT_MSG(outputSocket, "No output socket found");
 
@@ -352,10 +353,10 @@ void EndPoint::NetworkThreadProc()
             request->~SendRequest();
             allocator->Free(request, sizeof(SendRequest));
 
-            mNetworkLock.Lock();
+            mNetworkMutex.Lock();
         }
 
-        mNetworkLock.Unlock();
+        mNetworkMutex.Unlock();
 
         // Read messages from the input socket without blocking.
         while (inputSocket->NonBlockingReceive(inputMessage))
@@ -407,10 +408,10 @@ void EndPoint::NetworkThreadProc()
         }
 
         // The network thread spends most of its time asleep.
-        Detail::Utils::SleepThread(1);
+        Detail::Utils::SleepThread(10);
     }
 
-    mNetworkLock.Lock();
+    mNetworkMutex.Lock();
 
     // Drain the connection request queue.
     while (!mConnectQueue.Empty())
@@ -428,7 +429,7 @@ void EndPoint::NetworkThreadProc()
         allocator->Free(request, sizeof(SendRequest));
     }
 
-    mNetworkLock.Unlock();
+    mNetworkMutex.Unlock();
 
     // Release the input message used repeatedly within the loop.
     if (!inputMessage->Release())

@@ -14,7 +14,7 @@
 #include <Theron/Detail/Directory/StaticDirectory.h>
 #include <Theron/Detail/Network/Index.h>
 #include <Theron/Detail/Network/NameGenerator.h>
-#include <Theron/Detail/Network/String.h>
+#include <Theron/Detail/Strings/String.h>
 
 
 namespace Theron
@@ -22,11 +22,12 @@ namespace Theron
 
 
 Receiver::Receiver() :
+  mStringPoolRef(),
   mEndPoint(0),
   mName(),
   mAddress(),
   mMessageHandlers(),
-  mSpinLock(),
+  mCondition(),
   mMessagesReceived(0)
 {
     Initialize();
@@ -34,11 +35,12 @@ Receiver::Receiver() :
 
 
 Receiver::Receiver(EndPoint &endPoint, const char *const name) :
+  mStringPoolRef(),
   mEndPoint(&endPoint),
   mName(name),
   mAddress(),
   mMessageHandlers(),
-  mSpinLock(),
+  mCondition(),
   mMessagesReceived(0)
 {
     Initialize();
@@ -121,7 +123,7 @@ void Receiver::Release()
     // Deregister the receiver, so that the worker threads will leave it alone.
     Detail::StaticDirectory<Receiver>::Deregister(address.AsInteger());
 
-    mSpinLock.Lock();
+    mCondition.GetMutex().Lock();
 
     // Free all currently allocated handler objects.
     while (Detail::IReceiverHandler *const handler = mMessageHandlers.Front())
@@ -130,7 +132,7 @@ void Receiver::Release()
         AllocatorManager::Instance().GetAllocator()->Free(handler);
     }
 
-    mSpinLock.Unlock();
+    mCondition.GetMutex().Unlock();
 }
 
 

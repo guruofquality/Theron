@@ -22,8 +22,9 @@ An endpoint in a connected network of processes, potentially on remote hosts.
 #include <Theron/Detail/Messages/IMessage.h>
 #include <Theron/Detail/Network/MessageFactory.h>
 #include <Theron/Detail/Network/NameMap.h>
-#include <Theron/Detail/Network/String.h>
-#include <Theron/Detail/Threading/SpinLock.h>
+#include <Theron/Detail/Strings/String.h>
+#include <Theron/Detail/Strings/StringPool.h>
+#include <Theron/Detail/Threading/Mutex.h>
 #include <Theron/Detail/Threading/Thread.h>
 #include <Theron/Detail/Transport/Context.h>
 
@@ -247,10 +248,11 @@ private:
     static void NetworkThreadEntryPoint(void *const context);
     void NetworkThreadProc();
 
-    static Detail::SpinLock smContextLock;              ///< Ensures thread-safe access to the per-process network context.
+    static Detail::Mutex smContextMutex;                ///< Ensures thread-safe access to the per-process network context.
     static uint32_t smContextRefCount;                  ///< Context object reference count.
     static Detail::Context *smContext;                  ///< Pointer the single per-process network context object.
 
+    Detail::StringPool::Ref mStringPoolRef;             ///< Ensures that the StringPool is created.
     Detail::String mName;                               ///< Name of the this endpoint, unique across all hosts.
     Detail::String mLocation;                           ///< Unique network location (eg. IP address and port) of the endpoint.
     Detail::Context *mContext;                          ///< Pointer to per-process network context object.
@@ -259,7 +261,7 @@ private:
     Detail::Thread mNetworkThread;                      ///< Creates and listens to network sockets.
     bool mRunning;                                      ///< Flag used to terminate the network thread.
     bool mStarted;                                      ///< Flag used to signal that the network thread has started.
-    Detail::SpinLock mNetworkLock;                      ///< Thread-safe access to network state.
+    Detail::Mutex mNetworkMutex;                        ///< Thread-safe access to network state.
     Detail::Queue<ConnectRequest> mConnectQueue;        ///< Queue of connection requests.
     Detail::Queue<SendRequest> mSendQueue;              ///< Queue of message send requests.
 };

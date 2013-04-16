@@ -57,7 +57,7 @@ public:
 
 private:
 
-    void Handler(const TextMessage &message, const Theron::Address from)
+    void Handler(const TextMessage &message, const Theron::Address /*from*/)
     {
         printf("%s\n", message.mText);
         if (strcmp(message.mText, "exit") == 0)

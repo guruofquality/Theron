@@ -22,10 +22,10 @@ namespace Detail
 
 
 /**
-A list of free memory blocks.
+A pool of free memory blocks.
 */
-template <class LockType>
-class THERON_PREALIGN(THERON_CACHELINE_ALIGNMENT) Pool
+template <uint32_t MAX_BLOCKS>
+class Pool
 {
 public:
 
@@ -33,16 +33,6 @@ public:
     Constructor.
     */
     inline Pool();
-
-    /**
-    Locks the pool for exclusive access, if the lock type supports it.
-    */
-    inline void Lock() const;
-
-    /**
-    UnlLocks a previously locked pool.
-    */
-    inline void Unlock() const;
 
     /**
     Returns true if the pool contains no memory blocks.
@@ -81,59 +71,41 @@ private:
         Node *mNext;                        ///< Pointer to next node in a list.
     };
 
-    static const uint32_t MAX_BLOCKS = 16;  ///< Maximum number of memory blocks stored per pool.
-
-    mutable LockType mLock;                 ///< Synchronization primitive for thread-safe access to state.
     Node mHead;                             ///< Dummy node at head of a linked list of nodes in the pool.
     uint32_t mBlockCount;                   ///< Number of blocks currently cached in the pool.
+};
 
-} THERON_POSTALIGN(THERON_CACHELINE_ALIGNMENT);
 
-
-template <class LockType>
-THERON_FORCEINLINE Pool<LockType>::Pool() :
-  mLock(),
+template <uint32_t MAX_BLOCKS>
+THERON_FORCEINLINE Pool<MAX_BLOCKS>::Pool() :
   mHead(),
   mBlockCount(0)
 {
 }
 
 
-template <class LockType>
-THERON_FORCEINLINE void Pool<LockType>::Lock() const
-{
-    mLock.Lock();
-}
-
-
-template <class LockType>
-THERON_FORCEINLINE void Pool<LockType>::Unlock() const
-{
-    mLock.Unlock();
-}
-
-
-template <class LockType>
-THERON_FORCEINLINE bool Pool<LockType>::Empty() const
+template <uint32_t MAX_BLOCKS>
+THERON_FORCEINLINE bool Pool<MAX_BLOCKS>::Empty() const
 {
     THERON_ASSERT((mBlockCount == 0 && mHead.mNext == 0) || (mBlockCount != 0 && mHead.mNext != 0));
     return (mBlockCount == 0);
 }
 
 
-template <class LockType>
-THERON_FORCEINLINE bool Pool<LockType>::Add(void *const memory)
+template <uint32_t MAX_BLOCKS>
+THERON_FORCEINLINE bool Pool<MAX_BLOCKS>::Add(void *const memory)
 {
     THERON_ASSERT(memory);
-
-    // Just call it a node and link it in.
-    Node *const node(reinterpret_cast<Node *>(memory));
 
     // Below maximum block count limit?
     if (mBlockCount < MAX_BLOCKS)
     {
+        // Just call it a node and link it in.
+        Node *const node(reinterpret_cast<Node *>(memory));
+
         node->mNext = mHead.mNext;
         mHead.mNext = node;
+
         ++mBlockCount;
         return true;
     }
@@ -142,8 +114,8 @@ THERON_FORCEINLINE bool Pool<LockType>::Add(void *const memory)
 }
 
 
-template <class LockType>
-THERON_FORCEINLINE void *Pool<LockType>::FetchAligned(const uint32_t alignment)
+template <uint32_t MAX_BLOCKS>
+THERON_FORCEINLINE void *Pool<MAX_BLOCKS>::FetchAligned(const uint32_t alignment)
 {
     Node *previous(&mHead);
     const uint32_t alignmentMask(alignment - 1);
@@ -152,15 +124,15 @@ THERON_FORCEINLINE void *Pool<LockType>::FetchAligned(const uint32_t alignment)
     Node *node(mHead.mNext);
     while (node)
     {
-        // Prefetch.
         Node *const next(node->mNext);
 
-        // This is THERON_ALIGNED with the alignment mask calculated outside the loop.
+        // This is the THERON_ALIGNED macro with the alignment mask calculated once outside the loop.
         if ((reinterpret_cast<uintptr_t>(node) & alignmentMask) == 0)
         {
-            // Remove from list and return as block.
+            // Remove from list and return as a block.
             previous->mNext = next;
             --mBlockCount;
+
             return reinterpret_cast<void *>(node);
         }
 
@@ -173,8 +145,8 @@ THERON_FORCEINLINE void *Pool<LockType>::FetchAligned(const uint32_t alignment)
 }
 
 
-template <class LockType>
-THERON_FORCEINLINE void *Pool<LockType>::Fetch()
+template <uint32_t MAX_BLOCKS>
+THERON_FORCEINLINE void *Pool<MAX_BLOCKS>::Fetch()
 {
     // Grab first block in the list if the list isn't empty.
     Node *const node(mHead.mNext);
@@ -182,10 +154,11 @@ THERON_FORCEINLINE void *Pool<LockType>::Fetch()
     {
         mHead.mNext = node->mNext;
         --mBlockCount;
+
         return reinterpret_cast<void *>(node);
     }
 
-    // Zero result indicates no correctly aligned block available.
+    // Zero result indicates no block available.
     return 0;
 }
 

@@ -11,9 +11,9 @@
 #include <Theron/Detail/Threading/Mutex.h>
 
 
-#ifdef _MSC_VER
+#if THERON_MSVC
 #pragma warning(push,0)
-#endif // _MSC_VER
+#endif // THERON_MSVC
 
 #if THERON_WINDOWS
 
@@ -38,9 +38,9 @@
 
 #endif
 
-#ifdef _MSC_VER
+#if THERON_MSVC
 #pragma warning(pop)
-#endif // _MSC_VER
+#endif // THERON_MSVC
 
 
 namespace Theron
@@ -56,16 +56,6 @@ class Condition
 {
 public:
 
-#if THERON_WINDOWS
-
-    enum
-    {
-        PULSE_EVENT = 0,        ///< Event used to wake a single waiting thread.
-        PULSE_ALL_EVENT = 1     ///< Event used to wake all waiting threads.
-    };
-
-#endif
-
     /**
     Constructor.
     */
@@ -73,22 +63,7 @@ public:
     {
 #if THERON_WINDOWS
 
-        // This event wakes a single waiting thread.
-        mEvents[PULSE_EVENT] = CreateEvent(
-            0,                                  // No security attributes
-            false,                              // Manual reset disabled
-            false,                              // Initial state: reset
-            0);                                 // event name (none)
-
-        // This event wakes all the waiting threads
-        mEvents[PULSE_ALL_EVENT] = CreateEvent(
-            0,                                  // No security attributes
-            true,                               // Manual reset enabled
-            false,                              // Initial state: reset
-            0);                                 // event name (none)
-
-        THERON_ASSERT(mEvents[PULSE_EVENT]);
-        THERON_ASSERT(mEvents[PULSE_ALL_EVENT]);
+        InitializeConditionVariable(&mCondition);
 
 #elif THERON_BOOST
 #elif THERON_CPP11
@@ -102,18 +77,6 @@ public:
     */
     inline ~Condition()
     {
-#if THERON_WINDOWS
-
-        THERON_ASSERT(mEvents[PULSE_EVENT]);
-        THERON_ASSERT(mEvents[PULSE_ALL_EVENT]);
-
-        CloseHandle(mEvents[PULSE_EVENT]);
-        CloseHandle(mEvents[PULSE_ALL_EVENT]);
-
-#elif THERON_BOOST
-#elif THERON_CPP11
-#elif defined(THERON_POSIX)
-#endif
     }
 
     /**
@@ -133,24 +96,14 @@ public:
     {
 #if THERON_WINDOWS
 
-        lock.Unlock();
-
-        // This waits until woken up by either of the events.
-        THERON_ASSERT(mEvents[PULSE_EVENT]);
-        THERON_ASSERT(mEvents[PULSE_ALL_EVENT]);
-        WaitForMultipleObjects(
-            2,                                  // Number of events to wait on
-            mEvents,                            // Handles of the events
-            false,                              // Don't wait for all events - one will do
-            INFINITE);                          // No timeout
-
-        lock.Relock();
+        (void) lock;
+        SleepConditionVariableCS(&mCondition, &lock.mMutex.mCriticalSection, INFINITE);
     
 #elif THERON_BOOST
 
         // The lock must be locked before calling Wait().
-        THERON_ASSERT(lock.GetLock().owns_lock());
-        mCondition.wait(lock.GetLock());
+        THERON_ASSERT(lock.mLock.owns_lock());
+        mCondition.wait(lock.mLock);
 
 #elif THERON_CPP11
 #elif defined(THERON_POSIX)
@@ -164,8 +117,7 @@ public:
     {
 #if THERON_WINDOWS
 
-        THERON_ASSERT(mEvents[PULSE_EVENT]);
-        SetEvent(mEvents[PULSE_EVENT]);
+        WakeConditionVariable(&mCondition);
 
 #elif THERON_BOOST
 
@@ -183,8 +135,7 @@ public:
     {
 #if THERON_WINDOWS
 
-        THERON_ASSERT(mEvents[PULSE_ALL_EVENT]);
-        SetEvent(mEvents[PULSE_ALL_EVENT]);
+         WakeAllConditionVariable(&mCondition);
 
 #elif THERON_BOOST
 
@@ -199,12 +150,12 @@ private:
 
     Condition(const Condition &other);
     Condition &operator=(const Condition &other);
-    
+
     Mutex mMutex;
 
 #if THERON_WINDOWS
 
-    HANDLE mEvents[2];
+    CONDITION_VARIABLE mCondition;
 
 #elif THERON_BOOST
 

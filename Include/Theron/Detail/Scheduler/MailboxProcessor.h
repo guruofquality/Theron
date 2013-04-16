@@ -1,13 +1,13 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-#ifndef THERON_DETAIL_SCHEDULER_SCHEDULER_H
-#define THERON_DETAIL_SCHEDULER_SCHEDULER_H
+#ifndef THERON_DETAIL_SCHEDULER_MAILBOXPROCESSOR_H
+#define THERON_DETAIL_SCHEDULER_MAILBOXPROCESSOR_H
 
 
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
 
 #include <Theron/Detail/Mailboxes/Mailbox.h>
-#include <Theron/Detail/Scheduler/MailboxContext.h>
+#include <Theron/Detail/Scheduler/WorkerContext.h>
 
 
 namespace Theron
@@ -23,7 +23,7 @@ class MailboxProcessor
 {
 public:
 
-    static void ProcessMailbox(MailboxContext *const context, Mailbox *const mailbox);
+    static void Process(WorkerContext *const workerContext, Mailbox *const mailbox);
 
 private:
 
@@ -37,4 +37,4 @@ private:
 } // namespace Theron
 
 
-#endif // THERON_DETAIL_SCHEDULER_SCHEDULER_H
+#endif // THERON_DETAIL_SCHEDULER_MAILBOXPROCESSOR_H

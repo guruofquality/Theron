@@ -61,6 +61,7 @@ private:
 
     inline void TokenHandler(const int &token, const Theron::Address /*from*/)
     {
+        // TODO: Replace with fast code!
         int mssg(token);
         Theron::Address to(mCaller);
 
@@ -70,8 +71,7 @@ private:
             to = mNext;
         }
 
-        TailSend(mssg, to);
-    }
+        TailSend(mssg, to);    }
 
     Theron::Address mNext;
     Theron::Address mCaller;

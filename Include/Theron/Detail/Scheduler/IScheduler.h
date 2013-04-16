@@ -4,7 +4,13 @@
 
 
 #include <Theron/BasicTypes.h>
+#include <Theron/Counters.h>
 #include <Theron/Defines.h>
+#include <Theron/IAllocator.h>
+#include <Theron/YieldStrategy.h>
+
+#include <Theron/Detail/Directory/Directory.h>
+#include <Theron/Detail/Mailboxes/Mailbox.h>
 
 
 namespace Theron
@@ -13,13 +19,16 @@ namespace Detail
 {
 
 
-struct MailboxContext;
-class Mailbox;
-class WorkQueue;
+class FallbackHandlerCollection;
+class MailboxContext;
 
 
 /**
-Generic mailbox scheduler interface.
+\brief Mailbox scheduler interface.
+
+The Scheduler class itself is templated to allow the use of different queue implementations.
+This interface allows instantiations of the template against different queue types to be
+referenced polymorphically.
 */
 class IScheduler
 {
@@ -39,15 +48,73 @@ public:
     {
     }
 
-    virtual void SetSharedWorkQueue(WorkQueue *const workQueue) = 0;
-    virtual void SetLocalWorkQueue(WorkQueue *const workQueue) = 0;
-    virtual WorkQueue *GetLocalWorkQueue() = 0;
+    /**
+    Initializes a scheduler at start of day.
+    */
+    virtual void Initialize(const uint32_t threadCount) = 0;        
 
-    virtual void Initialize() = 0;
-    virtual void Teardown() = 0;
+    /**
+    Tears down the scheduler prior to destruction.
+    */
+    virtual void Release() = 0;
 
-    virtual Mailbox *Pop() = 0;
-    virtual void Push(Mailbox *const mailbox, const bool localQueue) = 0;
+    /**
+    Schedules for processing a mailbox that has received a message.
+    */
+    virtual void Schedule(void *const queueContext, Mailbox *const mailbox, const bool localThread) = 0;
+
+    /**
+    Returns a pointer to the shared mailbox context not associated with a specific worker thread.
+    */
+    virtual MailboxContext *GetSharedMailboxContext() = 0;
+
+    /**
+    Sets a maximum limit on the number of worker threads enabled in the scheduler.
+    */
+    virtual void SetMaxThreads(const uint32_t count) = 0;
+
+    /**
+    Sets a minimum limit on the number of worker threads enabled in the scheduler.
+    */
+    virtual void SetMinThreads(const uint32_t count) = 0;
+
+    /**
+    Gets the current maximum limit on the number of worker threads enabled in the scheduler.
+    */
+    virtual uint32_t GetMaxThreads() const = 0;
+
+    /**
+    Gets the current minimum limit on the number of worker threads enabled in the scheduler.
+    */
+    virtual uint32_t GetMinThreads() const = 0;
+
+    /**
+    Gets the current number of worker threads enabled in the scheduler.
+    */
+    virtual uint32_t GetNumThreads() const = 0;
+
+    /**
+    Gets the highest number of worker threads that was ever enabled at one time in the scheduler.
+    */
+    virtual uint32_t GetPeakThreads() const = 0;
+
+    /**
+    Resets all the scheduler's internal event counters to zero.
+    */
+    virtual void ResetCounters() const = 0;
+
+    /**
+    Gets the current value of a specified event counter, accumulated for all worker threads).
+    */
+    virtual uint32_t GetCounterValue(const Counter counter) const = 0;
+
+    /**
+    Gets the current value of a specified event counter, for each worker thread individually.
+    */
+    virtual uint32_t GetPerThreadCounterValues(
+        const Counter counter,
+        uint32_t *const perThreadCounts,
+        const uint32_t maxCounts) const = 0;
 
 private:
 

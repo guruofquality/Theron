@@ -283,7 +283,7 @@ THERON_FORCEINLINE bool ActorRef::Push(const ValueType &value, const Address &fr
 
     // Allocate a message. It'll be deleted by the worker thread that handles it.
     Detail::IMessage *const message(Detail::MessageCreator::Create(
-        &mailboxContext->mMessageCache,
+        mailboxContext->mMessageAllocator,
         value,
         from));
 

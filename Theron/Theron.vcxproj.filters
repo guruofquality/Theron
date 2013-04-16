@@ -51,6 +51,9 @@
     <Filter Include="Header Files\Detail\Scheduler">
       <UniqueIdentifier>{e30bc778-440b-43df-ba5b-5d63164603fc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Detail\Strings">
+      <UniqueIdentifier>{a0705212-78d4-46e1-b228-47b843f7c9e0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Actor.cpp">
@@ -95,10 +98,7 @@
     <ClCompile Include="YieldPolicy.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="NonBlockingScheduler.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="BlockingScheduler.cpp">
+    <ClCompile Include="StringPool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -143,9 +143,6 @@
       <Filter>Header Files\Detail\Allocators</Filter>
     </ClInclude>
     <ClInclude Include="..\Include\Theron\Detail\Allocators\Pool.h">
-      <Filter>Header Files\Detail\Allocators</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Include\Theron\Detail\Allocators\TrivialAllocator.h">
       <Filter>Header Files\Detail\Allocators</Filter>
     </ClInclude>
     <ClInclude Include="..\Include\Theron\Detail\Alignment\MessageAlignment.h">
@@ -271,9 +268,6 @@
     <ClInclude Include="..\Include\Theron\Detail\Containers\Queue.h">
       <Filter>Header Files\Detail\Containers</Filter>
     </ClInclude>
-    <ClInclude Include="..\Include\Theron\Detail\Network\String.h">
-      <Filter>Header Files\Detail\Network</Filter>
-    </ClInclude>
     <ClInclude Include="..\Include\Theron\Detail\Network\Index.h">
       <Filter>Header Files\Detail\Network</Filter>
     </ClInclude>
@@ -313,9 +307,6 @@
     <ClInclude Include="..\Include\Theron\Detail\Messages\MessageSize.h">
       <Filter>Header Files\Detail\Messages</Filter>
     </ClInclude>
-    <ClInclude Include="..\Include\Theron\Detail\Scheduler\IScheduler.h">
-      <Filter>Header Files\Detail\Scheduler</Filter>
-    </ClInclude>
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\MailboxContext.h">
       <Filter>Header Files\Detail\Scheduler</Filter>
     </ClInclude>
@@ -325,22 +316,10 @@
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\ThreadPool.h">
       <Filter>Header Files\Detail\Scheduler</Filter>
     </ClInclude>
-    <ClInclude Include="..\Include\Theron\Detail\Scheduler\WorkItem.h">
-      <Filter>Header Files\Detail\Scheduler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Include\Theron\Detail\Scheduler\WorkQueue.h">
-      <Filter>Header Files\Detail\Scheduler</Filter>
-    </ClInclude>
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\YieldImplementation.h">
       <Filter>Header Files\Detail\Scheduler</Filter>
     </ClInclude>
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\YieldPolicy.h">
-      <Filter>Header Files\Detail\Scheduler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Include\Theron\Detail\Scheduler\BlockingScheduler.h">
-      <Filter>Header Files\Detail\Scheduler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Include\Theron\Detail\Scheduler\NonBlockingScheduler.h">
       <Filter>Header Files\Detail\Scheduler</Filter>
     </ClInclude>
     <ClInclude Include="..\Include\Theron\YieldStrategy.h">
@@ -354,6 +333,27 @@
     </ClInclude>
     <ClInclude Include="..\Include\Theron\Detail\Threading\Mutex.h">
       <Filter>Header Files\Detail\Threading</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Scheduler\Scheduler.h">
+      <Filter>Header Files\Detail\Scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Scheduler\IScheduler.h">
+      <Filter>Header Files\Detail\Scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Scheduler\BlockingQueue.h">
+      <Filter>Header Files\Detail\Scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Scheduler\NonBlockingQueue.h">
+      <Filter>Header Files\Detail\Scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Scheduler\WorkerContext.h">
+      <Filter>Header Files\Detail\Scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Strings\String.h">
+      <Filter>Header Files\Detail\Strings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Strings\StringPool.h">
+      <Filter>Header Files\Detail\Strings</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

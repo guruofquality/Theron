@@ -8,7 +8,6 @@
 #include <Theron/Defines.h>
 #include <Theron/IAllocator.h>
 
-#include <Theron/Detail/Allocators/CachingAllocator.h>
 #include <Theron/Detail/Directory/Directory.h>
 #include <Theron/Detail/Handlers/FallbackHandlerCollection.h>
 #include <Theron/Detail/Mailboxes/Mailbox.h>
@@ -34,24 +33,28 @@ Context structure holding data used by a worker thread to process mailboxes.
 \note The members of a single context are all accessed only by one worker thread
 so we don't need to worry about shared writes, including false sharing.
 */
-struct MailboxContext
+class MailboxContext
 {
+public:
+
     /**
     Constructor.
     */
-    inline MailboxContext(IAllocator *const messageAllocator) :
+    inline MailboxContext() :
+      mScheduler(0),
+      mQueueContext(0),
       mMailboxes(0),
       mFallbackHandlers(0),
-      mMessageCache(messageAllocator),
-      mScheduler(0)
+      mMessageAllocator(0)
     {
     }
 
-    Directory<Mailbox> *mMailboxes;                         ///< Pointer to the array of mailboxes serviced by this context.
-    FallbackHandlerCollection *mFallbackHandlers;           ///< Pointer to fallback handlers for undelivered messages.
-    CachingAllocator<32> mMessageCache;                     ///< Per-thread cache of free message memory blocks.
-    IScheduler *mScheduler;                                 ///< Pointer to a per-thread mailbox scheduler.
-    Atomic::UInt32 mCounters[MAX_COUNTERS];                 ///< Event counters.
+    IScheduler *mScheduler;                             ///< Pointer to the associated scheduler.
+    void *mQueueContext;                                ///< Pointer to the associated queue context.
+    Directory<Mailbox> *mMailboxes;                     ///< Pointer to the array of mailboxes serviced by this context.
+    Atomic::UInt32 mCounters[MAX_COUNTERS];             ///< Array of event counters.
+    FallbackHandlerCollection *mFallbackHandlers;       ///< Pointer to fallback handlers for undelivered messages.
+    IAllocator *mMessageAllocator;                      ///< Pointer to message memory block allocator.
 
 private:
 
