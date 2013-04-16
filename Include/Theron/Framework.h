@@ -204,8 +204,8 @@ public:
           mThreadCount(threadCount),
           mNodeMask(nodeMask),
           mProcessorMask(processorMask),
-          mThreadPriority(priority),
-          mYieldStrategy(yieldStrategy)
+          mYieldStrategy(yieldStrategy),
+          mThreadPriority(priority)
         {
         }
 
