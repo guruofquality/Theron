@@ -223,9 +223,25 @@ THERON_FORCEINLINE void BlockingQueue::Push(
 
     // Push the mailbox onto the shared work queue.
     // Because the shared queue is accessed by multiple threads we have to protect it.
-    context->mLock->Relock();
+    if (context->mShared)
+    {
+        mSharedWorkQueueCondition.GetMutex().Lock();
+    }
+    else
+    {
+        context->mLock->Relock();
+    }
+
     mSharedWorkQueue.Push(mailbox);
-    context->mLock->Unlock();
+
+    if (context->mShared)
+    {
+        mSharedWorkQueueCondition.GetMutex().Unlock();
+    }
+    else
+    {
+        context->mLock->Unlock();
+    }
 
     // Pulse the condition associated with the shared queue to wake a worker thread.
     // It's okay to release the lock before calling Pulse.
