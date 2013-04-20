@@ -58,7 +58,8 @@ public:
         FallbackHandlerCollection *const fallbackHandlers,
         IAllocator *const messageAllocator,
         const uint32_t nodeMask,
-        const uint32_t processorMask,        
+        const uint32_t processorMask,
+        const float threadPriority,
         const YieldStrategy yieldStrategy);
 
     /**
@@ -133,7 +134,8 @@ private:
 
     // Construction parameters.
     uint32_t mNodeMask;                                 ///< NUMA node affinity mask.
-    uint32_t mProcessorMask;                            ///< Processor affinity mask with eahc NUMA node.
+    uint32_t mProcessorMask;                            ///< Processor affinity mask with each NUMA node.
+    float mThreadPriority;                              ///< Relative scheduling priority of the worker threads.
 
     MailboxContext mSharedMailboxContext;               ///< Per-framework mailbox context shared by all worker threads.
     QueueContext mSharedQueueContext;                   ///< Per-framework queue context shared by all worker threads.
@@ -156,12 +158,14 @@ inline Scheduler<QueueType>::Scheduler(
     FallbackHandlerCollection *const fallbackHandlers,
     IAllocator *const messageAllocator,
     const uint32_t nodeMask,
-    const uint32_t processorMask,        
+    const uint32_t processorMask,
+    const float threadPriority,
     const YieldStrategy yieldStrategy) :
   mMailboxes(mailboxes),
   mFallbackHandlers(fallbackHandlers),
   mNodeMask(nodeMask),
   mProcessorMask(processorMask),
+  mThreadPriority(threadPriority),
   mMessageAllocator(messageAllocator),
   mSharedMailboxContext(),
   mSharedQueueContext(),
@@ -445,7 +449,8 @@ inline void Scheduler<QueueType>::ManagerThreadProc()
                 if (!ThreadPool::StartThread(
                     threadContext,
                     mNodeMask,
-                    mProcessorMask))
+                    mProcessorMask,
+                    mThreadPriority))
                 {
                     break;
                 }
@@ -483,7 +488,8 @@ inline void Scheduler<QueueType>::ManagerThreadProc()
             if (!ThreadPool::StartThread(
                 threadContext,
                 mNodeMask,
-                mProcessorMask))
+                mProcessorMask,
+                mThreadPriority))
             {
                 THERON_FAIL_MSG("Failed to start worker thread");
             }

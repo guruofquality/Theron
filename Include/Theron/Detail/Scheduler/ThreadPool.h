@@ -47,6 +47,7 @@ public:
         inline explicit ThreadContext(QueueType *const queue) :
           mNodeMask(0),
           mProcessorMask(0),
+          mThreadPriority(0.0f),
           mRunning(false),
           mStarted(false),
           mThread(0),
@@ -59,6 +60,7 @@ public:
         // Internal
         uint32_t mNodeMask;                     ///< Bit-field NUMA node affinity mask for the created thread.
         uint32_t mProcessorMask;                ///< Bit-field processor affinity mask within specified nodes.
+        float mThreadPriority;                  ///< Relative scheduling priority of the thread.
         bool mRunning;                          ///< Indicates whether the thread is running; used to stop running threads.
         bool mStarted;                          ///< Indicates whether the thread has started.
         Thread *mThread;                        ///< Pointer to the thread object.
@@ -86,11 +88,13 @@ public:
     \param workQueue Pointer to the shared work queue that the thread will service.
     \param nodeMask Bit-mask specifying on which NUMA processor nodes the thread may execute.
     \param processorMask Bit-mask specifying a subset of the processors in each indicated NUMA processor node.
+    \param threadPriority Relative scheduling priority of the thread.
     */
     inline static bool StartThread(
         ThreadContext *const threadContext,
         const uint32_t nodeMask,
-        const uint32_t processorMask);
+        const uint32_t processorMask,
+        const float threadPriority);
 
     /**
     Stops the given thread, which must have been started with StartThread.
@@ -157,7 +161,8 @@ template <class QueueType, class ContextType, class ProcessorType>
 inline bool ThreadPool<QueueType, ContextType, ProcessorType>::StartThread(
     ThreadContext *const threadContext,
     const uint32_t nodeMask,
-    const uint32_t processorMask)
+    const uint32_t processorMask,
+    const float threadPriority)
 {
     THERON_ASSERT(threadContext->mRunning == false);
     THERON_ASSERT(threadContext->mThread);
@@ -165,6 +170,7 @@ inline bool ThreadPool<QueueType, ContextType, ProcessorType>::StartThread(
 
     threadContext->mNodeMask = nodeMask;
     threadContext->mProcessorMask = processorMask;
+    threadContext->mThreadPriority = threadPriority;
     threadContext->mRunning = true;
 
     // Start the thread, running it via a static (non-member function) entry point that wraps the real member function.
@@ -243,8 +249,9 @@ inline void ThreadPool<QueueType, ContextType, ProcessorType>::ThreadEntryPoint(
     QueueContext *const queueContext(&threadContext->mQueueContext);
     ContextType *const userContext(&threadContext->mUserContext);
 
-    // Set the NUMA node and processor affinity for the running thread.
+    // Set the thread's scheduling priority, NUMA node affinity and processor affinity.
     Utils::SetThreadAffinity(threadContext->mNodeMask, threadContext->mProcessorMask);
+    Utils::SetThreadRelativePriority(threadContext->mThreadPriority);
 
     queue->InitializeWorkerContext(queueContext);
 

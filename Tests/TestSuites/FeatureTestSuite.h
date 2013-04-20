@@ -31,7 +31,10 @@ public:
         TESTFRAMEWORK_REGISTER_TEST(ConstructFrameworkThreadCount);
         TESTFRAMEWORK_REGISTER_TEST(ConstructFrameworkDefaultParams);
         TESTFRAMEWORK_REGISTER_TEST(ConstructFrameworkParamsThreadCount);
-        TESTFRAMEWORK_REGISTER_TEST(ConstructFrameworkParamsThreadCountNode);
+        TESTFRAMEWORK_REGISTER_TEST(ConstructFrameworkParamsNodeProcessor);
+        TESTFRAMEWORK_REGISTER_TEST(ConstructFrameworkParamsStrategy);
+        TESTFRAMEWORK_REGISTER_TEST(ConstructFrameworkParamsPriorityOne);
+        TESTFRAMEWORK_REGISTER_TEST(ConstructFrameworkParamsPriorityMinusOne);
         TESTFRAMEWORK_REGISTER_TEST(ConstructActor);
         TESTFRAMEWORK_REGISTER_TEST(ConstructMultipleActors);
         TESTFRAMEWORK_REGISTER_TEST(ConstructAddress);
@@ -123,9 +126,32 @@ public:
         Theron::Framework framework(params);
     }
 
-    inline static void ConstructFrameworkParamsThreadCountNode()
+    inline static void ConstructFrameworkParamsNodeProcessor()
     {
-        Theron::Framework::Parameters params(16, 0);
+        Theron::Framework::Parameters params(16, 0x1, 0xFFFF);
+        params.mNodeMask = 0x1;
+        params.mProcessorMask = 0xFFFF;
+        Theron::Framework framework(params);
+    }
+
+    inline static void ConstructFrameworkParamsStrategy()
+    {
+        Theron::Framework::Parameters params(16, 0x1, 0xFFFF, Theron::YIELD_STRATEGY_BLOCKING);
+        params.mYieldStrategy = Theron::YIELD_STRATEGY_BLOCKING;
+        Theron::Framework framework(params);
+    }
+
+    inline static void ConstructFrameworkParamsPriorityOne()
+    {
+        Theron::Framework::Parameters params(16, 0x1, 0xFFFF, Theron::YIELD_STRATEGY_BLOCKING, 1.0f);
+        params.mThreadPriority = 1.0f;
+        Theron::Framework framework(params);
+    }
+
+    inline static void ConstructFrameworkParamsPriorityMinusOne()
+    {
+        Theron::Framework::Parameters params(16, 0x1, 0xFFFF, Theron::YIELD_STRATEGY_BLOCKING, -1.0f);
+        params.mThreadPriority = -1.0f;
         Theron::Framework framework(params);
     }
 

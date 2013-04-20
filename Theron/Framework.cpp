@@ -96,7 +96,8 @@ Detail::IScheduler *Framework::CreateScheduler()
             &mFallbackHandlers,
             &mMessageAllocator,
             mParams.mNodeMask,
-            mParams.mProcessorMask,        
+            mParams.mProcessorMask,
+            mParams.mThreadPriority,
             mParams.mYieldStrategy);
     }
     else
@@ -106,7 +107,8 @@ Detail::IScheduler *Framework::CreateScheduler()
             &mFallbackHandlers,
             &mMessageAllocator,
             mParams.mNodeMask,
-            mParams.mProcessorMask,        
+            mParams.mProcessorMask,
+            mParams.mThreadPriority,
             mParams.mYieldStrategy);
     }
 }

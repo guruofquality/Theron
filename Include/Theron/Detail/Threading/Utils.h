@@ -120,6 +120,13 @@ public:
     */
     inline static bool SetThreadAffinity(const uint32_t nodeMask, const uint32_t processorMask);
 
+    /**
+    Hints to the OS the relative priority of the current thread, relative to other threads.
+
+    The legal values are -1.0f to +1.0f, with zero indicating "normal" priority.
+    */
+    inline static bool SetThreadRelativePriority(const float relativePriority);
+
 private:
 
     Utils(const Utils &other);
@@ -435,6 +442,76 @@ numa_cleanup_and_done:
 #endif
 
 #endif // THERON_NUMA
+
+    return false;
+}
+
+
+// Implementation based on code from numanuma by guruofquality.
+inline bool Utils::SetThreadRelativePriority(const float priority)
+{
+    if (priority < -1.0f || priority > 1.0f)
+    {
+        return false;
+    }
+
+#if THERON_WINDOWS
+
+    int threadPriority = THREAD_PRIORITY_NORMAL;
+
+    if (priority > 0.0f)
+    {
+        if      (priority > +0.75f) threadPriority = THREAD_PRIORITY_TIME_CRITICAL;
+        else if (priority > +0.50f) threadPriority = THREAD_PRIORITY_HIGHEST;
+        else if (priority > +0.25f) threadPriority = THREAD_PRIORITY_ABOVE_NORMAL;
+        else                        threadPriority = THREAD_PRIORITY_NORMAL;
+    }
+    else
+    {
+        if      (priority < -0.75f) threadPriority = THREAD_PRIORITY_IDLE;
+        else if (priority < -0.50f) threadPriority = THREAD_PRIORITY_LOWEST;
+        else if (priority < -0.25f) threadPriority = THREAD_PRIORITY_BELOW_NORMAL;
+        else                        threadPriority = THREAD_PRIORITY_NORMAL;
+    }
+
+    if (SetThreadPriority(GetCurrentThread(), threadPriority))
+    {
+        return true;
+    }
+
+#elif THERON_POSIX
+
+    struct sched_param sp;
+    sp.sched_priority = 0;
+
+    if (priority <= 0.0f)
+    {
+        const int policy(SCHED_OTHER);
+        if (pthread_setschedparam(pthread_self(), policy, &sp) == 0)
+        {
+            return true;
+        }
+    }
+    else
+    {
+        const int policy(SCHED_RR);
+        const int minPriority(sched_get_priority_min(policy));
+        const int maxPriority(sched_get_priority_max(policy));
+
+        if (minPriority == -1 || maxPriority == -1)
+        {
+            return false;
+        }
+
+        // Scale linearly between minimum and maximum allowed static priority.
+        sp.sched_priority = minPriority + (int)(priority * (maxPriority - minPriority));
+        if (pthread_setschedparam(pthread_self(), policy, &sp) == 0)
+        {
+            return true;
+        }
+    }
+
+#endif
 
     return false;
 }

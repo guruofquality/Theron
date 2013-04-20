@@ -197,15 +197,18 @@ public:
         \param nodeMask Bitfield mask specifying the NUMA node affinity of the created worker threads.
         \param processorMask Bitfield mask specifying the processor affinity of the created worker threads within each enabled NUMA node.
         \param yieldStrategy Enum value specifying how freely worker threads yield to other system threads.
+        \param priority Relative scheduling priority of the worker threads (range -1.0f to 1.0f, 0.0f is "normal").
         */
         inline explicit Parameters(
             const uint32_t threadCount = 16,
             const uint32_t nodeMask = 0x1,
             const uint32_t processorMask = 0xFFFFFFFF,
-            const YieldStrategy yieldStrategy = YIELD_STRATEGY_BLOCKING) :
+            const YieldStrategy yieldStrategy = YIELD_STRATEGY_BLOCKING,
+            const float priority = 0.0f) :
           mThreadCount(threadCount),
           mNodeMask(nodeMask),
           mProcessorMask(processorMask),
+          mThreadPriority(priority),
           mYieldStrategy(yieldStrategy)
         {
         }
@@ -214,6 +217,7 @@ public:
         uint32_t mNodeMask;             ///< Specifies the NUMA processor nodes upon which the framework may execute.
         uint32_t mProcessorMask;        ///< Specifies the subset of the processors in each NUMA processor node upon which the framework may execute.
         YieldStrategy mYieldStrategy;   ///< Strategy that defines how freely worker threads yield to other system threads.
+        float mThreadPriority;          ///< Relative scheduler priority of the worker threads created within the framework.
     };
 
     /**
