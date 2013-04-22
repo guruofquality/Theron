@@ -62,11 +62,11 @@ private:
     {
         if (token > 0)
         {
-            TailSend(token - 1, mNext);
+            Send(token - 1, mNext);
         }
         else
         {
-            TailSend(token, mCaller);
+            Send(token, mCaller);
         }
     }
 

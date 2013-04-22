@@ -40,12 +40,6 @@ namespace Theron
 {
 
 
-namespace Detail
-{
-class MessageSender;
-}
-
-
 class Actor;
 class Framework;
 class Receiver;
@@ -69,7 +63,6 @@ public:
     friend class Actor;
     friend class Framework;
     friend class Receiver;
-    friend class Detail::MessageSender;
 
     /**
     \brief Parameters structure that can be passed to the EndPoint constructor.

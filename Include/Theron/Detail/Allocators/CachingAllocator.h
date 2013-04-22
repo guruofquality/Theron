@@ -24,24 +24,40 @@ namespace Detail
 {
 
 
-class NullCachingAllocatorLock
+struct DefaultCacheTraits
 {
-public:
-
-    THERON_FORCEINLINE void Lock()
+    /**
+    Default lock type boils away to no locking.
+    */
+    class LockType
     {
-    }
+    public:
 
-    THERON_FORCEINLINE void Unlock()
+        THERON_FORCEINLINE void Lock()
+        {
+        }
+
+        THERON_FORCEINLINE void Unlock()
+        {
+        }
+    };
+
+    /**
+    Default alignment type enforces no entry alignment.
+    */
+    struct AlignType
     {
-    }
+    };
+
+    static const uint32_t MAX_POOLS = 8;
+    static const uint32_t MAX_BLOCKS = 16;
 };
 
 
 /**
 A thread-safe caching allocator that caches free memory blocks.
 */
-template <uint32_t MAX_POOLS, uint32_t MAX_BLOCKS, class LockType = NullCachingAllocatorLock>
+template <class CacheTraits = DefaultCacheTraits>
 class CachingAllocator : public Theron::IAllocator
 {
 public:
@@ -102,12 +118,13 @@ private:
     {
     public:
 
-        typedef Detail::Pool<MAX_BLOCKS> PoolType;
+        typedef Detail::Pool<CacheTraits::MAX_BLOCKS> PoolType;
 
         inline Entry() : mBlockSize(0)
         {
         }
 
+        typename CacheTraits::AlignType mAlign;
         uint32_t mBlockSize;
         PoolType mPool;
     };
@@ -118,40 +135,40 @@ private:
     inline void *AllocateInline(const uint32_t size, const uint32_t alignment);
     inline void FreeInline(void *const block, const uint32_t size);
 
-    IAllocator *mAllocator;         ///< Pointer to a wrapped low-level allocator.
-    LockType mMutex;                ///< Protects access to the pools.
-    Entry mEntries[MAX_POOLS];      ///< Pools of memory blocks of different sizes.
+    IAllocator *mAllocator;                     ///< Pointer to a wrapped low-level allocator.
+    typename CacheTraits::LockType mMutex;      ///< Protects access to the pools.
+    Entry mEntries[CacheTraits::MAX_POOLS];     ///< Pools of memory blocks of different sizes.
 };
 
 
-template <uint32_t MAX_POOLS, uint32_t MAX_BLOCKS, class LockType>
-THERON_FORCEINLINE CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::CachingAllocator() : mAllocator(0)
+template <class CacheTraits>
+THERON_FORCEINLINE CachingAllocator<CacheTraits>::CachingAllocator() : mAllocator(0)
 {
 }
 
 
-template <uint32_t MAX_POOLS, uint32_t MAX_BLOCKS, class LockType>
-THERON_FORCEINLINE CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::CachingAllocator(IAllocator *const allocator) : mAllocator(allocator)
+template <class CacheTraits>
+THERON_FORCEINLINE CachingAllocator<CacheTraits>::CachingAllocator(IAllocator *const allocator) : mAllocator(allocator)
 {
 }
 
 
-template <uint32_t MAX_POOLS, uint32_t MAX_BLOCKS, class LockType>
-THERON_FORCEINLINE CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::~CachingAllocator()
+template <class CacheTraits>
+THERON_FORCEINLINE CachingAllocator<CacheTraits>::~CachingAllocator()
 {
     Clear();
 }
 
 
-template <uint32_t MAX_POOLS, uint32_t MAX_BLOCKS, class LockType>
-inline void CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::SetAllocator(IAllocator *const allocator)
+template <class CacheTraits>
+inline void CachingAllocator<CacheTraits>::SetAllocator(IAllocator *const allocator)
 {
     mAllocator = allocator;
 }
 
 
-template <uint32_t MAX_POOLS, uint32_t MAX_BLOCKS, class LockType>
-inline void *CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::Allocate(const uint32_t size)
+template <class CacheTraits>
+inline void *CachingAllocator<CacheTraits>::Allocate(const uint32_t size)
 {
     // Promote small allocations to cache-line size and alignment to improve cache hit rate.
     const uint32_t effectiveSize(size > THERON_CACHELINE_ALIGNMENT ? size : THERON_CACHELINE_ALIGNMENT);
@@ -162,8 +179,8 @@ inline void *CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::Allocate(const u
 }
 
 
-template <uint32_t MAX_POOLS, uint32_t MAX_BLOCKS, class LockType>
-inline void *CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::AllocateAligned(const uint32_t size, const uint32_t alignment)
+template <class CacheTraits>
+inline void *CachingAllocator<CacheTraits>::AllocateAligned(const uint32_t size, const uint32_t alignment)
 {
     // Promote small alignments to cache-line size and alignment to improve cache hit rate.
     const uint32_t effectiveSize(size > THERON_CACHELINE_ALIGNMENT ? size : THERON_CACHELINE_ALIGNMENT);
@@ -174,8 +191,8 @@ inline void *CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::AllocateAligned(
 }
 
 
-template <uint32_t MAX_POOLS, uint32_t MAX_BLOCKS, class LockType>
-THERON_FORCEINLINE void *CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::AllocateInline(const uint32_t size, const uint32_t alignment)
+template <class CacheTraits>
+THERON_FORCEINLINE void *CachingAllocator<CacheTraits>::AllocateInline(const uint32_t size, const uint32_t alignment)
 {
     void *block(0);
 
@@ -188,13 +205,13 @@ THERON_FORCEINLINE void *CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::Allo
     mMutex.Lock();
 
     // The last pool is reserved and should always be empty.
-    THERON_ASSERT(mEntries[MAX_POOLS - 1].mBlockSize == 0);
-    THERON_ASSERT(mEntries[MAX_POOLS - 1].mPool.Empty());
+    THERON_ASSERT(mEntries[CacheTraits::MAX_POOLS - 1].mBlockSize == 0);
+    THERON_ASSERT(mEntries[CacheTraits::MAX_POOLS - 1].mPool.Empty());
 
     // Search each entry in turn for one whose pool contains blocks of the required size.
     // Stop if we reach the first unused entry (marked by a block size of zero).
     uint32_t index(0);
-    while (index < MAX_POOLS)
+    while (index < CacheTraits::MAX_POOLS)
     {
         Entry &entry(mEntries[index]);
         if (entry.mBlockSize == size)
@@ -227,9 +244,9 @@ THERON_FORCEINLINE void *CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::Allo
 
     // If we claimed the last pool then clear the pool which is
     // now last after the swap, so it's available for next time.
-    if (index == MAX_POOLS - 1)
+    if (index == CacheTraits::MAX_POOLS - 1)
     {
-        Entry &entry(mEntries[MAX_POOLS - 1]);
+        Entry &entry(mEntries[CacheTraits::MAX_POOLS - 1]);
         while (!entry.mPool.Empty())
         {
             mAllocator->Free(entry.mPool.Fetch(), entry.mBlockSize);
@@ -237,8 +254,8 @@ THERON_FORCEINLINE void *CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::Allo
     }
 
     // Check that the last pool has been left unused and empty.
-    THERON_ASSERT(mEntries[MAX_POOLS - 1].mBlockSize == 0);
-    THERON_ASSERT(mEntries[MAX_POOLS - 1].mPool.Empty());
+    THERON_ASSERT(mEntries[CacheTraits::MAX_POOLS - 1].mBlockSize == 0);
+    THERON_ASSERT(mEntries[CacheTraits::MAX_POOLS - 1].mPool.Empty());
 
     mMutex.Unlock();
 
@@ -252,8 +269,8 @@ THERON_FORCEINLINE void *CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::Allo
 }
 
 
-template <uint32_t MAX_POOLS, uint32_t MAX_BLOCKS, class LockType>
-inline void CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::Free(void *const block)
+template <class CacheTraits>
+inline void CachingAllocator<CacheTraits>::Free(void *const block)
 {
     // This caching allocator relies on knowing the sizes of freed blocks.
     // We know the allocated size is at least a cache-line because we promote smaller alignments.
@@ -265,8 +282,8 @@ inline void CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::Free(void *const 
 }
 
 
-template <uint32_t MAX_POOLS, uint32_t MAX_BLOCKS, class LockType>
-inline void CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::Free(void *const block, const uint32_t size)
+template <class CacheTraits>
+inline void CachingAllocator<CacheTraits>::Free(void *const block, const uint32_t size)
 {
     // We know the allocated size is at least a cache-line because we promote smaller alignments.
     // This does assume the memory was allocated using this cache, or another instance of it.
@@ -276,8 +293,8 @@ inline void CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::Free(void *const 
 }
 
 
-template <uint32_t MAX_POOLS, uint32_t MAX_BLOCKS, class LockType>
-THERON_FORCEINLINE void CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::FreeInline(void *const block, const uint32_t size)
+template <class CacheTraits>
+THERON_FORCEINLINE void CachingAllocator<CacheTraits>::FreeInline(void *const block, const uint32_t size)
 {
     bool added(false);
 
@@ -292,7 +309,7 @@ THERON_FORCEINLINE void CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::FreeI
     // Stop if we reach the first unused entry (marked by a block size of zero).
     // Don't search the very last pool, since it is reserved for use in swaps.
     uint32_t index(0);
-    while (index < MAX_POOLS && mEntries[index].mBlockSize)
+    while (index < CacheTraits::MAX_POOLS && mEntries[index].mBlockSize)
     {
         Entry &entry(mEntries[index]);
         if (entry.mBlockSize == size)
@@ -315,13 +332,13 @@ THERON_FORCEINLINE void CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::FreeI
 }
 
 
-template <uint32_t MAX_POOLS, uint32_t MAX_BLOCKS, class LockType>
-THERON_FORCEINLINE void CachingAllocator<MAX_POOLS, MAX_BLOCKS, LockType>::Clear()
+template <class CacheTraits>
+THERON_FORCEINLINE void CachingAllocator<CacheTraits>::Clear()
 {
     mMutex.Lock();
 
     // Free any remaining blocks in the pools.
-    for (uint32_t index = 0; index < MAX_POOLS; ++index)
+    for (uint32_t index = 0; index < CacheTraits::MAX_POOLS; ++index)
     {
         Entry &entry(mEntries[index]);
         while (!entry.mPool.Empty())

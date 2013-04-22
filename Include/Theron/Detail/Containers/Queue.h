@@ -39,7 +39,7 @@ public:
     Baseclass that adds link members to node types that derive from it.
     In order to be used with the queue, item classes must derive from Node.
     */
-    class Node
+    class THERON_PREALIGN(THERON_CACHELINE_ALIGNMENT) Node
     {
     public:
 
@@ -54,7 +54,8 @@ public:
 
         Node(const Node &other);
         Node &operator=(const Node &other);
-    };
+
+    } THERON_POSTALIGN(THERON_CACHELINE_ALIGNMENT);
 
     /**
     Constructor

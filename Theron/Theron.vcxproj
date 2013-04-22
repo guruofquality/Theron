@@ -20,8 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Actor.cpp" />
-    <ClCompile Include="ActorRef.cpp" />
-    <ClCompile Include="ActorRegistry.cpp" />
     <ClCompile Include="Address.cpp" />
     <ClCompile Include="AllocatorManager.cpp" />
     <ClCompile Include="BuildDescriptor.cpp" />
@@ -31,14 +29,12 @@
     <ClCompile Include="Framework.cpp" />
     <ClCompile Include="HandlerCollection.cpp" />
     <ClCompile Include="MailboxProcessor.cpp" />
-    <ClCompile Include="MessageSender.cpp" />
     <ClCompile Include="Receiver.cpp" />
     <ClCompile Include="StringPool.cpp" />
     <ClCompile Include="YieldPolicy.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Include\Theron\Actor.h" />
-    <ClInclude Include="..\Include\Theron\ActorRef.h" />
     <ClInclude Include="..\Include\Theron\Address.h" />
     <ClInclude Include="..\Include\Theron\Align.h" />
     <ClInclude Include="..\Include\Theron\AllocatorManager.h" />
@@ -75,13 +71,11 @@
     <ClInclude Include="..\Include\Theron\Detail\Handlers\MessageHandlerCast.h" />
     <ClInclude Include="..\Include\Theron\Detail\Handlers\ReceiverHandler.h" />
     <ClInclude Include="..\Include\Theron\Detail\Handlers\ReceiverHandlerCast.h" />
-    <ClInclude Include="..\Include\Theron\Detail\Legacy\ActorRegistry.h" />
     <ClInclude Include="..\Include\Theron\Detail\Mailboxes\Mailbox.h" />
     <ClInclude Include="..\Include\Theron\Detail\Messages\IMessage.h" />
     <ClInclude Include="..\Include\Theron\Detail\Messages\Message.h" />
     <ClInclude Include="..\Include\Theron\Detail\Messages\MessageCast.h" />
     <ClInclude Include="..\Include\Theron\Detail\Messages\MessageCreator.h" />
-    <ClInclude Include="..\Include\Theron\Detail\Messages\MessageSender.h" />
     <ClInclude Include="..\Include\Theron\Detail\Messages\MessageSize.h" />
     <ClInclude Include="..\Include\Theron\Detail\Messages\MessageTraits.h" />
     <ClInclude Include="..\Include\Theron\Detail\Network\Hash.h" />

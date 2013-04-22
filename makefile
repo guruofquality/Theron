@@ -275,7 +275,6 @@ THERON_HEADERS = \
 	Include/Theron/Detail/Handlers/MessageHandlerCast.h \
 	Include/Theron/Detail/Handlers/ReceiverHandler.h \
     Include/Theron/Detail/Handlers/ReceiverHandlerCast.h \
-	Include/Theron/Detail/Legacy/ActorRegistry.h \
 	Include/Theron/Detail/Mailboxes/Mailbox.h \
 	Include/Theron/Detail/Scheduler/BlockingQueue.h \
 	Include/Theron/Detail/Scheduler/IScheduler.h \
@@ -291,7 +290,6 @@ THERON_HEADERS = \
 	Include/Theron/Detail/Messages/Message.h \
 	Include/Theron/Detail/Messages/MessageCast.h \
 	Include/Theron/Detail/Messages/MessageCreator.h \
-	Include/Theron/Detail/Messages/MessageSender.h \
 	Include/Theron/Detail/Messages/MessageSize.h \
 	Include/Theron/Detail/Messages/MessageTraits.h \
 	Include/Theron/Detail/Network/Hash.h \
@@ -315,7 +313,6 @@ THERON_HEADERS = \
 	Include/Theron/Detail/Transport/OutputMessage.h \
 	Include/Theron/Detail/Transport/OutputSocket.h \
 	Include/Theron/Actor.h \
-	Include/Theron/ActorRef.h \
 	Include/Theron/Address.h \
 	Include/Theron/Align.h \
 	Include/Theron/AllocatorManager.h \
@@ -335,8 +332,6 @@ THERON_HEADERS = \
 
 THERON_SOURCES = \
 	Theron/Actor.cpp \
-	Theron/ActorRef.cpp \
-	Theron/ActorRegistry.cpp \
 	Theron/Address.cpp \
 	Theron/AllocatorManager.cpp \
 	Theron/BuildDescriptor.cpp \
@@ -346,15 +341,12 @@ THERON_SOURCES = \
 	Theron/Framework.cpp \
 	Theron/HandlerCollection.cpp \
 	Theron/MailboxProcessor.cpp \
-	Theron/MessageSender.cpp \
 	Theron/Receiver.cpp \
 	Theron/StringPool.cpp
 	Theron/YieldPolicy.cpp
 
 THERON_OBJECTS = \
 	${BUILD}/Actor.o \
-	${BUILD}/ActorRef.o \
-	${BUILD}/ActorRegistry.o \
 	${BUILD}/Address.o \
 	${BUILD}/AllocatorManager.o \
 	${BUILD}/BuildDescriptor.o \
@@ -364,7 +356,6 @@ THERON_OBJECTS = \
 	${BUILD}/Framework.o \
 	${BUILD}/HandlerCollection.o \
 	${BUILD}/MailboxProcessor.o \
-	${BUILD}/MessageSender.o \
 	${BUILD}/Receiver.o \
 	${BUILD}/StringPool.o \
 	${BUILD}/YieldPolicy.o
@@ -374,12 +365,6 @@ $(THERON_LIB): $(THERON_OBJECTS)
 
 ${BUILD}/Actor.o: Theron/Actor.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/Actor.cpp -o ${BUILD}/Actor.o ${INCLUDE_FLAGS}
-
-${BUILD}/ActorRef.o: Theron/ActorRef.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Theron/ActorRef.cpp -o ${BUILD}/ActorRef.o ${INCLUDE_FLAGS}
-
-${BUILD}/ActorRegistry.o: Theron/ActorRegistry.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Theron/ActorRegistry.cpp -o ${BUILD}/ActorRegistry.o ${INCLUDE_FLAGS}
 
 ${BUILD}/Address.o: Theron/Address.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/Address.cpp -o ${BUILD}/Address.o ${INCLUDE_FLAGS}
@@ -408,9 +393,6 @@ ${BUILD}/HandlerCollection.o: Theron/HandlerCollection.cpp ${THERON_HEADERS}
 ${BUILD}/MailboxProcessor.o: Theron/MailboxProcessor.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/MailboxProcessor.cpp -o ${BUILD}/MailboxProcessor.o ${INCLUDE_FLAGS}
 
-${BUILD}/MessageSender.o: Theron/MessageSender.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Theron/MessageSender.cpp -o ${BUILD}/MessageSender.o ${INCLUDE_FLAGS}
-
 ${BUILD}/Receiver.o: Theron/Receiver.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/Receiver.cpp -o ${BUILD}/Receiver.o ${INCLUDE_FLAGS}
 
@@ -433,7 +415,6 @@ TESTS_HEADERS = \
 	Tests/TestFramework/TestManager.h \
 	Tests/TestFramework/TestSuite.h \
 	Tests/TestSuites/FeatureTestSuite.h \
-	Tests/TestSuites/LegacyTestSuite.h \
 	Tests/TestSuites/NetworkTestSuite.h
 
 TESTS_SOURCES = \

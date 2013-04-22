@@ -7,9 +7,7 @@
 #include <Theron/Defines.h>
 #include <Theron/IAllocator.h>
 
-#include <Theron/Detail/Directory/Directory.h>
 #include <Theron/Detail/Handlers/FallbackHandlerCollection.h>
-#include <Theron/Detail/Mailboxes/Mailbox.h>
 #include <Theron/Detail/Scheduler/IScheduler.h>
 
 
@@ -35,7 +33,6 @@ public:
     inline MailboxContext() :
       mScheduler(0),
       mQueueContext(0),
-      mMailboxes(0),
       mFallbackHandlers(0),
       mMessageAllocator(0)
     {
@@ -43,7 +40,6 @@ public:
 
     IScheduler *mScheduler;                             ///< Pointer to the associated scheduler.
     void *mQueueContext;                                ///< Pointer to the associated queue context.
-    Directory<Mailbox> *mMailboxes;                     ///< Pointer to the array of mailboxes serviced by this context.
     FallbackHandlerCollection *mFallbackHandlers;       ///< Pointer to fallback handlers for undelivered messages.
     IAllocator *mMessageAllocator;                      ///< Pointer to message memory block allocator.
 

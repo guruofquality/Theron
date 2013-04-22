@@ -34,7 +34,7 @@ public:
     {
     }
 
-    CachingAllocator<8, 16> mMessageCache;  ///< Per-thread cache of message memory blocks.
+    CachingAllocator<> mMessageCache;       ///< Per-thread cache of message memory blocks.
     MailboxContext mMailboxContext;         ///< Per-thread context for mailbox processing.
 
 private:

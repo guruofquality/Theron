@@ -10,6 +10,7 @@
 #include <Theron/EndPoint.h>
 #include <Theron/Framework.h>
 #include <Theron/IAllocator.h>
+#include <Theron/Receiver.h>
 
 #include <Theron/Detail/Directory/StaticDirectory.h>
 #include <Theron/Detail/Scheduler/BlockingQueue.h>
@@ -95,6 +96,7 @@ Detail::IScheduler *Framework::CreateScheduler()
             &mMailboxes,
             &mFallbackHandlers,
             &mMessageAllocator,
+            &mSharedMailboxContext,
             mParams.mNodeMask,
             mParams.mProcessorMask,
             mParams.mThreadPriority,
@@ -106,6 +108,7 @@ Detail::IScheduler *Framework::CreateScheduler()
             &mMailboxes,
             &mFallbackHandlers,
             &mMessageAllocator,
+            &mSharedMailboxContext,
             mParams.mNodeMask,
             mParams.mProcessorMask,
             mParams.mThreadPriority,
@@ -219,6 +222,67 @@ void Framework::DeregisterActor(Actor *const actor)
 
         Detail::Utils::Backoff(backoff);
     }
+}
+
+
+bool Framework::DeliverWithinLocalProcess(Detail::IMessage *const message, const Detail::Index &index)
+{
+    const uint32_t targetFrameworkIndex(index.mComponents.mFramework);
+
+    THERON_ASSERT(index.mUInt32 != 0);
+
+    // Is the message addressed to a receiver? Receiver addresses have zero framework indices.
+    if (targetFrameworkIndex == 0)
+    {
+        // Get a reference to the receiver directory entry for this address.
+        Detail::Entry &entry(Detail::StaticDirectory<Receiver>::GetEntry(index.mComponents.mIndex));
+
+        // Pin the entry and lookup the entity registered at the address.
+        entry.Lock();
+        entry.Pin();
+        Receiver *const receiver(static_cast<Receiver *>(entry.GetEntity()));
+        entry.Unlock();
+
+        // If a receiver is registered at the mailbox then deliver the message to it.
+        if (receiver)
+        {
+            receiver->Push(message);
+        }
+
+        // Unpin the entry, allowing it to be changed by other threads.
+        entry.Lock();
+        entry.Unpin();
+        entry.Unlock();
+
+        return (receiver != 0);
+    }
+
+    bool delivered(false);
+
+    // TODO: Return a pointer so we can handle missing pages gracefully.
+    // Get the entry for the addressed framework.
+    Detail::Entry &entry(Detail::StaticDirectory<Framework>::GetEntry(index.mComponents.mFramework));
+
+    // Pin the entry and lookup the framework registered at the index.
+    entry.Lock();
+    entry.Pin();
+    Framework *const framework(static_cast<Framework *>(entry.GetEntity()));
+    entry.Unlock();
+
+    // If a framework is registered at this index then forward the message to it.
+    if (framework)
+    {
+        // The address is just an index with no name.
+        const Address address(Detail::String(), index);
+        delivered = framework->FrameworkReceive(message, address);
+    }
+
+    // Unpin the entry, allowing it to be changed by other threads.
+    entry.Lock();
+    entry.Unpin();
+    entry.Unlock();
+
+    return delivered;
 }
 
 

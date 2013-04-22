@@ -43,15 +43,13 @@ public:
         TESTFRAMEWORK_REGISTER_TEST(GetActorFramework);
         TESTFRAMEWORK_REGISTER_TEST(GetActorAddress);
         TESTFRAMEWORK_REGISTER_TEST(RegisterHandler);
-        TESTFRAMEWORK_REGISTER_TEST(SendHandledMessage);
+        TESTFRAMEWORK_REGISTER_TEST(SendHandledMessageInBlockingFramework);
+        TESTFRAMEWORK_REGISTER_TEST(SendHandledMessageInNonBlockingFramework);
         TESTFRAMEWORK_REGISTER_TEST(CreateActorInFunction);
         TESTFRAMEWORK_REGISTER_TEST(SendMessageToReceiverInFunction);
         TESTFRAMEWORK_REGISTER_TEST(SendMessageFromNullAddressInFunction);
         TESTFRAMEWORK_REGISTER_TEST(SendMessageToActorFromNullAddressInFunction);
         TESTFRAMEWORK_REGISTER_TEST(SendMessageToActorFromReceiverInFunction);
-        TESTFRAMEWORK_REGISTER_TEST(PushMessageToActorFromNullAddressInFunction);
-        TESTFRAMEWORK_REGISTER_TEST(PushMessageToActorFromReceiverInFunction);
-        TESTFRAMEWORK_REGISTER_TEST(PushMessageToActorInMessageHandler);
         TESTFRAMEWORK_REGISTER_TEST(ReceiveReplyInFunction);
         TESTFRAMEWORK_REGISTER_TEST(CatchReplyInFunction);
         TESTFRAMEWORK_REGISTER_TEST(SendNonPODMessageInFunction);
@@ -90,7 +88,6 @@ public:
         TESTFRAMEWORK_REGISTER_TEST(SendEmptyMessage);
         TESTFRAMEWORK_REGISTER_TEST(MultipleFrameworks);
         TESTFRAMEWORK_REGISTER_TEST(ConstructFrameworkWithParameters);
-        TESTFRAMEWORK_REGISTER_TEST(UseActorRefs);
         TESTFRAMEWORK_REGISTER_TEST(ThreadCountApi);
         TESTFRAMEWORK_REGISTER_TEST(EventCounterApi);
         TESTFRAMEWORK_REGISTER_TEST(ConstructEndPoint);
@@ -222,14 +219,39 @@ public:
         Registrar<int> actor(framework);
     }
 
-    inline static void SendHandledMessage()
+    inline static void SendHandledMessageInBlockingFramework()
     {
-        Theron::Framework framework;
+        Theron::Framework::Parameters params;
+        params.mYieldStrategy = Theron::YIELD_STRATEGY_BLOCKING;
+
+        Theron::Framework framework(params);
         Theron::Receiver receiver;
         Replier<int> actor(framework);
 
         framework.Send(int(0), receiver.GetAddress(), actor.GetAddress());
+        framework.Send(int(1), receiver.GetAddress(), actor.GetAddress());
+        framework.Send(int(2), receiver.GetAddress(), actor.GetAddress());
 
+        receiver.Wait();
+        receiver.Wait();
+        receiver.Wait();
+    }
+
+    inline static void SendHandledMessageInNonBlockingFramework()
+    {
+        Theron::Framework::Parameters params;
+        params.mYieldStrategy = Theron::YIELD_STRATEGY_POLITE;
+
+        Theron::Framework framework(params);
+        Theron::Receiver receiver;
+        Replier<int> actor(framework);
+
+        framework.Send(int(0), receiver.GetAddress(), actor.GetAddress());
+        framework.Send(int(1), receiver.GetAddress(), actor.GetAddress());
+        framework.Send(int(2), receiver.GetAddress(), actor.GetAddress());
+
+        receiver.Wait();
+        receiver.Wait();
         receiver.Wait();
     }
 
@@ -273,37 +295,6 @@ public:
         Signaller signaller(framework);
 
         framework.Send(receiver.GetAddress(), receiver.GetAddress(), signaller.GetAddress());
-        receiver.Wait();
-    }
-
-    inline static void PushMessageToActorFromNullAddressInFunction()
-    {
-        Theron::Framework framework;
-        Theron::Receiver receiver;
-        Signaller signaller(framework);
-
-        signaller.Push(receiver.GetAddress(), Theron::Address::Null());
-        receiver.Wait();
-    }
-
-    inline static void PushMessageToActorFromReceiverInFunction()
-    {
-        Theron::Framework framework;
-        Theron::Receiver receiver;
-        Signaller signaller(framework);
-
-        signaller.Push(receiver.GetAddress(), receiver.GetAddress());
-        receiver.Wait();
-    }
-
-    inline static void PushMessageToActorInMessageHandler()
-    {
-        Theron::Framework framework;
-        Theron::Receiver receiver;
-        Signaller signaller(framework);
-        Pusher pusher(framework, &signaller);
-
-        framework.Send(receiver.GetAddress(), receiver.GetAddress(), pusher.GetAddress());
         receiver.Wait();
     }
 
@@ -1149,45 +1140,6 @@ public:
         receiver.Wait();
     }
 
-    inline static void UseActorRefs()
-    {
-        Theron::Framework framework;
-        Theron::Receiver receiver;
-
-        Theron::ActorRef copyOne;
-        Theron::ActorRef copyTwo;
-
-        {
-            // Test parameterized and parameterless construction.
-            Version3Replier::Parameters params;
-            const Theron::ActorRef actorOne(framework.CreateActor<Version3Replier>());
-            Theron::ActorRef actorTwo(framework.CreateActor<Version3Replier>(params));
-
-            // Test transferral of ownership to copy-constructed ActorRefs.
-            const Theron::ActorRef tempOne(actorOne);
-            Theron::ActorRef tempTwo(actorTwo);
-
-            // Test transferral of ownership to assigned ActorRefs.
-            copyOne = tempOne;
-            copyTwo = tempTwo;
-        }
-
-        // Check ActorRef::operator== and ActorRef::operator!=
-        Check(copyOne == copyOne, "ActorRef::operator== failed");
-        Check(copyTwo == copyTwo, "ActorRef::operator== failed");
-        Check(copyOne != copyTwo, "ActorRef::operator!= failed");
-
-        // Test ActorRef::Null().
-        Check(copyOne != Theron::ActorRef::Null(), "ActorRef is null");
-        Check(copyTwo != Theron::ActorRef::Null(), "ActorRef is null");
-
-        framework.Send(int(35), receiver.GetAddress(), copyOne.GetAddress());
-        framework.Send(int(36), receiver.GetAddress(), copyTwo.GetAddress());
-
-        receiver.Wait();
-        receiver.Wait();
-    }
-
     inline static void ThreadCountApi()
     {
         Theron::Framework framework;
@@ -1518,28 +1470,6 @@ private:
             // Send the 'from' address to the address received in the message.
             Send(from, address);
         }
-    };
-
-    class Pusher : public Theron::Actor
-    {
-    public:
-
-        inline Pusher(Theron::Framework &framework, Theron::Actor *const target) :
-          Theron::Actor(framework),
-          mTarget(target)
-        {
-            RegisterHandler(this, &Pusher::Signal);
-        }
-
-    private:
-
-        inline void Signal(const Theron::Address &address, const Theron::Address /*from*/)
-        {
-            // Push the received address as a message directly into the target actor.
-            mTarget->Push(address, GetAddress());
-        }
-
-        Theron::Actor *mTarget;
     };
 
     class Switcher : public Theron::Actor

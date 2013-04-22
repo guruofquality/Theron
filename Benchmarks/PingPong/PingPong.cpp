@@ -67,11 +67,12 @@ private:
     {
         if (message > 0)
         {
-            TailSend(message - 1, mPartner);
-            return;
+            Send(message - 1, mPartner);
         }
-
-        TailSend(message, mCaller);
+        else
+        {
+            Send(message, mCaller);
+        }
     }
 
     Theron::Address mCaller;

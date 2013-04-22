@@ -48,7 +48,6 @@ public:
           mNodeMask(0),
           mProcessorMask(0),
           mThreadPriority(0.0f),
-          mRunning(false),
           mStarted(false),
           mThread(0),
           mQueue(queue),
@@ -61,7 +60,6 @@ public:
         uint32_t mNodeMask;                     ///< Bit-field NUMA node affinity mask for the created thread.
         uint32_t mProcessorMask;                ///< Bit-field processor affinity mask within specified nodes.
         float mThreadPriority;                  ///< Relative scheduling priority of the thread.
-        bool mRunning;                          ///< Indicates whether the thread is running; used to stop running threads.
         bool mStarted;                          ///< Indicates whether the thread has started.
         Thread *mThread;                        ///< Pointer to the thread object.
 
@@ -164,14 +162,15 @@ inline bool ThreadPool<QueueType, ContextType, ProcessorType>::StartThread(
     const uint32_t processorMask,
     const float threadPriority)
 {
-    THERON_ASSERT(threadContext->mRunning == false);
     THERON_ASSERT(threadContext->mThread);
     THERON_ASSERT(threadContext->mThread->Running() == false);
 
     threadContext->mNodeMask = nodeMask;
     threadContext->mProcessorMask = processorMask;
     threadContext->mThreadPriority = threadPriority;
-    threadContext->mRunning = true;
+
+    // Register the worker's queue context with the queue.
+    threadContext->mQueue->InitializeWorkerContext(&threadContext->mQueueContext);
 
     // Start the thread, running it via a static (non-member function) entry point that wraps the real member function.
     threadContext->mThread->Start(ThreadEntryPoint, threadContext);
@@ -186,9 +185,9 @@ inline bool ThreadPool<QueueType, ContextType, ProcessorType>::StopThread(Thread
     THERON_ASSERT(threadContext->mThread);
     THERON_ASSERT(threadContext->mThread->Running());
 
-    // Reset the enabled flag in the context object for the thread.
-    // The thread will terminate once it sees the flag has been reset.
-    threadContext->mRunning = false;
+    // Deregister the worker's queue context.
+    // Typically this instructs the thread to terminate.
+    threadContext->mQueue->ReleaseWorkerContext(&threadContext->mQueueContext);
 
     return true;
 }
@@ -210,7 +209,6 @@ inline bool ThreadPool<QueueType, ContextType, ProcessorType>::JoinThread(Thread
 template <class QueueType, class ContextType, class ProcessorType>
 inline bool ThreadPool<QueueType, ContextType, ProcessorType>::DestroyThread(ThreadContext *const threadContext)
 {
-    THERON_ASSERT(threadContext->mRunning == false);
     THERON_ASSERT(threadContext->mThread);
     THERON_ASSERT(threadContext->mThread->Running() == false);
 
@@ -228,7 +226,7 @@ inline bool ThreadPool<QueueType, ContextType, ProcessorType>::DestroyThread(Thr
 template <class QueueType, class ContextType, class ProcessorType>
 THERON_FORCEINLINE bool ThreadPool<QueueType, ContextType, ProcessorType>::IsRunning(ThreadContext *const threadContext)
 {
-    return threadContext->mRunning;
+    return threadContext->mQueue->Running(&threadContext->mQueueContext);
 }
 
 
@@ -253,21 +251,17 @@ inline void ThreadPool<QueueType, ContextType, ProcessorType>::ThreadEntryPoint(
     Utils::SetThreadAffinity(threadContext->mNodeMask, threadContext->mProcessorMask);
     Utils::SetThreadRelativePriority(threadContext->mThreadPriority);
 
-    queue->InitializeWorkerContext(queueContext);
-
     // Mark the thread as started so the caller knows they can start issuing work.
     threadContext->mStarted = true;
 
     // Process until told to stop.
-    while (threadContext->mRunning)
+    while (queue->Running(queueContext))
     {
         if (ItemType *const item = queue->Pop(queueContext))
         {
             queue->Process<ContextType, ProcessorType>(queueContext, userContext, item);
         }
     }
-
-    queue->ReleaseWorkerContext(queueContext);
 }
 
 

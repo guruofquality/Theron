@@ -234,7 +234,7 @@ private:
 
     private:
 
-        inline void Handler(const MessageType &message, const Theron::Address from)
+        inline void Handler(const MessageType &message, const Theron::Address /*from*/)
         {
             Send(message, mNotify);
         }

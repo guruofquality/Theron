@@ -48,17 +48,17 @@ public:
         friend class BlockingQueue;
 
         inline ContextType() :
+          mRunning(false),
           mShared(false),
-          mLocalWorkQueue(),
-          mLock(0)
+          mLocalWorkQueue()
         {
         }
 
     private:
 
+        bool mRunning;                              ///< Used to signal the thread to terminate.
         bool mShared;                               ///< Indicates whether this is the 'shared' context.
         Queue<Mailbox> mLocalWorkQueue;             ///< Local thread-specific work queue.
-        Lock *mLock;                                ///< Pointer to owned lock object.
         Atomic::UInt32 mCounters[MAX_COUNTERS];     ///< Array of per-context event counters.
     };
 
@@ -101,6 +101,11 @@ public:
     Returns true if a call to Pop would return no mailbox, for the given context.
     */
     inline bool Empty(const ContextType *const context) const;
+
+    /**
+    Returns true if the thread with the given context is still enabled.
+    */
+    inline bool Running(const ContextType *const context) const;
 
     /**
     Wakes any worker threads which are blocked waiting for the queue to become non-empty.
@@ -152,15 +157,7 @@ inline void BlockingQueue::InitializeWorkerContext(ContextType *const context)
 {
     // Only worker threads should call this method.
     context->mShared = false;
-
-    // Each worker thread holds the lock almost all the time in the main loop,
-    // releasing it only when it is doing actual processing. This protects against
-    // weird thread waiting and termination race conditions.
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
-    void *const memory = allocator->AllocateAligned(sizeof(Lock), THERON_CACHELINE_ALIGNMENT);
-
-    THERON_ASSERT_MSG(memory, "Failed to allocate lock for queue context");
-    context->mLock = new (memory) Lock(mSharedWorkQueueCondition.GetMutex());
+    context->mRunning = true;
 }
 
 
@@ -171,12 +168,8 @@ inline void BlockingQueue::ReleaseSharedContext(ContextType *const /*context*/)
 
 inline void BlockingQueue::ReleaseWorkerContext(ContextType *const context)
 {
-    // Each worker thread finally releases the lock it holds on the queue mutex.
-    context->mLock->~Lock();
-
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
-    allocator->Free(context->mLock, sizeof(Lock));
-    context->mLock = 0;
+    Lock (mSharedWorkQueueCondition.GetMutex());
+    context->mRunning = false;
 }
 
 
@@ -196,17 +189,20 @@ THERON_FORCEINLINE bool BlockingQueue::Empty(const ContextType *const context) c
 {
     // Check the context's local queue.
     // If the provided context is the shared context then it doesn't have a local queue.
-    if (!context->mShared)
+    if (!context->mShared && !context->mLocalWorkQueue.Empty())
     {
-        if (!context->mLocalWorkQueue.Empty())
-        {
-            return false;
-        }
+        return false;
     }
 
     // Check the shared work queue.
     Lock lock(mSharedWorkQueueCondition.GetMutex());
     return mSharedWorkQueue.Empty();
+}
+
+
+THERON_FORCEINLINE bool BlockingQueue::Running(const ContextType *const context) const
+{
+    return context->mRunning;
 }
 
 
@@ -262,18 +258,21 @@ THERON_FORCEINLINE Mailbox *BlockingQueue::Pop(ContextType *const context)
 
     // Pop a mailbox off the shared work queue.
     // Because the shared queue is accessed by multiple threads we have to protect it.
-    // The calling worker thread context contains a lock on the mutex which should currently be locked.
-    // We unlock it only temporarily while processing popped mailboxes.
+    Mailbox *mailbox(0);
+    Lock lock(mSharedWorkQueueCondition.GetMutex());
+
     if (!mSharedWorkQueue.Empty())
     {
-        return static_cast<Mailbox *>(mSharedWorkQueue.Pop());
+        mailbox = static_cast<Mailbox *>(mSharedWorkQueue.Pop());
+    }
+    else if (context->mRunning == true)
+    {
+        // Wait to be pulsed when work arrives on the shared queue.
+        context->mCounters[Theron::COUNTER_YIELDS].Increment();
+        mSharedWorkQueueCondition.Wait(lock);
     }
 
-    // Wait to be pulsed when work arrives on the shared queue.
-    context->mCounters[Theron::COUNTER_YIELDS].Increment();
-    mSharedWorkQueueCondition.Wait(*context->mLock);
-
-    return 0;
+    return mailbox;
 }
 
 
@@ -285,16 +284,10 @@ THERON_FORCEINLINE void BlockingQueue::Process(
 {
     // The shared context is never used to call Process.
     THERON_ASSERT(context->mShared == false);
-    THERON_ASSERT(context->mLock != 0);
-
-    // We unlock the lock on the shared queue mutex while we process the item.
-    context->mLock->Unlock();
 
     // Increment the context's message processing event counter.
     context->mCounters[Theron::COUNTER_MESSAGES_PROCESSED].Increment();
     ProcessorType::Process(userContext, mailbox);
-
-    context->mLock->Relock();
 }
 
 

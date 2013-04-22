@@ -50,6 +50,7 @@ public:
         friend class NonBlockingQueue;
 
         inline ContextType() :
+          mRunning(false),
           mShared(false),
           mLocalWorkQueue()
         {
@@ -57,6 +58,7 @@ public:
 
     private:
 
+        bool mRunning;                              ///< Used to signal the thread to terminate.
         bool mShared;                               ///< Indicates whether this is the 'shared' context.
         Queue<Mailbox> mLocalWorkQueue;             ///< Local thread-specific work queue.
         YieldImplementation mYield;                 ///< Thread yield strategy implementation.
@@ -102,6 +104,11 @@ public:
     Returns true if a call to Pop would return no mailbox, for the given context.
     */
     inline bool Empty(const ContextType *const context) const;
+
+    /**
+    Returns true if the thread with the given context is still enabled.
+    */
+    inline bool Running(const ContextType *const context) const;
 
     /**
     Wakes any worker threads which are blocked waiting for the queue to become non-empty.
@@ -153,6 +160,7 @@ inline void NonBlockingQueue::InitializeSharedContext(ContextType *const context
 inline void NonBlockingQueue::InitializeWorkerContext(ContextType *const context)
 {
     // Only worker threads should call this method.
+    context->mRunning = true;
     context->mShared = false;
 
     switch (mYieldStrategy)
@@ -170,8 +178,9 @@ inline void NonBlockingQueue::ReleaseSharedContext(ContextType *const /*context*
 }
 
 
-inline void NonBlockingQueue::ReleaseWorkerContext(ContextType *const /*context*/)
+inline void NonBlockingQueue::ReleaseWorkerContext(ContextType *const context)
 {
+    context->mRunning = false;
 }
 
 
@@ -213,6 +222,12 @@ THERON_FORCEINLINE bool NonBlockingQueue::Empty(const ContextType *const context
 }
 
 
+THERON_FORCEINLINE bool NonBlockingQueue::Running(const ContextType *const context) const
+{
+    return context->mRunning;
+}
+
+
 THERON_FORCEINLINE void NonBlockingQueue::WakeAll()
 {
     // Queue implementation is non-blocking, so threads don't block and don't need waking.
@@ -245,32 +260,29 @@ THERON_FORCEINLINE void NonBlockingQueue::Push(ContextType *const context, Mailb
 
 THERON_FORCEINLINE Mailbox *NonBlockingQueue::Pop(ContextType *const context)
 {
-    Mailbox *mailbox(0);
-
     // The shared context is never used to call Pop, only to Push
     // messages sent outside the context of a worker thread.
     THERON_ASSERT(context->mShared == false);
 
+    // Try to pop a mailbox off the calling thread's local work queue.
     // We only check the shared queue once the local queue is empty.
-    if (context->mLocalWorkQueue.Empty())
+    if (!context->mLocalWorkQueue.Empty())
     {
-        // Pop a mailbox off the shared work queue.
-        // Because the shared queue is accessed by multiple threads we have to protect it.
-        // In this implementation the shared queue is protected by a spinlock.
-        mSharedWorkQueueSpinLock.Lock();
-
-        if (!mSharedWorkQueue.Empty())
-        {
-            mailbox = static_cast<Mailbox *>(mSharedWorkQueue.Pop());
-        }
-
-        mSharedWorkQueueSpinLock.Unlock();
+        context->mYield.Reset();
+        return static_cast<Mailbox *>(context->mLocalWorkQueue.Pop());
     }
-    else
+
+    // Pop a mailbox off the shared work queue.
+    // Because the shared queue is accessed by multiple threads we have to protect it.
+    // In this implementation the shared queue is protected by a spinlock.
+    Mailbox *mailbox(0);
+
+    mSharedWorkQueueSpinLock.Lock();
+    if (!mSharedWorkQueue.Empty())
     {
-        // Try to pop a mailbox off the calling thread's local work queue.
-        mailbox = static_cast<Mailbox *>(context->mLocalWorkQueue.Pop());
+        mailbox = static_cast<Mailbox *>(mSharedWorkQueue.Pop());
     }
+    mSharedWorkQueueSpinLock.Unlock();
 
     if (mailbox)
     {
@@ -292,9 +304,11 @@ THERON_FORCEINLINE void NonBlockingQueue::Process(
     UserContextType *const userContext,
     Mailbox *const mailbox)
 {
+    // The shared context is never used to call Process.
+    THERON_ASSERT(context->mShared == false);
+
     // Increment the context's message processing event counter.
     context->mCounters[Theron::COUNTER_MESSAGES_PROCESSED].Increment();
-
     ProcessorType::Process(userContext, mailbox);
 }
 

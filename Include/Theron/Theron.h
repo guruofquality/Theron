@@ -10,7 +10,6 @@ All-inclusive wrapper header that includes all public headers.
 
 
 #include <Theron/Actor.h>
-#include <Theron/ActorRef.h>
 #include <Theron/Address.h>
 #include <Theron/Align.h>
 #include <Theron/AllocatorManager.h>

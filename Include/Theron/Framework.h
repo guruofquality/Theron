@@ -11,7 +11,6 @@ Framework that hosts and executes actors.
 
 #include <new>
 
-#include <Theron/ActorRef.h>
 #include <Theron/Address.h>
 #include <Theron/Align.h>
 #include <Theron/AllocatorManager.h>
@@ -29,10 +28,8 @@ Framework that hosts and executes actors.
 #include <Theron/Detail/Directory/Entry.h>
 #include <Theron/Detail/Handlers/DefaultFallbackHandler.h>
 #include <Theron/Detail/Handlers/FallbackHandlerCollection.h>
-#include <Theron/Detail/Legacy/ActorRegistry.h>
 #include <Theron/Detail/Mailboxes/Mailbox.h>
 #include <Theron/Detail/Messages/MessageCreator.h>
-#include <Theron/Detail/Messages/MessageSender.h>
 #include <Theron/Detail/Scheduler/MailboxContext.h>
 #include <Theron/Detail/Scheduler/IScheduler.h>
 #include <Theron/Detail/Strings/String.h>
@@ -116,8 +113,7 @@ class Framework : public Detail::Entry::Entity
 public:
 
     friend class Actor;
-    friend class ActorRef;
-    friend class Detail::MessageSender;
+    friend class EndPoint;
 
     /**
     \brief Parameters structure that can be passed to the Framework constructor.
@@ -671,124 +667,21 @@ public:
         ObjectType *const actor,
         void (ObjectType::*handler)(const void *const data, const uint32_t size, const Address from));
 
-    /**
-    \brief Deprecated method provided for backwards compatibility.
-
-    \note In versions of Theron from 4.0 onwards, there is no need to use this method.
-    It is provided only for backwards compatibility.
-
-    In versions of Theron prior to 4.0, actors couldn't be constructed directly
-    in user code. Instead you had to ask a Framework to create one for you, using
-    the CreateActor method template. Instead of returning the actor itself,
-    CreateActor returned a <i>reference</i> to the actor in the form of an \ref ActorRef
-    object.
-
-    \code
-    // LEGACY CODE!
-    class MyActor : public Theron::Actor
-    {
-    };
-
-    int main()
-    {
-        Theron::Framework framework;
-        Theron::ActorRef actorRef(framework.CreateActor<MyActor>());
-    }
-    \endcode
-
-    In versions of Theron starting with 4.0, Actors are first-class citizens and
-    behave like vanilla C++ objects. They can be constructed directly with no
-    call to Framework::CreateActor. Once constructed they are referenced directly
-    by user code with no need for ActorRef proxy objects.
-
-    When writing new code, follow the new, simpler construction pattern where actors
-    are constructed directly and not referenced by ActorRefs:
-
-    \code
-    // New code
-    class MyActor : public Theron::Actor
-    {
-    public:
-
-        MyActor(Theron::Framework &framework) : Theron::Actor(framework)
-        {
-        }
-    };
-
-    int main()
-    {
-        Theron::Framework framework;
-        MyActor actor(framework);
-    }
-    \endcode
-    */
-    template <class ActorType>
-    ActorRef CreateActor();
-
-    /**
-    \brief Deprecated method provided for backwards compatibility.
-
-    \note In versions of Theron from 4.0 onwards, there is no need to use this method.
-    It is provided only for backwards compatibility.
-
-    In versions of Theron prior to 4.0, actors couldn't be constructed directly
-    in user code. Instead you had to ask a Framework to create one for you, using
-    the CreateActor method template. Instead of returning the actor itself,
-    CreateActor returned a <i>reference</i> to the actor in the form of an \ref ActorRef
-    object.
-
-    \code
-    // LEGACY CODE!
-    class MyActor : public Theron::Actor
-    {
-    public:
-
-        struct Parameters
-        {
-            int mSomeParameter;
-        }
-
-        MyActor(const Parameters &params)
-        {
-        }
-    };
-
-    int main()
-    {
-        Theron::Framework framework;
-        MyActor::Parameters params;
-        params.mSomeParameter = 0;
-        Theron::ActorRef actorRef(framework.CreateActor<MyActor>(params));
-    }
-    \endcode
-
-    When writing new code, follow the new, simpler construction pattern where actors
-    are constructed directly and not referenced by ActorRefs:
-
-    \code
-    // New code
-    class MyActor : public Theron::Actor
-    {
-    public:
-
-        MyActor(Theron::Framework &framework, const int mSomeParameter) : Theron::Actor(framework)
-        {
-        }
-    };
-
-    int main()
-    {
-        Theron::Framework framework;
-        MyActor actor(framework, 0);
-    }
-    \endcode
-    */
-    template <class ActorType>
-    ActorRef CreateActor(const typename ActorType::Parameters &params);
-
 private:
 
-    typedef Detail::CachingAllocator<8, 16, Detail::SpinLock> MessageCache;
+    struct MessageCacheTraits
+    {
+        typedef Detail::SpinLock LockType;
+
+        struct THERON_PREALIGN(THERON_CACHELINE_ALIGNMENT) AlignType
+        {
+        } THERON_POSTALIGN(THERON_CACHELINE_ALIGNMENT);
+
+        static const uint32_t MAX_POOLS = 8;
+        static const uint32_t MAX_BLOCKS = 16;
+    };
+
+    typedef Detail::CachingAllocator<MessageCacheTraits> MessageCache;
 
     Framework(const Framework &other);
     Framework &operator=(const Framework &other);
@@ -815,11 +708,6 @@ private:
     void DestroyScheduler(Detail::IScheduler *const scheduler);
 
     /**
-    Gets the non-zero index of this framework, unique within the local process.
-    */
-    inline uint32_t GetIndex() const;
-
-    /**
     Registers a new actor in the directory and allocates a mailbox.
     */
     void RegisterActor(Actor *const actor, const char *const name = 0);
@@ -828,6 +716,22 @@ private:
     Deregisters a previously registered actor.
     */
     void DeregisterActor(Actor *const actor);
+
+    /**
+    Helper method that sends messages.
+    */
+    inline bool SendInternal(
+        void *const queueContext,
+        Detail::IMessage *const message,
+        Address address,
+        const bool localQueue);
+
+    /**
+    Helper method that sends messages to entities in the local process.
+    */
+    static bool DeliverWithinLocalProcess(
+        Detail::IMessage *const message,
+        const Detail::Index &index);
 
     /**
     Receives a message from another framework.
@@ -839,7 +743,7 @@ private:
     /**
     Returns a pointer to the shared mailbox context not associated with a specific worker thread.
     */
-    inline Detail::MailboxContext *GetSharedMailboxContext();
+    inline const Detail::MailboxContext *GetMailboxContext() const;
 
     Detail::StringPool::Ref mStringPoolRef;                 ///< Ensures that the StringPool is created.
     EndPoint *const mEndPoint;                              ///< Pointer to the network endpoint, if any, to which this framework is tied.
@@ -850,6 +754,7 @@ private:
     Detail::FallbackHandlerCollection mFallbackHandlers;    ///< Registered message handlers run for unhandled messages.
     Detail::DefaultFallbackHandler mDefaultFallbackHandler; ///< Default handler for unhandled messages.
     MessageCache mMessageAllocator;                         ///< Thread-safe per-framework cache of message memory blocks.
+    Detail::MailboxContext mSharedMailboxContext;           ///< Shared per-framework mailbox context.
     Detail::IScheduler *mScheduler;                         ///< Pointer to owned scheduler implementation.
 };
 
@@ -864,6 +769,7 @@ inline Framework::Framework(const uint32_t threadCount) :
   mFallbackHandlers(),
   mDefaultFallbackHandler(),
   mMessageAllocator(AllocatorManager::Instance().GetAllocator()),
+  mSharedMailboxContext(),
   mScheduler(0)
 {
     Detail::BuildDescriptor::Check();
@@ -882,6 +788,7 @@ inline Framework::Framework(const Parameters &params) :
   mFallbackHandlers(),
   mDefaultFallbackHandler(),
   mMessageAllocator(AllocatorManager::Instance().GetAllocator()),
+  mSharedMailboxContext(),
   mScheduler(0)
 {
     Detail::BuildDescriptor::Check();
@@ -900,6 +807,7 @@ inline Framework::Framework(EndPoint &endPoint, const char *const name, const Pa
   mFallbackHandlers(),
   mDefaultFallbackHandler(),
   mMessageAllocator(AllocatorManager::Instance().GetAllocator()),
+  mSharedMailboxContext(),
   mScheduler(0)
 {
     Detail::BuildDescriptor::Check();
@@ -929,12 +837,11 @@ THERON_FORCEINLINE bool Framework::Send(const ValueType &value, const Address &f
 
     // Call the message sending implementation using the processor context of the framework.
     // When messages are sent using Framework::Send there's no obvious worker thread.
-    return Detail::MessageSender::Send(
-        mEndPoint,
-        mScheduler->GetSharedMailboxContext(),
-        mIndex,
+    return SendInternal(
+        mSharedMailboxContext.mQueueContext,
         message,
-        address);
+        address,
+        false);
 }
 
 
@@ -995,24 +902,91 @@ THERON_FORCEINLINE uint32_t Framework::GetPerThreadCounterValues(
 }
 
 
+THERON_FORCEINLINE bool Framework::SendInternal(
+    void *const queueContext,
+    Detail::IMessage *const message,
+    Address address,
+    const bool localQueue)
+{
+    // Index of zero implies the actor is addressed only by name and may be remote.
+    if (address.mIndex.mUInt32 == 0)
+    {
+        const Detail::String &name(address.GetName());
+
+        THERON_ASSERT(!name.IsNull());
+        THERON_ASSERT_MSG(mEndPoint, "Sending messages addressed by name requires a Theron::EndPoint");
+
+        // Search the local endPoint for a mailbox with the given name.
+        // If there is a local match we fall through using the retrieved index, and we don't
+        // bother to push the message out onto the network, since names are globally unique.
+        if (!mEndPoint->Lookup(name, address.mIndex))
+        {
+            // If there isn't a local match we send the message out onto the network.
+            return mEndPoint->RequestSend(message, name);
+        }
+    }
+
+    // The address should have been resolved to a non-zero local index.
+    THERON_ASSERT(address.mIndex.mUInt32);
+
+    // Is the addressed entity in the local framework?
+    if (address.mIndex.mComponents.mFramework == mIndex)
+    {
+        // Message is addressed to an actor in the sending framework.
+        // Get a reference to the destination mailbox.
+        Detail::Mailbox &mailbox(mMailboxes.GetEntry(address.mIndex.mComponents.mIndex));
+
+        // Push the message into the mailbox and schedule the mailbox for processing
+        // if it was previously empty, so won't already be scheduled.
+        // The message will be destroyed by the worker thread that does the processing,
+        // even if it turns out that no actor is registered with the mailbox.
+        mailbox.Lock();
+
+        const bool schedule(mailbox.Empty());
+        mailbox.Push(message);
+
+        if (schedule)
+        {
+            mScheduler->Schedule(queueContext, &mailbox, localQueue);
+        }
+
+        mailbox.Unlock();
+
+        return true;
+    }
+
+    // Message is addressed to a mailbox in the local process but not in the
+    // sending Framework. In this less common case we pay the hit of an extra call.
+    if (DeliverWithinLocalProcess(message, address.mIndex))
+    {
+        return true;
+    }
+
+    // Destroy the undelivered message.
+    mFallbackHandlers.Handle(message);
+    Detail::MessageCreator::Destroy(&mMessageAllocator, message);
+
+    return false;
+}
+
+
 THERON_FORCEINLINE bool Framework::FrameworkReceive(
     Detail::IMessage *const message,
     const Address &address)
 {
     // Call the generic message sending function.
     // We use our own local context here because we're receiving the message.
-    return Detail::MessageSender::Send(
-        mEndPoint,
-        mScheduler->GetSharedMailboxContext(),
-        mIndex,
+    return SendInternal(
+        mSharedMailboxContext.mQueueContext,
         message,
-        address);
+        address,
+        false);
 }
 
 
-THERON_FORCEINLINE Detail::MailboxContext *Framework::GetSharedMailboxContext()
+THERON_FORCEINLINE const Detail::MailboxContext *Framework::GetMailboxContext() const
 {
-    return mScheduler->GetSharedMailboxContext();
+    return &mSharedMailboxContext;
 }
 
 
@@ -1031,116 +1005,6 @@ inline bool Framework::SetFallbackHandler(
     void (ObjectType::*handler)(const void *const data, const uint32_t size, const Address from))
 {
     return mFallbackHandlers.Set(handlerObject, handler);
-}
-
-
-THERON_FORCEINLINE uint32_t Framework::GetIndex() const
-{
-    return mIndex;
-}
-
-
-template <class ActorType>
-inline ActorRef Framework::CreateActor()
-{
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
-
-    // The actor type may need to be allocated with non-default alignment.
-    const uint32_t actorSize(static_cast<uint32_t>(sizeof(ActorType)));
-    const uint32_t actorAlignment(Detail::ActorAlignment<ActorType>::ALIGNMENT);
-
-    void *const actorMemory(allocator->AllocateAligned(actorSize, actorAlignment));
-    if (actorMemory == 0)
-    {
-        return ActorRef();
-    }
-
-    // Get the address of the Actor baseclass using some cast trickery.
-    // Note that the Actor may not always be the first baseclass, so the address may differ!
-    // The static_cast takes the offset of the Actor baseclass within ActorType into account.
-    ActorType *const pretendActor(reinterpret_cast<ActorType *>(actorMemory));
-    Actor *const actorBase(static_cast<Actor *>(pretendActor));
-
-    // Register the actor in the registry while we construct it.
-    // This stores an entry passing the actor pointers to its memory block and owning framework.
-    void *const entryMemory(allocator->Allocate(sizeof(typename Detail::ActorRegistry::Entry)));
-    if (entryMemory == 0)
-    {
-        allocator->Free(actorMemory, actorSize);
-        return ActorRef();
-    }
-
-    typename Detail::ActorRegistry::Entry *const entry = new (entryMemory) typename Detail::ActorRegistry::Entry;
-
-    entry->mActor = actorBase;
-    entry->mFramework = this;
-    entry->mMemory = actorMemory;
-
-    Detail::ActorRegistry::Register(entry);
-    
-    // Construct the actor for real in the allocated memory.
-    // The Actor picks up the registered framework pointer in its default constructor.
-    // This relies on the user not incorrectly calling the non-default Actor constructor!
-    ActorType *const actor = new (actorMemory) ActorType();
-
-    // Deregister and free the entry.
-    Detail::ActorRegistry::Deregister(entry);
-
-    allocator->Free(entryMemory, sizeof(typename Detail::ActorRegistry::Entry));
-
-    return ActorRef(actor);
-}
-
-
-template <class ActorType>
-inline ActorRef Framework::CreateActor(const typename ActorType::Parameters &params)
-{
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
-
-    // The actor type may need to be allocated with non-default alignment.
-    const uint32_t actorSize(static_cast<uint32_t>(sizeof(ActorType)));
-    const uint32_t actorAlignment(Detail::ActorAlignment<ActorType>::ALIGNMENT);
-
-    void *const actorMemory(allocator->AllocateAligned(actorSize, actorAlignment));
-    if (actorMemory == 0)
-    {
-        return ActorRef();
-    }
-
-    // Get the address of the Actor baseclass using some cast trickery.
-    // Note that the Actor may not always be the first baseclass, so the address may differ!
-    // The static_cast takes the offset of the Actor baseclass within ActorType into account.
-    ActorType *const pretendActor(reinterpret_cast<ActorType *>(actorMemory));
-    Actor *const actorBase(static_cast<Actor *>(pretendActor));
-
-    // Register the actor in the registry while we construct it.
-    // This stores an entry passing the actor pointers to its memory block and owning framework.
-    void *const entryMemory(allocator->Allocate(sizeof(typename Detail::ActorRegistry::Entry)));
-    if (entryMemory == 0)
-    {
-        allocator->Free(actorMemory, actorSize);
-        return ActorRef();
-    }
-
-    typename Detail::ActorRegistry::Entry *const entry = new (entryMemory) typename Detail::ActorRegistry::Entry;
-
-    entry->mActor = actorBase;
-    entry->mFramework = this;
-    entry->mMemory = actorMemory;
-
-    Detail::ActorRegistry::Register(entry);
-    
-    // Construct the actor for real in the allocated memory.
-    // The Actor picks up the registered framework pointer in its default constructor.
-    // This relies on the user not incorrectly calling the non-default Actor constructor!
-    ActorType *const actor = new (actorMemory) ActorType(params);
-
-    // Deregister and free the entry.
-    Detail::ActorRegistry::Deregister(entry);
-
-    allocator->Free(entryMemory, sizeof(typename Detail::ActorRegistry::Entry));
-
-    return ActorRef(actor);
 }
 
 

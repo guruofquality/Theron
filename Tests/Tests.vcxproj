@@ -140,7 +140,6 @@
     <ClInclude Include="TestFramework\TestManager.h" />
     <ClInclude Include="TestFramework\TestSuite.h" />
     <ClInclude Include="TestSuites\FeatureTestSuite.h" />
-    <ClInclude Include="TestSuites\LegacyTestSuite.h" />
     <ClInclude Include="TestSuites\NetworkTestSuite.h" />
   </ItemGroup>
   <ItemGroup>

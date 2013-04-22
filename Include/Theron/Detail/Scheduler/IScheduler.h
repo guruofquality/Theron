@@ -64,11 +64,6 @@ public:
     virtual void Schedule(void *const queueContext, Mailbox *const mailbox, const bool localThread) = 0;
 
     /**
-    Returns a pointer to the shared mailbox context not associated with a specific worker thread.
-    */
-    virtual MailboxContext *GetSharedMailboxContext() = 0;
-
-    /**
     Sets a maximum limit on the number of worker threads enabled in the scheduler.
     */
     virtual void SetMaxThreads(const uint32_t count) = 0;

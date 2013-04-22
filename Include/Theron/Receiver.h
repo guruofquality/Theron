@@ -43,13 +43,8 @@ namespace Theron
 {
 
 
-namespace Detail
-{
-class MessageSender;
-}
-
-
 class EndPoint;
+class Framework;
 
 
 /**
@@ -87,7 +82,7 @@ class Receiver : public Detail::Entry::Entity
 {
 public:
 
-    friend class Detail::MessageSender;
+    friend class Framework;
 
     /**
     \brief Default constructor.

@@ -20,12 +20,6 @@ namespace Theron
 {
 
 
-namespace Detail
-{
-class MessageSender;
-}
-
-
 class EndPoint;
 class Framework;
 class Receiver;
@@ -62,7 +56,6 @@ class Address
 {
 public:
 
-    friend class Detail::MessageSender;
     friend class EndPoint;
     friend class Framework;
     friend class Receiver;

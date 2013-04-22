@@ -57,6 +57,7 @@ public:
         Directory<Mailbox> *const mailboxes,
         FallbackHandlerCollection *const fallbackHandlers,
         IAllocator *const messageAllocator,
+        MailboxContext *const sharedMailboxContext,
         const uint32_t nodeMask,
         const uint32_t processorMask,
         const float threadPriority,
@@ -81,11 +82,6 @@ public:
     Schedules for processing a mailbox that has received a message.
     */
     inline virtual void Schedule(void *const queueContext, Mailbox *const mailbox, const bool localThread);
-
-    /**
-    Returns a pointer to the shared mailbox context not associated with a specific worker thread.
-    */
-    inline virtual MailboxContext *GetSharedMailboxContext();
 
     inline virtual void SetMaxThreads(const uint32_t count);
     inline virtual void SetMinThreads(const uint32_t count);
@@ -131,13 +127,13 @@ private:
     Directory<Mailbox> *mMailboxes;                     ///< Pointer to external mailbox array.
     FallbackHandlerCollection *mFallbackHandlers;       ///< Pointer to external fallback message handler collection.
     IAllocator *mMessageAllocator;                      ///< Pointer to external message memory block allocator.
+    MailboxContext *mSharedMailboxContext;              ///< Pointer to external mailbox context shared by all worker threads.
 
     // Construction parameters.
     uint32_t mNodeMask;                                 ///< NUMA node affinity mask.
     uint32_t mProcessorMask;                            ///< Processor affinity mask with each NUMA node.
     float mThreadPriority;                              ///< Relative scheduling priority of the worker threads.
 
-    MailboxContext mSharedMailboxContext;               ///< Per-framework mailbox context shared by all worker threads.
     QueueContext mSharedQueueContext;                   ///< Per-framework queue context shared by all worker threads.
     QueueType mQueue;                                   ///< Instantiation of the work queue implementation.
 
@@ -157,6 +153,7 @@ inline Scheduler<QueueType>::Scheduler(
     Directory<Mailbox> *const mailboxes,
     FallbackHandlerCollection *const fallbackHandlers,
     IAllocator *const messageAllocator,
+    MailboxContext *const sharedMailboxContext,
     const uint32_t nodeMask,
     const uint32_t processorMask,
     const float threadPriority,
@@ -167,7 +164,7 @@ inline Scheduler<QueueType>::Scheduler(
   mProcessorMask(processorMask),
   mThreadPriority(threadPriority),
   mMessageAllocator(messageAllocator),
-  mSharedMailboxContext(),
+  mSharedMailboxContext(sharedMailboxContext),
   mSharedQueueContext(),
   mQueue(yieldStrategy),
   mManagerThread(),
@@ -194,11 +191,10 @@ inline void Scheduler<QueueType>::Initialize(const uint32_t threadCount)
     // This context is used by worker threads when a per-thread context isn't available.
     // The mailbox context holds pointers to the scheduler and associated queue context.
     // These are used to push mailboxes that still need further processing.
-    mSharedMailboxContext.mMessageAllocator = mMessageAllocator;
-    mSharedMailboxContext.mMailboxes = mMailboxes;
-    mSharedMailboxContext.mFallbackHandlers = mFallbackHandlers;
-    mSharedMailboxContext.mScheduler = this;
-    mSharedMailboxContext.mQueueContext = &mSharedQueueContext;
+    mSharedMailboxContext->mMessageAllocator = mMessageAllocator;
+    mSharedMailboxContext->mFallbackHandlers = mFallbackHandlers;
+    mSharedMailboxContext->mScheduler = this;
+    mSharedMailboxContext->mQueueContext = &mSharedQueueContext;
 
     mQueue.InitializeSharedContext(&mSharedQueueContext);
 
@@ -254,13 +250,6 @@ inline void Scheduler<QueueType>::Schedule(void *const queueContext, Mailbox *co
 {
     QueueContext *const typedContext(reinterpret_cast<QueueContext *>(queueContext));
     mQueue.Push(typedContext, mailbox, localThread);
-}
-
-
-template <class QueueType>
-inline MailboxContext *Scheduler<QueueType>::GetSharedMailboxContext()
-{
-    return &mSharedMailboxContext;
 }
 
 
@@ -473,7 +462,6 @@ inline void Scheduler<QueueType>::ManagerThreadProc()
             // These are used to push mailboxes that still need further processing.
             threadContext->mUserContext.mMessageCache.SetAllocator(mMessageAllocator);
             threadContext->mUserContext.mMailboxContext.mMessageAllocator = &threadContext->mUserContext.mMessageCache;
-            threadContext->mUserContext.mMailboxContext.mMailboxes = mMailboxes;
             threadContext->mUserContext.mMailboxContext.mFallbackHandlers = mFallbackHandlers;
             threadContext->mUserContext.mMailboxContext.mScheduler = this;
             threadContext->mUserContext.mMailboxContext.mQueueContext = &threadContext->mQueueContext;

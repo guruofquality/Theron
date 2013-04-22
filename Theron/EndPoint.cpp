@@ -14,10 +14,10 @@
 #include <Theron/AllocatorManager.h>
 #include <Theron/Assert.h>
 #include <Theron/EndPoint.h>
+#include <Theron/Framework.h>
 #include <Theron/IAllocator.h>
 
 #include <Theron/Detail/Messages/MessageCreator.h>
-#include <Theron/Detail/Messages/MessageSender.h>
 #include <Theron/Detail/Network/MessageFactory.h>
 #include <Theron/Detail/Network/NetworkMessage.h>
 #include <Theron/Detail/Threading/Utils.h>
@@ -398,7 +398,7 @@ void EndPoint::NetworkThreadProc()
                 if (message)
                 {
                     // Try to deliver the allocated message to an actor in a local framework.
-                    if (!Detail::MessageSender::DeliverWithinLocalProcess(message, toIndex))
+                    if (!Framework::DeliverWithinLocalProcess(message, toIndex))
                     {
                         // Destroy the undelivered message using the global allocator.
                         Detail::MessageCreator::Destroy(allocator, message);

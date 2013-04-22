@@ -10,7 +10,6 @@
 #include "TestFramework/TestManager.h"
 
 #include "TestSuites/FeatureTestSuite.h"
-#include "TestSuites/LegacyTestSuite.h"
 
 #if THERON_XS
 #include "TestSuites/NetworkTestSuite.h"
@@ -19,7 +18,6 @@
 
 /// Static instantiations of the test suites.
 Tests::FeatureTestSuite featureTestSuite;
-Tests::LegacyTestSuite legacyTestSuite;
 
 #if THERON_XS
 Tests::NetworkTestSuite networkTestSuite;
