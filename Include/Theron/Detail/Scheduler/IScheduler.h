@@ -61,7 +61,7 @@ public:
     /**
     Schedules for processing a mailbox that has received a message.
     */
-    virtual void Schedule(void *const queueContext, Mailbox *const mailbox, const bool localThread) = 0;
+    virtual void Schedule(void *const queueContext, Mailbox *const mailbox) = 0;
 
     /**
     Sets a maximum limit on the number of worker threads enabled in the scheduler.

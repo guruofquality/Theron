@@ -81,7 +81,7 @@ public:
     /**
     Schedules for processing a mailbox that has received a message.
     */
-    inline virtual void Schedule(void *const queueContext, Mailbox *const mailbox, const bool localThread);
+    inline virtual void Schedule(void *const queueContext, Mailbox *const mailbox);
 
     inline virtual void SetMaxThreads(const uint32_t count);
     inline virtual void SetMinThreads(const uint32_t count);
@@ -100,7 +100,7 @@ public:
 private:
 
     typedef typename QueueType::ContextType QueueContext;
-    typedef ThreadPool<QueueType, WorkerContext, MailboxProcessor> ThreadPool;
+    typedef Detail::ThreadPool<QueueType, WorkerContext, MailboxProcessor> ThreadPool;
     typedef typename ThreadPool::ThreadContext ThreadContext;
     typedef List<ThreadContext> ContextList;
 
@@ -160,11 +160,11 @@ inline Scheduler<QueueType>::Scheduler(
     const YieldStrategy yieldStrategy) :
   mMailboxes(mailboxes),
   mFallbackHandlers(fallbackHandlers),
+  mMessageAllocator(messageAllocator),
+  mSharedMailboxContext(sharedMailboxContext),
   mNodeMask(nodeMask),
   mProcessorMask(processorMask),
   mThreadPriority(threadPriority),
-  mMessageAllocator(messageAllocator),
-  mSharedMailboxContext(sharedMailboxContext),
   mSharedQueueContext(),
   mQueue(yieldStrategy),
   mManagerThread(),
@@ -246,10 +246,10 @@ inline void Scheduler<QueueType>::Release()
 
 
 template <class QueueType>
-inline void Scheduler<QueueType>::Schedule(void *const queueContext, Mailbox *const mailbox, const bool localThread)
+inline void Scheduler<QueueType>::Schedule(void *const queueContext, Mailbox *const mailbox)
 {
     QueueContext *const typedContext(reinterpret_cast<QueueContext *>(queueContext));
-    mQueue.Push(typedContext, mailbox, localThread);
+    mQueue.Push(typedContext, mailbox);
 }
 
 
@@ -315,7 +315,7 @@ inline bool Scheduler<QueueType>::QueuesEmpty() const
     mThreadContextLock.Lock();
     
     // Check the worker thread queue contexts.
-    ContextList::Iterator contexts(mThreadContexts.GetIterator());
+    typename ContextList::Iterator contexts(mThreadContexts.GetIterator());
     while (contexts.Next())
     {
         ThreadContext *const threadContext(contexts.Get());
@@ -344,7 +344,7 @@ inline void Scheduler<QueueType>::ResetCounters()
     mThreadContextLock.Lock();
 
     // Reset the counters in all worker thread contexts.
-    ContextList::Iterator contexts(mThreadContexts.GetIterator());
+    typename ContextList::Iterator contexts(mThreadContexts.GetIterator());
     while (contexts.Next())
     {
         ThreadContext *const threadContext(contexts.Get());
@@ -367,7 +367,7 @@ inline uint32_t Scheduler<QueueType>::GetCounterValue(const Counter counter) con
     mThreadContextLock.Lock();
 
     // Accumulate the counter values from all thread contexts.
-    ContextList::Iterator contexts(mThreadContexts.GetIterator());
+    typename ContextList::Iterator contexts(mThreadContexts.GetIterator());
     while (contexts.Next())
     {
         ThreadContext *const threadContext(contexts.Get());
@@ -394,7 +394,7 @@ inline uint32_t Scheduler<QueueType>::GetPerThreadCounterValues(
     mThreadContextLock.Lock();
 
     // Read the per-thread counter values into the provided array, skipping non-running contexts.
-    ContextList::Iterator contexts(mThreadContexts.GetIterator());
+    typename ContextList::Iterator contexts(mThreadContexts.GetIterator());
     while (itemCount < maxCounts && contexts.Next())
     {
         ThreadContext *const threadContext(contexts.Get());
@@ -429,7 +429,7 @@ inline void Scheduler<QueueType>::ManagerThreadProc()
         mThreadContextLock.Lock();
 
         // Re-start stopped worker threads while the thread count is too low.
-        ContextList::Iterator contexts(mThreadContexts.GetIterator());
+        typename ContextList::Iterator contexts(mThreadContexts.GetIterator());
         while (mThreadCount.Load() < mTargetThreadCount.Load() && contexts.Next())
         {
             ThreadContext *const threadContext(contexts.Get());

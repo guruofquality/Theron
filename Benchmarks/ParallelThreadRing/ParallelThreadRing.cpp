@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
     timer.Stop();
 
     printf("Processed %d messages in %.1f seconds\n", numMessagesProcessed, timer.Seconds());
-    printf("Counted %d waits, %d local pushes and %d shared pushes\n", numYields, numLocalPushes, numSharedPushes);
+    printf("Counted %d thread yields, %d local pushes and %d shared pushes\n", numYields, numLocalPushes, numSharedPushes);
 
 #if THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
     Theron::IAllocator *const allocator(Theron::AllocatorManager::Instance().GetAllocator());

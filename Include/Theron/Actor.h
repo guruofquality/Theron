@@ -748,67 +748,18 @@ protected:
     This method can safely be called within the constructor or destructor of a derived
     actor object, as well as (more typically) within its message handler functions.
 
-    \note When sending messages from message handlers, use \ref TailSend instead, in the
-    common case where the sending of the message is the last action of the message
-    handler. In such cases, using TailSend can result in significantly higher performance.
-
     \tparam ValueType The message type (any copyable class or Plain-Old-Data type).
     \param value The message value to be sent.
     \param address The address of the destination Receiver or Actor mailbox.
     \return True, if the message was delivered, otherwise false.
-
-    \see TailSend
     */
     template <class ValueType>
     inline bool Send(const ValueType &value, const Address &address) const;
 
     /**
-    \brief Sends a message to the entity at the given address, without waking a worker thread.
+    \brief Sends a message to the entity at the given address.
 
-    This method sends a message to the entity at a given address, and is functionally
-    identical to the similar \ref Send method.
-    
-    TailSend differs from Send in that it is potentially more efficient when
-    called as the last operation of a message handler. TailSend hints to Theron that
-    the message handler sending the message is about to terminate, freeing the worker
-    thread that is currently executing it. As a result Theron may choose to schedule
-    the actor receiving the message on the same thread, rather than dispatching it
-    to an arbitrary, and potentially different, worker thread.
-
-    \note TailSend is only useful when called from the 'tail' of a message handler
-    (rather than an actor constructor or destructor) and only when the sent message
-    is addressed to an actor within the same \ref Framework. Since the actor receiving
-    the message is typically processed by the worker thread that is executing the
-    current message handler, the two are effectively serialized with no potential
-    for parallelism. For that reason TailSend should not be used to send messages
-    to actors that are intended to handle the message in parallel with the executing
-    handler.
-
-    \code
-    class Processor : public Theron::Actor
-    {
-    public:
-
-        explicit Processor(Theron::Framework &framework) : Theron::Actor(framework)
-        {
-            RegisterHandler(this, &Processor::Process);
-        }
-
-    private:
-
-        void Process(const int &message, const Theron::Address from)
-        {
-            // Use Send when sending messages from non-tail positions.
-            Send(someRequest, someOtherActor);
-
-            // Do some compute-intensive processing using the message value.
-            // ...
-
-            // Send the result as the last action using TailSend.
-            TailSend(result, from);
-        }
-    };
-    \endcode
+    \note TailSend is deprecated; use \ref Send instead.
    
     \tparam ValueType The message type (any copyable class or Plain Old Datatype).
     \param value The message value to be sent.
@@ -958,8 +909,7 @@ THERON_FORCEINLINE bool Actor::Send(const ValueType &value, const Address &addre
         return mFramework->SendInternal(
             mailboxContext->mQueueContext,
             message,
-            address,
-            false);
+            address);
     }
 
     return false;
@@ -969,38 +919,8 @@ THERON_FORCEINLINE bool Actor::Send(const ValueType &value, const Address &addre
 template <class ValueType>
 THERON_FORCEINLINE bool Actor::TailSend(const ValueType &value, const Address &address) const
 {
-    // Try to use the processor context owned by a worker thread.
-    // The current thread will be a worker thread if this method has been called from a message
-    // handler. If it was called from an actor constructor or destructor then the current thread
-    // may be an application thread, in which case the stored context pointer will be null.
-    // If it is null we fall back to the per-framework context, which is shared between threads.
-    // The advantage of using a thread-specific context is that it is only accessed by that
-    // single thread so doesn't need to be thread-safe and isn't written by other threads
-    // so doesn't cause expensive cache coherency updates between cores.
-    const Detail::MailboxContext *mailboxContext(mMailboxContext);
-    if (mMailboxContext == 0)
-    {
-        mailboxContext = mFramework->GetMailboxContext();
-    }
-
-    // Allocate a message. It'll be deleted by the worker thread that handles it.
-    Detail::IMessage *const message(Detail::MessageCreator::Create(
-        mailboxContext->mMessageAllocator,
-        value,
-        mAddress));
-
-    if (message)
-    {
-        // Call the message sending implementation using the acquired processor context.
-        // We schedule the receiving actor, if any, on the local queue of the processing worker thread, if any.
-        return mFramework->SendInternal(
-            mailboxContext->mQueueContext,
-            message,
-            address,
-            true);
-    }
-
-    return false;
+    // Currently TailSend is equivalent to Send; use Send instead.
+    return Send(value, address);
 }
 
 

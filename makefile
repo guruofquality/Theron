@@ -342,7 +342,7 @@ THERON_SOURCES = \
 	Theron/HandlerCollection.cpp \
 	Theron/MailboxProcessor.cpp \
 	Theron/Receiver.cpp \
-	Theron/StringPool.cpp
+	Theron/StringPool.cpp \
 	Theron/YieldPolicy.cpp
 
 THERON_OBJECTS = \
