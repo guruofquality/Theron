@@ -184,6 +184,7 @@ TESTS = ${BIN}/Tests
 THREADRING = ${BIN}/ThreadRing
 PARALLELTHREADRING = ${BIN}/ParallelThreadRing
 PINGPONG = ${BIN}/PingPong
+MULTIPLEWRITERS = ${BIN}/MultipleWriters
 PRIMEFACTORS = ${BIN}/PrimeFactors
 
 ALIGNMENT = ${BIN}/Alignment
@@ -219,6 +220,7 @@ benchmarks: library \
 	${THREADRING} \
 	${PARALLELTHREADRING} \
 	${PINGPONG} \
+	${MULTIPLEWRITERS} \
 	${PRIMEFACTORS}
 
 tutorial: library \
@@ -470,6 +472,17 @@ ${PINGPONG}: $(THERON_LIB) ${PINGPONG_OBJECTS}
 
 ${BUILD}/PingPong.o: Benchmarks/PingPong/PingPong.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Benchmarks/PingPong/PingPong.cpp -o ${BUILD}/PingPong.o ${INCLUDE_FLAGS}
+
+
+# MultipleWriters benchmark
+MULTIPLEWRITERS_SOURCES = Benchmarks/MultipleWriters/MultipleWriters.cpp
+MULTIPLEWRITERS_OBJECTS = ${BUILD}/MultipleWriters.o
+
+${MULTIPLEWRITERS}: $(THERON_LIB) ${MULTIPLEWRITERS_OBJECTS}
+	$(CC) $(LDFLAGS) ${MULTIPLEWRITERS_OBJECTS} $(THERON_LIB) -o ${MULTIPLEWRITERS} ${LIB_FLAGS}
+
+${BUILD}/MultipleWriters.o: Benchmarks/MultipleWriters/MultipleWriters.cpp ${THERON_HEADERS}
+	$(CC) $(CFLAGS) Benchmarks/MultipleWriters/MultipleWriters.cpp -o ${BUILD}/MultipleWriters.o ${INCLUDE_FLAGS}
 
 
 # PrimeFactors benchmark
