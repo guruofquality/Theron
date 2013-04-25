@@ -12,8 +12,8 @@
 #include "../Common/Timer.h"
 
 
-static const Theron::uint64_t PRIME_FACTOR_1 = 86028157ULL;
-static const Theron::uint64_t PRIME_FACTOR_2 = 329545133ULL;
+static const Theron::uint64_t PRIME_FACTOR_1 = 20483ULL;
+static const Theron::uint64_t PRIME_FACTOR_2 = 29303ULL;
 static const Theron::uint64_t PRIME_PRODUCT = PRIME_FACTOR_1 * PRIME_FACTOR_2;
 
 
@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
 {
     int numMessagesProcessed(0), numYields(0), numLocalPushes(0), numSharedPushes(0);
 
-    const int numQueries = (argc > 1 && atoi(argv[1]) > 0) ? atoi(argv[1]) : 1000;
+    const int numQueries = (argc > 1 && atoi(argv[1]) > 0) ? atoi(argv[1]) : 1000000;
     const int numThreads = (argc > 2 && atoi(argv[2]) > 0) ? atoi(argv[2]) : 16;
     const int numWorkers = (argc > 3 && atoi(argv[3]) > 0) ? atoi(argv[3]) : 16;
 
