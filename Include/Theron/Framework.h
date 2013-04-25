@@ -723,8 +723,7 @@ private:
     inline bool SendInternal(
         void *const queueContext,
         Detail::IMessage *const message,
-        Address address,
-        const bool localQueue);
+        Address address);
 
     /**
     Helper method that sends messages to entities in the local process.
@@ -840,8 +839,7 @@ THERON_FORCEINLINE bool Framework::Send(const ValueType &value, const Address &f
     return SendInternal(
         mSharedMailboxContext.mQueueContext,
         message,
-        address,
-        false);
+        address);
 }
 
 
@@ -905,8 +903,7 @@ THERON_FORCEINLINE uint32_t Framework::GetPerThreadCounterValues(
 THERON_FORCEINLINE bool Framework::SendInternal(
     void *const queueContext,
     Detail::IMessage *const message,
-    Address address,
-    const bool localQueue)
+    Address address)
 {
     // Index of zero implies the actor is addressed only by name and may be remote.
     if (address.mIndex.mUInt32 == 0)
@@ -947,7 +944,7 @@ THERON_FORCEINLINE bool Framework::SendInternal(
 
         if (schedule)
         {
-            mScheduler->Schedule(queueContext, &mailbox, localQueue);
+            mScheduler->Schedule(queueContext, &mailbox);
         }
 
         mailbox.Unlock();
@@ -979,8 +976,7 @@ THERON_FORCEINLINE bool Framework::FrameworkReceive(
     return SendInternal(
         mSharedMailboxContext.mQueueContext,
         message,
-        address,
-        false);
+        address);
 }
 
 

@@ -3,6 +3,7 @@
 #define THERON_DETAIL_SCHEDULER_NONBLOCKINGQUEUE_H
 
 
+#include <Theron/Align.h>
 #include <Theron/BasicTypes.h>
 #include <Theron/Counters.h>
 #include <Theron/Defines.h>
@@ -58,11 +59,18 @@ public:
 
     private:
 
-        bool mRunning;                              ///< Used to signal the thread to terminate.
-        bool mShared;                               ///< Indicates whether this is the 'shared' context.
-        Queue<Mailbox> mLocalWorkQueue;             ///< Local thread-specific work queue.
-        YieldImplementation mYield;                 ///< Thread yield strategy implementation.
-        Atomic::UInt32 mCounters[MAX_COUNTERS];     ///< Array of per-context event counters.
+        template <class ValueType>
+        struct THERON_PREALIGN(THERON_CACHELINE_ALIGNMENT) Aligned
+        {
+            ValueType mValue;
+
+        } THERON_POSTALIGN(THERON_CACHELINE_ALIGNMENT);
+
+        bool mRunning;                                      ///< Used to signal the thread to terminate.
+        bool mShared;                                       ///< Indicates whether this is the 'shared' context.
+        Queue<Mailbox> mLocalWorkQueue;                     ///< Local thread-specific work queue.
+        YieldImplementation mYield;                         ///< Thread yield strategy implementation.
+        Aligned<Atomic::UInt32> mCounters[MAX_COUNTERS];    ///< Array of per-context event counters.
     };
 
     /**
@@ -117,9 +125,8 @@ public:
 
     /**
     Pushes a mailbox into the queue, scheduling it for processing.
-    \param localThread A hint indicating that the mailbox should be processed by the same thread.
     */
-    inline void Push(ContextType *const context, Mailbox *const mailbox, const bool localThread);
+    inline void Push(ContextType *const context, Mailbox *const mailbox);
 
     /**
     Pops a previously pushed mailbox from the queue for processing.
@@ -186,13 +193,13 @@ inline void NonBlockingQueue::ReleaseWorkerContext(ContextType *const context)
 
 inline void NonBlockingQueue::ResetCounter(ContextType *const context, const uint32_t counter) const
 {
-    context->mCounters[counter].Store(0);
+    context->mCounters[counter].mValue.Store(0);
 }
 
 
 inline uint32_t NonBlockingQueue::GetCounterValue(const ContextType *const context, const uint32_t counter) const
 {
-    return context->mCounters[counter].Load();
+    return context->mCounters[counter].mValue.Load();
 }
 
 
@@ -234,16 +241,18 @@ THERON_FORCEINLINE void NonBlockingQueue::WakeAll()
 }
 
 
-THERON_FORCEINLINE void NonBlockingQueue::Push(ContextType *const context, Mailbox *const mailbox, const bool localThread)
+THERON_FORCEINLINE void NonBlockingQueue::Push(ContextType *const context, Mailbox *const mailbox)
 {
-    // Try to push the mailbox onto the calling thread's local work queue.
-    // If the provided context is the shared context then it doesn't have a local queue.
-    if (localThread && !context->mShared)
+    // Try to push the mailbox onto the local queue of the calling worker thread context.
+    // We take the approach of only pushing to the local queue if it's empty.
+    // If the queue isn't empty then the second mailbox would be serialized with the first.
+    // The shared context doesn't have a local queue.
+    if (!context->mShared && context->mLocalWorkQueue.Empty())
     {
         // The local queue in a per-thread context is only accessed by that thread
         // so we don't need to protect access to it.
         context->mLocalWorkQueue.Push(mailbox);
-        context->mCounters[Theron::COUNTER_LOCAL_PUSHES].Increment();
+        context->mCounters[Theron::COUNTER_LOCAL_PUSHES].mValue.Increment();
 
         return;
     }
@@ -254,7 +263,7 @@ THERON_FORCEINLINE void NonBlockingQueue::Push(ContextType *const context, Mailb
     mSharedWorkQueue.Push(mailbox);
     mSharedWorkQueueSpinLock.Unlock();
 
-    context->mCounters[Theron::COUNTER_SHARED_PUSHES].Increment();
+    context->mCounters[Theron::COUNTER_SHARED_PUSHES].mValue.Increment();
 }
 
 
@@ -291,7 +300,7 @@ THERON_FORCEINLINE Mailbox *NonBlockingQueue::Pop(ContextType *const context)
     }
 
     // Progressive backoff.
-    context->mCounters[Theron::COUNTER_YIELDS].Increment();
+    context->mCounters[Theron::COUNTER_YIELDS].mValue.Increment();
     context->mYield.Execute();
 
     return 0;
@@ -308,7 +317,7 @@ THERON_FORCEINLINE void NonBlockingQueue::Process(
     THERON_ASSERT(context->mShared == false);
 
     // Increment the context's message processing event counter.
-    context->mCounters[Theron::COUNTER_MESSAGES_PROCESSED].Increment();
+    context->mCounters[Theron::COUNTER_MESSAGES_PROCESSED].mValue.Increment();
     ProcessorType::Process(userContext, mailbox);
 }
 

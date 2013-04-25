@@ -259,7 +259,7 @@ inline void ThreadPool<QueueType, ContextType, ProcessorType>::ThreadEntryPoint(
     {
         if (ItemType *const item = queue->Pop(queueContext))
         {
-            queue->template Process<ContextType, ProcessorType>(queueContext, userContext, item);
+            queue-> template Process<ContextType, ProcessorType>(queueContext, userContext, item);
         }
     }
 }

@@ -75,7 +75,7 @@ void MailboxProcessor::Process(WorkerContext *const workerContext, Mailbox *cons
     mailbox->Pop();
     if (!mailbox->Empty())
     {
-        context->mScheduler->Schedule(context->mQueueContext, mailbox, true);
+        context->mScheduler->Schedule(context->mQueueContext, mailbox);
     }
 
     mailbox->Unlock();

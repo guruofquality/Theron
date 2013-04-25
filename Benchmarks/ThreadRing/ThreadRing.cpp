@@ -92,7 +92,10 @@ struct AddressCatcher
 
 int main(int argc, char *argv[])
 {
-    int numMessagesProcessed(0);
+    Theron::uint32_t messageCounts[32];
+    Theron::uint32_t yieldCounts[32];
+    Theron::uint32_t localPushCounts[32];
+    Theron::uint32_t sharedPushCounts[32];
     AddressCatcher catcher;
 
     const int numHops = (argc > 1 && atoi(argv[1]) > 0) ? atoi(argv[1]) : 50000000;
@@ -137,13 +140,45 @@ int main(int argc, char *argv[])
             delete members[index];
         }
 
-        numMessagesProcessed = framework.GetCounterValue(Theron::COUNTER_MESSAGES_PROCESSED);
+        framework.GetPerThreadCounterValues(Theron::COUNTER_MESSAGES_PROCESSED, messageCounts, 32);
+        framework.GetPerThreadCounterValues(Theron::COUNTER_YIELDS, yieldCounts, 32);
+        framework.GetPerThreadCounterValues(Theron::COUNTER_LOCAL_PUSHES, localPushCounts, 32);
+        framework.GetPerThreadCounterValues(Theron::COUNTER_SHARED_PUSHES, sharedPushCounts, 32);
     }
 
     timer.Stop();
 
-    printf("Processed %d messages in %.1f seconds\n", numMessagesProcessed, timer.Seconds());
+    printf("Processed in %.1f seconds\n", timer.Seconds());
     printf("Token stopped at entity '%d'\n", catcher.mAddress.AsInteger());
+    
+    printf("Message:");
+    for (int index = 0; index <= numThreads; ++index)
+    {
+        printf("% 10d", messageCounts[index]);
+    }
+
+    printf("\n");
+    printf("Yield:  ");
+    for (int index = 0; index <= numThreads; ++index)
+    {
+        printf("% 10d", yieldCounts[index]);
+    }
+
+    printf("\n");
+    printf("Local:  ");
+    for (int index = 0; index <= numThreads; ++index)
+    {
+        printf("% 10d", localPushCounts[index]);
+    }
+
+    printf("\n");
+    printf("Shared: ");
+    for (int index = 0; index <= numThreads; ++index)
+    {
+        printf("% 10d", sharedPushCounts[index]);
+    }
+
+    printf("\n");
 
 #if THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
     Theron::IAllocator *const allocator(Theron::AllocatorManager::Instance().GetAllocator());
