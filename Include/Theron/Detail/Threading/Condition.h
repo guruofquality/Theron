@@ -19,6 +19,10 @@
 
 #include <windows.h>
 
+#elif defined(THERON_POSIX)
+
+#include <pthread.h>
+
 #elif THERON_BOOST
 
 #include <boost/thread/condition_variable.hpp>
@@ -27,10 +31,6 @@
 #elif THERON_CPP11
 
 #error CPP11 support not implemented yet.
-
-#elif defined(THERON_POSIX)
-
-#error POSIX support not implemented yet.
 
 #else
 
@@ -65,9 +65,12 @@ public:
 
         InitializeConditionVariable(&mCondition);
 
+#elif defined(THERON_POSIX)
+
+    pthread_cond_init(&mCondition, NULL);
+
 #elif THERON_BOOST
 #elif THERON_CPP11
-#elif defined(THERON_POSIX)
 #endif
     }
 
@@ -77,6 +80,14 @@ public:
     */
     inline ~Condition()
     {
+#if THERON_WINDOWS
+#elif defined(THERON_POSIX)
+
+    pthread_cond_destroy(&mCondition);
+
+#elif THERON_BOOST
+#elif THERON_CPP11
+#endif
     }
 
     /**
@@ -98,7 +109,11 @@ public:
 
         (void) lock;
         SleepConditionVariableCS(&mCondition, &lock.mMutex.mCriticalSection, INFINITE);
-    
+
+#elif defined(THERON_POSIX)
+
+        pthread_cond_wait(&mCondition, &lock.mMutex.mMutex);
+
 #elif THERON_BOOST
 
         // The lock must be locked before calling Wait().
@@ -106,7 +121,6 @@ public:
         mCondition.wait(lock.mLock);
 
 #elif THERON_CPP11
-#elif defined(THERON_POSIX)
 #endif
     }
 
@@ -119,12 +133,15 @@ public:
 
         WakeConditionVariable(&mCondition);
 
+#elif defined(THERON_POSIX)
+
+        pthread_cond_signal(&mCondition);
+
 #elif THERON_BOOST
 
         mCondition.notify_one();
 
 #elif THERON_CPP11
-#elif defined(THERON_POSIX)
 #endif
     }
 
@@ -137,12 +154,15 @@ public:
 
          WakeAllConditionVariable(&mCondition);
 
+#elif defined(THERON_POSIX)
+
+        pthread_cond_broadcast(&mCondition);
+
 #elif THERON_BOOST
 
         mCondition.notify_all();
 
 #elif THERON_CPP11
-#elif defined(THERON_POSIX)
 #endif
     }
 
@@ -157,12 +177,15 @@ private:
 
     CONDITION_VARIABLE mCondition;
 
+#elif defined(THERON_POSIX)
+
+    pthread_cond_t mCondition;
+
 #elif THERON_BOOST
 
     boost::condition_variable mCondition;
 
 #elif THERON_CPP11
-#elif defined(THERON_POSIX)
 #endif
 
 };

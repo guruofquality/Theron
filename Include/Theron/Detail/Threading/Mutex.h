@@ -14,6 +14,10 @@
 
 #include <windows.h>
 
+#elif defined(THERON_POSIX)
+
+#include <pthread.h>
+
 #elif THERON_BOOST
 
 #include <boost/thread/mutex.hpp>
@@ -21,10 +25,6 @@
 #elif THERON_CPP11
 
 #error CPP11 support not implemented yet.
-
-#elif defined(THERON_POSIX)
-
-#error POSIX support not implemented yet.
 
 #else
 
@@ -62,9 +62,12 @@ public:
 
         InitializeCriticalSection(&mCriticalSection);
 
+#elif defined(THERON_POSIX)
+
+        pthread_mutex_init(&mMutex, NULL);
+
 #elif THERON_BOOST
 #elif THERON_CPP11
-#elif defined(THERON_POSIX)
 #endif
     }
 
@@ -77,9 +80,12 @@ public:
 
         DeleteCriticalSection(&mCriticalSection);
 
+#elif defined(THERON_POSIX)
+
+        pthread_mutex_destroy(&mMutex);
+
 #elif THERON_BOOST
 #elif THERON_CPP11
-#elif defined(THERON_POSIX)
 #endif
     }
 
@@ -93,12 +99,15 @@ public:
 
         EnterCriticalSection(&mCriticalSection);
 
+#elif defined(THERON_POSIX)
+
+        pthread_mutex_lock(&mMutex);
+
 #elif THERON_BOOST
 
         mMutex.lock();
 
 #elif THERON_CPP11
-#elif defined(THERON_POSIX)
 #endif
     }
 
@@ -111,12 +120,15 @@ public:
 
         LeaveCriticalSection(&mCriticalSection);
 
+#elif defined(THERON_POSIX)
+
+        pthread_mutex_unlock(&mMutex);
+
 #elif THERON_BOOST
 
         mMutex.unlock();
 
 #elif THERON_CPP11
-#elif defined(THERON_POSIX)
 #endif
     }
 
@@ -129,12 +141,15 @@ private:
 
     CRITICAL_SECTION mCriticalSection;
 
+#elif defined(THERON_POSIX)
+
+    pthread_mutex_t mMutex;
+
 #elif THERON_BOOST
 
     boost::mutex mMutex;
 
 #elif THERON_CPP11
-#elif defined(THERON_POSIX)
 #endif
 
 };
