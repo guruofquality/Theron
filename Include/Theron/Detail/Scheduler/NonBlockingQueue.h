@@ -126,7 +126,7 @@ public:
     /**
     Pushes a mailbox into the queue, scheduling it for processing.
     */
-    inline void Push(ContextType *const context, Mailbox *const mailbox);
+    inline void Push(ContextType *const context, Mailbox *mailbox);
 
     /**
     Pops a previously pushed mailbox from the queue for processing.
@@ -241,20 +241,36 @@ THERON_FORCEINLINE void NonBlockingQueue::WakeAll()
 }
 
 
-THERON_FORCEINLINE void NonBlockingQueue::Push(ContextType *const context, Mailbox *const mailbox)
+THERON_FORCEINLINE void NonBlockingQueue::Push(ContextType *const context, Mailbox *mailbox)
 {
     // Try to push the mailbox onto the local queue of the calling worker thread context.
-    // We take the approach of only pushing to the local queue if it's empty.
-    // If the queue isn't empty then the second mailbox would be serialized with the first.
+    // The local queue in a per-thread context is only accessed by that thread
+    // so we don't need to protect access to it.
     // The shared context doesn't have a local queue.
-    if (!context->mShared && context->mLocalWorkQueue.Empty())
+    if (!context->mShared)
     {
-        // The local queue in a per-thread context is only accessed by that thread
-        // so we don't need to protect access to it.
-        context->mLocalWorkQueue.Push(mailbox);
-        context->mCounters[Theron::COUNTER_LOCAL_PUSHES].mValue.Increment();
+        Queue<Mailbox> &localQueue(context->mLocalWorkQueue);
+        const bool empty(localQueue.Empty());
 
-        return;
+        // If there's already a mailbox in the local queue then
+        // swap it with the new mailbox. Effectively we promote the
+        // previously pushed mailbox to the shared queue. This ensures we
+        // never have more than one mailbox serialized on the local queue.
+        // Promoting the earlier mailbox helps to promote fairness.
+        // Also we now know that the earlier mailbox wasn't the last mailbox
+        // messaged by this actor, whereas the new one might be. It's best
+        // to push to the local queue only the last mailbox messaged by an
+        // actor - ideally one messaged right at the end or 'tail' of the handler.
+        // This constitutes a kind of tail recursion optimization.
+        context->mCounters[Theron::COUNTER_LOCAL_PUSHES].mValue.Increment();
+        localQueue.Push(mailbox);
+
+        if (empty)
+        {
+            return;
+        }
+
+        mailbox = localQueue.Pop();
     }
 
     // Push the mailbox onto the shared work queue.

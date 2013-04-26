@@ -23,12 +23,8 @@ private:
 
     inline void TokenHandler(const int &token, const Theron::Address /*from*/)
     {
-        // Send the reader a series of integers from token-1 to 0.
-        int count(token);
-        while (--count >= 0)
-        {
-            Send(count, mReader);
-        }
+        // Forward the token to the reader.
+        Send(token, mReader);
     }
 
     Theron::Address mReader;
@@ -50,7 +46,7 @@ private:
     {
         if (token == 0)
         {
-            // Signal the waiting sink that we received the last in a series.
+            // Signal the waiting sink that we received a zero token.
             Send(0, mSink);
         }
     }
@@ -71,15 +67,14 @@ int main(int argc, char *argv[])
     Theron::uint32_t localPushCounts[32];
     Theron::uint32_t sharedPushCounts[32];
 
-    const int numWrites = (argc > 1 && atoi(argv[1]) > 0) ? atoi(argv[1]) : 50000000;
+    const int numTokens = (argc > 1 && atoi(argv[1]) > 0) ? atoi(argv[1]) : 50000000;
     const int numThreads = (argc > 2 && atoi(argv[2]) > 0) ? atoi(argv[2]) : 16;
-    const int numWriters = (argc > 2 && atoi(argv[2]) > 0) ? atoi(argv[2]) : 16;
-    const int tokenValue((numWrites + numWriters - 1) / numWriters);
+    const int numWriters = (argc > 3 && atoi(argv[3]) > 0) ? atoi(argv[3]) : 2;
 
-    printf("Using numWrites = %d (use first command line argument to change)\n", numWrites);
+    printf("Using numTokens = %d (use first command line argument to change)\n", numTokens);
     printf("Using numThreads = %d (use second command line argument to change)\n", numThreads);
     printf("Using numWriters = %d (use third command line argument to change)\n", numWriters);
-    printf("Starting %d writers sending %d messages each...\n", numWriters, tokenValue);
+    printf("Starting %d writers sending %d messages between them...\n", numWriters, numTokens);
 
     // The reported time includes the startup and cleanup cost.
     Timer timer;
@@ -99,19 +94,17 @@ int main(int argc, char *argv[])
             writers[index] = new Writer(framework, reader.GetAddress());
         }
 
-        // Start the processing by sending a non-zero token to each writer.
-        // Each writer sends every integer from token-1 to 0 to the reader in succession.
-        for (int index = 0; index < numWriters; ++index)
+        // Send each of the writers a token in round-robin until all tokens have been sent.
+        int count(numTokens);
+        int index(0);
+        while (--count >= 0)
         {
-            framework.Send(tokenValue, receiver.GetAddress(), writers[index]->GetAddress());
+            framework.Send(count, Theron::Address::Null(), writers[index++]->GetAddress());
+            index = (index == numWriters) ? 0 : index;
         }
 
-        // Wait for the signal messages indicating the reader has received all the zero tokens.
-        int count(numWriters);
-        while (count)
-        {
-            count -= receiver.Wait(count);
-        }
+        // Wait for the signal message indicating the reader has received the zero token.
+        receiver.Wait();
 
         // Destroy the writers.
         for (int index = 0; index < numWriters; ++index)
