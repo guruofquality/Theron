@@ -129,7 +129,7 @@ void Receiver::Release()
     while (Detail::IReceiverHandler *const handler = mMessageHandlers.Front())
     {
         mMessageHandlers.Remove(handler);
-        AllocatorManager::Instance().GetAllocator()->Free(handler);
+        AllocatorManager::GetCache()->Free(handler);
     }
 
     mCondition.GetMutex().Unlock();

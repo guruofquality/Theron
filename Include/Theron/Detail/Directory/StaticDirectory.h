@@ -74,7 +74,7 @@ inline uint32_t StaticDirectory<Entity>::Register(Entry::Entity *const entity)
     // Create the singleton instance if this is the first reference.
     if (smReferenceCount++ == 0)
     {
-        IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+        IAllocator *const allocator(AllocatorManager::GetCache());
         void *const memory(allocator->AllocateAligned(sizeof(DirectoryType), THERON_CACHELINE_ALIGNMENT));
 
         if (memory == 0)
@@ -133,7 +133,7 @@ inline void StaticDirectory<Entity>::Deregister(const uint32_t index)
     // Destroy the singleton instance if this was the last reference.
     if (--smReferenceCount == 0)
     {
-        IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+        IAllocator *const allocator(AllocatorManager::GetCache());
         smDirectory->~DirectoryType();
         allocator->Free(smDirectory, sizeof(DirectoryType));
     }

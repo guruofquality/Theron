@@ -54,7 +54,7 @@ public:
         inline ContextType() :
           mRunning(false),
           mShared(false),
-          mLocalWorkQueue()
+          mLocalWorkQueue(0)
         {
         }
 
@@ -69,7 +69,7 @@ public:
 
         bool mRunning;                                      ///< Used to signal the thread to terminate.
         bool mShared;                                       ///< Indicates whether this is the 'shared' context.
-        Queue<Mailbox> mLocalWorkQueue;                     ///< Local thread-specific work queue.
+        Mailbox *mLocalWorkQueue;                           ///< Local thread-specific single-item work queue.
         Aligned<Atomic::UInt32> mCounters[MAX_COUNTERS];    ///< Array of per-context event counters.
     };
 
@@ -199,7 +199,7 @@ THERON_FORCEINLINE bool BlockingQueue::Empty(const ContextType *const context) c
 {
     // Check the context's local queue.
     // If the provided context is the shared context then it doesn't have a local queue.
-    if (!context->mShared && !context->mLocalWorkQueue.Empty())
+    if (!context->mShared && context->mLocalWorkQueue)
     {
         return false;
     }
@@ -230,9 +230,6 @@ THERON_FORCEINLINE void BlockingQueue::Push(ContextType *const context, Mailbox 
     // The shared context doesn't have a local queue.
     if (!context->mShared)
     {
-        Queue<Mailbox> &localQueue(context->mLocalWorkQueue);
-        const bool empty(localQueue.Empty());
-
         // If there's already a mailbox in the local queue then
         // swap it with the new mailbox. Effectively we promote the
         // previously pushed mailbox to the shared queue. This ensures we
@@ -243,15 +240,17 @@ THERON_FORCEINLINE void BlockingQueue::Push(ContextType *const context, Mailbox 
         // to push to the local queue only the last mailbox messaged by an
         // actor - ideally one messaged right at the end or 'tail' of the handler.
         // This constitutes a kind of tail recursion optimization.
-        context->mCounters[Theron::COUNTER_LOCAL_PUSHES].mValue.Increment();
-        localQueue.Push(mailbox);
+        Mailbox *const previous(context->mLocalWorkQueue);
+        context->mLocalWorkQueue = mailbox;
 
-        if (empty)
+        context->mCounters[Theron::COUNTER_LOCAL_PUSHES].mValue.Increment();
+
+        if (previous == 0)
         {
             return;
         }
 
-        mailbox = localQueue.Pop();
+        mailbox = previous;
     }
 
     // Push the mailbox onto the shared work queue.
@@ -270,22 +269,25 @@ THERON_FORCEINLINE void BlockingQueue::Push(ContextType *const context, Mailbox 
 
 THERON_FORCEINLINE Mailbox *BlockingQueue::Pop(ContextType *const context)
 {
+    Mailbox *mailbox(0);
+
     // The shared context is never used to call Pop, only to Push
     // messages sent outside the context of a worker thread.
     THERON_ASSERT(context->mShared == false);
 
     // Try to pop a mailbox off the calling thread's local work queue.
     // We only check the shared queue once the local queue is empty.
-    if (!context->mLocalWorkQueue.Empty())
+    // Note that the local queue contains at most one item.
+    if (context->mLocalWorkQueue)
     {
-        return static_cast<Mailbox *>(context->mLocalWorkQueue.Pop());
+        mailbox = context->mLocalWorkQueue;
+        context->mLocalWorkQueue = 0;
+        return mailbox;
     }
 
     // Pop a mailbox off the shared work queue.
     // Because the shared queue is accessed by multiple threads we have to protect it.
-    Mailbox *mailbox(0);
     Lock lock(mSharedWorkQueueCondition.GetMutex());
-
     if (!mSharedWorkQueue.Empty())
     {
         mailbox = static_cast<Mailbox *>(mSharedWorkQueue.Pop());

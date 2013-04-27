@@ -219,7 +219,7 @@ public:
         THERON_ASSERT(mThread == 0);
 
         // Allocate memory for a boost::thread object. They're not copyable.
-        void *const memory = AllocatorManager::Instance().GetAllocator()->Allocate(sizeof(boost::thread));
+        void *const memory = AllocatorManager::GetCache()->Allocate(sizeof(boost::thread));
         if (memory == 0)
         {
             return false;
@@ -253,7 +253,7 @@ public:
         // Explicitly destruct because allocated with placement new.
         mThread->~thread();
 
-        AllocatorManager::Instance().GetAllocator()->Free(mThread, sizeof(boost::thread)); 
+        AllocatorManager::GetCache()->Free(mThread, sizeof(boost::thread)); 
         mThread = 0;
     }
 
@@ -344,7 +344,7 @@ public:
         THERON_ASSERT(mThread == 0);
 
         // Allocate memory for a std::thread object. They're not copyable.
-        void *const memory = AllocatorManager::Instance().GetAllocator()->Allocate(sizeof(std::thread));
+        void *const memory = AllocatorManager::GetCache()->Allocate(sizeof(std::thread));
         if (memory == 0)
         {
             return false;
@@ -378,7 +378,7 @@ public:
         // Explicitly destruct because allocated with placement new.
         mThread->~thread();
 
-        AllocatorManager::Instance().GetAllocator()->Free(mThread, sizeof(std::thread)); 
+        AllocatorManager::GetCache()->Free(mThread, sizeof(std::thread)); 
         mThread = 0;
     }
 

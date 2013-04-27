@@ -26,7 +26,7 @@ HandlerCollection::~HandlerCollection()
 
 void HandlerCollection::UpdateHandlers()
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     mHandlersDirty = false;
 

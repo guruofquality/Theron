@@ -32,7 +32,7 @@ void StringPool::Reference()
     // Create the singleton instance if this is the first reference.
     if (smReferenceCount++ == 0)
     {
-        IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+        IAllocator *const allocator(AllocatorManager::GetCache());
         void *const memory(allocator->AllocateAligned(sizeof(Container), THERON_CACHELINE_ALIGNMENT));
         smContainer = new (memory) Container();
     }
@@ -46,7 +46,7 @@ void StringPool::Dereference()
     // Destroy the singleton instance if this was the last reference.
     if (--smReferenceCount == 0)
     {
-        IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+        IAllocator *const allocator(AllocatorManager::GetCache());
         smContainer->~Container();
         allocator->Free(smContainer, sizeof(Container));
     }
@@ -60,7 +60,7 @@ StringPool::Container::Container()
 
 StringPool::Container::~Container()
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     // Free all entries.
     while (!mEntries.Empty())
@@ -91,7 +91,7 @@ const char *StringPool::Container::Get(const char *const str)
     }
 
     // Create a new entry.
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
     void *const memory(allocator->Allocate(sizeof(Entry)));
     Entry *const entry = new (memory) Entry(str);
 

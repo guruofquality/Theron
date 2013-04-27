@@ -88,7 +88,7 @@ inline NameMap::NameMap() : mSpinLock(), mMap()
 
 inline NameMap::~NameMap()
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     // Clear the map on destruction.
     while (NameIndexMap::Node *const node = mMap.Front())
@@ -103,7 +103,7 @@ inline NameMap::~NameMap()
 
 inline bool NameMap::Insert(const String &name, const Index &index)
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
     NameIndexMap::Node *node(0);
 
     // Allocate and construct the node speculatively outside the spinlock.
@@ -141,7 +141,7 @@ inline bool NameMap::Insert(const String &name, const Index &index)
 
 inline bool NameMap::Remove(const String &name)
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
     mSpinLock.Lock();
 
     NameIndexMap::KeyNodeIterator nodes(mMap.GetKeyNodeIterator(name));

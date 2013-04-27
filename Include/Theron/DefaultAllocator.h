@@ -169,7 +169,7 @@ public:
     \ref Allocate or \ref AllocateAligned, but not freed in calls to \ref Free.
 
     \code
-    Theron::IAllocator *const allocator = Theron::AllocatorManager::Instance().GetAllocator();
+    Theron::IAllocator *const allocator = Theron::AllocatorManager::GetAllocator();
     Theron::DefaultAllocator *const defaultAllocator = dynamic_cast<Theron::DefaultAllocator *>(allocator);
 
     if (defaultAllocator)
@@ -196,7 +196,7 @@ public:
     \ref Allocate or \ref AllocateAligned, but not freed in calls to \ref Free.
 
     \code
-    Theron::IAllocator *const allocator = Theron::AllocatorManager::Instance().GetAllocator();
+    Theron::IAllocator *const allocator = Theron::AllocatorManager::GetAllocator();
     Theron::DefaultAllocator *const defaultAllocator = dynamic_cast<Theron::DefaultAllocator *>(allocator);
 
     if (defaultAllocator)
@@ -222,7 +222,7 @@ public:
     Returns the total number of calls to \ref Allocate or \ref AllocateAligned.
 
     \code
-    Theron::IAllocator *const allocator = Theron::AllocatorManager::Instance().GetAllocator();
+    Theron::IAllocator *const allocator = Theron::AllocatorManager::GetAllocator();
     Theron::DefaultAllocator *const defaultAllocator = dynamic_cast<Theron::DefaultAllocator *>(allocator);
 
     if (defaultAllocator)

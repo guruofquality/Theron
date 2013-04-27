@@ -72,7 +72,7 @@ Detail::IScheduler *Framework::CreateScheduler()
     typedef Detail::Scheduler<Detail::BlockingQueue> BlockingScheduler;
     typedef Detail::Scheduler<Detail::NonBlockingQueue> NonBlockingScheduler;
 
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
     void *schedulerMemory(0);
 
     if (mParams.mYieldStrategy == YIELD_STRATEGY_BLOCKING)
@@ -119,7 +119,7 @@ Detail::IScheduler *Framework::CreateScheduler()
 
 void Framework::DestroyScheduler(Detail::IScheduler *const scheduler)
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     scheduler->~IScheduler();
     allocator->Free(scheduler);

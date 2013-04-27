@@ -767,7 +767,7 @@ inline Framework::Framework(const uint32_t threadCount) :
   mMailboxes(),
   mFallbackHandlers(),
   mDefaultFallbackHandler(),
-  mMessageAllocator(AllocatorManager::Instance().GetAllocator()),
+  mMessageAllocator(AllocatorManager::GetCache()),
   mSharedMailboxContext(),
   mScheduler(0)
 {
@@ -786,7 +786,7 @@ inline Framework::Framework(const Parameters &params) :
   mMailboxes(),
   mFallbackHandlers(),
   mDefaultFallbackHandler(),
-  mMessageAllocator(AllocatorManager::Instance().GetAllocator()),
+  mMessageAllocator(AllocatorManager::GetCache()),
   mSharedMailboxContext(),
   mScheduler(0)
 {
@@ -805,7 +805,7 @@ inline Framework::Framework(EndPoint &endPoint, const char *const name, const Pa
   mMailboxes(),
   mFallbackHandlers(),
   mDefaultFallbackHandler(),
-  mMessageAllocator(AllocatorManager::Instance().GetAllocator()),
+  mMessageAllocator(AllocatorManager::GetCache()),
   mSharedMailboxContext(),
   mScheduler(0)
 {

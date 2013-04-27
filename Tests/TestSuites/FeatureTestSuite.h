@@ -27,6 +27,8 @@ public:
     {
         TESTFRAMEWORK_REGISTER_TESTSUITE(FeatureTestSuite);
 
+        TESTFRAMEWORK_REGISTER_TEST(SetAllocator);
+        TESTFRAMEWORK_REGISTER_TEST(SetAllocatorLegacy);
         TESTFRAMEWORK_REGISTER_TEST(ConstructFramework);
         TESTFRAMEWORK_REGISTER_TEST(ConstructFrameworkThreadCount);
         TESTFRAMEWORK_REGISTER_TEST(ConstructFrameworkDefaultParams);
@@ -99,6 +101,22 @@ public:
         TESTFRAMEWORK_REGISTER_TEST(NameReceiverOnConstruction);
         TESTFRAMEWORK_REGISTER_TEST(SendMessageToLocalActorByName);
         TESTFRAMEWORK_REGISTER_TEST(SendMessagesBetweenLocalFrameworksByName);
+    }
+
+    inline static void SetAllocator()
+    {
+        Theron::DefaultAllocator allocator;
+        Theron::AllocatorManager::SetAllocator(&allocator);
+        Check(Theron::AllocatorManager::GetAllocator() == &allocator, "SetAllocator failed");
+        Theron::AllocatorManager::SetAllocator(0);
+    }
+
+    inline static void SetAllocatorLegacy()
+    {
+        Theron::DefaultAllocator allocator;
+        Theron::AllocatorManager::Instance().SetAllocator(&allocator);
+        Check(Theron::AllocatorManager::Instance().GetAllocator() == &allocator, "SetAllocator failed");
+        Theron::AllocatorManager::SetAllocator(0);
     }
 
     inline static void ConstructFramework()
@@ -2117,7 +2135,7 @@ private:
             RegisterHandler(this, &Version3Replier::Handler);
 
             // Allocate memory in the constructor to check the destructor is called.
-            mMemory = Theron::AllocatorManager::Instance().GetAllocator()->Allocate(64);
+            mMemory = Theron::AllocatorManager::GetAllocator()->Allocate(64);
 
             // Check the alignment of the final actor type.
             THERON_ASSERT(THERON_ALIGNED(this, 128));
@@ -2128,7 +2146,7 @@ private:
             RegisterHandler(this, &Version3Replier::Handler);
 
             // Allocate memory in the constructor to check the destructor is called.
-            mMemory = Theron::AllocatorManager::Instance().GetAllocator()->Allocate(64);
+            mMemory = Theron::AllocatorManager::GetAllocator()->Allocate(64);
 
             // Check the alignment of the final actor type.
             THERON_ASSERT(THERON_ALIGNED(this, 128));
@@ -2140,7 +2158,7 @@ private:
 
             // Free the memory in the destructor to check the destructor is called.
             // The DefaultAllocator memory allocation checking will fail if we leak.
-            Theron::AllocatorManager::Instance().GetAllocator()->Free(mMemory);
+            Theron::AllocatorManager::GetAllocator()->Free(mMemory);
         }
 
     private:

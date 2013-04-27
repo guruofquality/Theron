@@ -91,7 +91,7 @@ inline bool FallbackHandlerCollection::Set(
 {
     typedef FallbackHandler<ObjectType> MessageHandlerType;
 
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     mHandlersDirty = true;
 
@@ -127,7 +127,7 @@ inline bool FallbackHandlerCollection::Set(
 {
     typedef BlindFallbackHandler<ObjectType> MessageHandlerType;
 
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     mHandlersDirty = true;
 

@@ -422,7 +422,7 @@ inline void Scheduler<QueueType>::ManagerThreadEntryPoint(void *const context)
 template <class QueueType>
 inline void Scheduler<QueueType>::ManagerThreadProc()
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     while (mRunning)
     {

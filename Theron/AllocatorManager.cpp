@@ -8,7 +8,8 @@ namespace Theron
 {
 
 
-AllocatorManager AllocatorManager::smInstance;
+DefaultAllocator AllocatorManager::smDefaultAllocator;
+AllocatorManager::CacheType AllocatorManager::smCache(&smDefaultAllocator);
 
 
 } // namespace Theron
