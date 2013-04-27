@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
     printf("\n");
 
 #if THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
-    Theron::IAllocator *const allocator(Theron::AllocatorManager::Instance().GetAllocator());
+    Theron::IAllocator *const allocator(Theron::AllocatorManager::GetAllocator());
     const int allocationCount(static_cast<Theron::DefaultAllocator *>(allocator)->GetAllocationCount());
     const int peakBytesAllocated(static_cast<Theron::DefaultAllocator *>(allocator)->GetPeakBytesAllocated());
     printf("Total number of allocations: %d calls\n", allocationCount);

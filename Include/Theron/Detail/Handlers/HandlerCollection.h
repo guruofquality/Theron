@@ -100,7 +100,7 @@ THERON_FORCEINLINE bool HandlerCollection::Add(void (ActorType::*handler)(const 
 {
     typedef MessageHandler<ActorType, ValueType> MessageHandlerType;
 
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     // Allocate memory for a message handler object.
     void *const memory = allocator->Allocate(sizeof(MessageHandlerType));
@@ -230,7 +230,7 @@ THERON_FORCEINLINE bool HandlerCollection::Contains(void (ActorType::*handler)(c
 
 THERON_FORCEINLINE bool HandlerCollection::Clear()
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     // Free all currently allocated handler objects.
     while (IMessageHandler *const handler = mHandlers.Front())

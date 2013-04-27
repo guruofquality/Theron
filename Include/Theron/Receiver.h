@@ -407,7 +407,7 @@ inline bool Receiver::RegisterHandler(
     typedef Detail::ReceiverHandler<ClassType, ValueType> MessageHandlerType;
 
     // Allocate memory for a message handler object.
-    void *const memory = AllocatorManager::Instance().GetAllocator()->Allocate(sizeof(MessageHandlerType));
+    void *const memory = AllocatorManager::GetCache()->Allocate(sizeof(MessageHandlerType));
     if (memory == 0)
     {
         return false;
@@ -458,7 +458,7 @@ inline bool Receiver::DeregisterHandler(
                 mMessageHandlers.Remove(messageHandler);
 
                 // Free the handler object, which was allocated on registration.
-                AllocatorManager::Instance().GetAllocator()->Free(messageHandler);
+                AllocatorManager::GetCache()->Free(messageHandler);
 
                 break;
             }
@@ -553,7 +553,7 @@ THERON_FORCEINLINE void Receiver::Push(Detail::IMessage *const message)
 
     // Destroy the message.
     // We use the global allocator to allocate messages sent to receivers.
-    IAllocator *const messageAllocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const messageAllocator(AllocatorManager::GetCache());
     Detail::MessageCreator::Destroy(messageAllocator, message);
 }
 

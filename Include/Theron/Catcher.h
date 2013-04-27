@@ -118,7 +118,7 @@ inline Catcher<MessageType>::Catcher() : mMutex(), mQueue()
 template <class MessageType>
 inline Catcher<MessageType>::~Catcher()
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
     Detail::Lock lock(mMutex);
 
     // Free any left-over entries on the queue.
@@ -144,7 +144,7 @@ THERON_FORCEINLINE bool Catcher<MessageType>::Empty() const
 template <class MessageType>
 inline void Catcher<MessageType>::Push(const MessageType &message, const Address from)
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     // Allocate an entry to hold the copy of the message in the queue, with correct alignment.
     const uint32_t entrySize(static_cast<uint32_t>(sizeof(Entry)));
@@ -194,7 +194,7 @@ inline bool Catcher<MessageType>::Front(MessageType &message, Address &from)
 template <class MessageType>
 inline bool Catcher<MessageType>::Pop(MessageType &message, Address &from)
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
     Entry *entry(0);
 
     // Pop an entry off the queue, locking for thread-safety.

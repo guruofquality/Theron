@@ -21,7 +21,6 @@ namespace Detail
 void MailboxProcessor::Process(WorkerContext *const workerContext, Mailbox *const mailbox)
 {
     // Load the context data from the worker thread's mailbox context.
-    // Actors that need more processing are always pushed onto the worker thread's local queue.
     MailboxContext *const context(&workerContext->mMailboxContext);
     FallbackHandlerCollection *const fallbackHandlers(context->mFallbackHandlers);
     IAllocator *const messageAllocator(context->mMessageAllocator);

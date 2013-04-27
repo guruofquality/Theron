@@ -137,7 +137,7 @@ template <class QueueType, class ContextType, class ProcessorType>
 inline bool ThreadPool<QueueType, ContextType, ProcessorType>::CreateThread(ThreadContext *const threadContext)
 {
     // Allocate a new thread, aligning the memory to a cache-line boundary to reduce false-sharing of cache-lines.
-    void *const threadMemory = AllocatorManager::Instance().GetAllocator()->AllocateAligned(sizeof(Thread), THERON_CACHELINE_ALIGNMENT);
+    void *const threadMemory = AllocatorManager::GetCache()->AllocateAligned(sizeof(Thread), THERON_CACHELINE_ALIGNMENT);
     if (threadMemory == 0)
     {
         return false;
@@ -216,7 +216,7 @@ inline bool ThreadPool<QueueType, ContextType, ProcessorType>::DestroyThread(Thr
     threadContext->mThread->~Thread();
 
     // Free the memory for the thread.
-    AllocatorManager::Instance().GetAllocator()->Free(threadContext->mThread, sizeof(Thread));
+    AllocatorManager::GetCache()->Free(threadContext->mThread, sizeof(Thread));
     threadContext->mThread = 0;
 
     return true;

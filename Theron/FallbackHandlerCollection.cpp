@@ -26,7 +26,7 @@ FallbackHandlerCollection::~FallbackHandlerCollection()
 
 bool FallbackHandlerCollection::Clear()
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     // Destroy any currently set handlers.
     if (mHandler)
@@ -72,7 +72,7 @@ bool FallbackHandlerCollection::Handle(const IMessage *const message)
 
 void FallbackHandlerCollection::UpdateHandlers()
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     mHandlersDirty = false;
 

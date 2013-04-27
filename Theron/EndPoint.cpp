@@ -38,7 +38,7 @@ Detail::Context *EndPoint::smContext(0);
 
 Detail::Context *EndPoint::InitializeContext()
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     smContextMutex.Lock();
 
@@ -64,7 +64,7 @@ Detail::Context *EndPoint::InitializeContext()
 
 void EndPoint::ReleaseContext()
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     THERON_ASSERT(smContext);
     THERON_ASSERT(smContextRefCount);
@@ -136,7 +136,7 @@ EndPoint::~EndPoint()
 
 bool EndPoint::Connect(const char *const address)
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     if (address == 0)
     {
@@ -169,7 +169,7 @@ bool EndPoint::Connect(const char *const address)
 
 bool EndPoint::RequestSend(Detail::IMessage *const message, const Detail::String &name)
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     if (message == 0 || name.IsNull())
     {
@@ -204,7 +204,7 @@ void EndPoint::NetworkThreadEntryPoint(void *const context)
 
 void EndPoint::NetworkThreadProc()
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     THERON_ASSERT(mContext);
     THERON_ASSERT(!mLocation.IsNull());

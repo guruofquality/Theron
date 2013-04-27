@@ -26,7 +26,7 @@ DefaultHandlerCollection::~DefaultHandlerCollection()
 
 bool DefaultHandlerCollection::Clear()
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     // Destroy any currently set handlers.
     if (mHandler)
@@ -73,7 +73,7 @@ bool DefaultHandlerCollection::Handle(Actor *const actor, const IMessage *const 
 
 void DefaultHandlerCollection::UpdateHandlers()
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     mHandlersDirty = false;
 

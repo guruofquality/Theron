@@ -117,7 +117,7 @@ int main()
 
     // Set the custom allocator for use by Theron.
     // Note that can only be done once, at start of day.
-    Theron::AllocatorManager::Instance().SetAllocator(&allocator);
+    Theron::AllocatorManager::SetAllocator(&allocator);
 
     // Construct a framework and an actor, send the actor a message and wait for the reply.
     // We do this in a local scope to ensure that all Theron objects are destructed before

@@ -72,7 +72,7 @@ private:
 
         inline explicit Entry(const char *const str) : mValue(0)
         {
-            IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+            IAllocator *const allocator(AllocatorManager::GetCache());
             const uint32_t length(static_cast<uint32_t>(strlen(str)));
             uint32_t lengthWithNull(length + 1);
             const uint32_t roundedLength(THERON_ROUNDUP(lengthWithNull, 4));
@@ -84,7 +84,7 @@ private:
 
         inline ~Entry()
         {
-            IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+            IAllocator *const allocator(AllocatorManager::GetCache());
             allocator->Free(mValue);
         }
 

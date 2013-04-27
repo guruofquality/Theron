@@ -91,7 +91,7 @@ inline bool DefaultHandlerCollection::Set(void (ActorType::*handler)(const Addre
 {
     typedef DefaultHandler<ActorType> MessageHandlerType;
 
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     mHandlersDirty = true;
 
@@ -125,7 +125,7 @@ inline bool DefaultHandlerCollection::Set(void (ActorType::*handler)(const void 
 {
     typedef BlindDefaultHandler<ActorType> MessageHandlerType;
 
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     mHandlersDirty = true;
 

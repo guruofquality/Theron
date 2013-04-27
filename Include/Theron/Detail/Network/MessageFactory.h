@@ -112,7 +112,7 @@ private:
             const Address &from) const
         {
             // Allocate the message from the global allocator.
-            IAllocator *const messageAllocator(AllocatorManager::Instance().GetAllocator());
+            IAllocator *const messageAllocator(AllocatorManager::GetCache());
 
             // Reject the message data if it's not the right size.
 			const uint32_t expectedMessageSize(MessageSize<ValueType>::GetSize());
@@ -156,7 +156,7 @@ inline MessageFactory::MessageFactory() : mSpinLock(), mMap()
 
 inline MessageFactory::~MessageFactory()
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     // Clear the map on destruction.
     while (MessageBuilderMap::Node *const node = mMap.Front())
@@ -177,7 +177,7 @@ inline bool MessageFactory::Register(const String &name)
 {
     typedef MessageBuilder<ValueType> MessageBuilderType;
 
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
 
     // Allocate and construct the builder and node speculatively outside the spinlock.
     void *const builderMemory(allocator->Allocate(sizeof(MessageBuilderType)));
@@ -202,7 +202,7 @@ inline bool MessageFactory::Register(const String &name)
 
 inline bool MessageFactory::RegisterBuilder(const String &name, IMessageBuilder *const builder)
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
     
     void *const nodeMemory(allocator->Allocate(sizeof(MessageBuilderMap::Node)));
     if (nodeMemory == 0)
@@ -237,7 +237,7 @@ inline bool MessageFactory::RegisterBuilder(const String &name, IMessageBuilder 
 
 inline bool MessageFactory::Deregister(const String &name)
 {
-    IAllocator *const allocator(AllocatorManager::Instance().GetAllocator());
+    IAllocator *const allocator(AllocatorManager::GetCache());
     mSpinLock.Lock();
 
     MessageBuilderMap::KeyNodeIterator nodes(mMap.GetKeyNodeIterator(name));
