@@ -241,6 +241,23 @@ THERON_FORCEINLINE void NonBlockingQueue::WakeAll()
 
 THERON_FORCEINLINE void NonBlockingQueue::Push(ContextType *const context, Mailbox *mailbox)
 {
+    // Update the maximum mailbox queue length seen by this thread.
+    const uint32_t messageCount(mailbox->Count());
+    Atomic::UInt32 &counter(context->mCounters[Theron::COUNTER_MAILBOX_QUEUE_MAX].mValue);
+
+    uint32_t currentValue(counter.Load());
+    uint32_t backoff(0);
+
+    while (messageCount > currentValue)
+    {
+        if (counter.CompareExchangeAcquire(currentValue, messageCount))
+        {
+            break;
+        }
+
+        Utils::Backoff(backoff);
+    }
+
     // Try to push the mailbox onto the local queue of the calling worker thread context.
     // The local queue in a per-thread context is only accessed by that thread
     // so we don't need to protect access to it.

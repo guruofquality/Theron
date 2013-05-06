@@ -97,6 +97,7 @@
     <ClInclude Include="..\Include\Theron\Detail\Strings\String.h" />
     <ClInclude Include="..\Include\Theron\Detail\Strings\StringPool.h" />
     <ClInclude Include="..\Include\Theron\Detail\Threading\Atomic.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Threading\Clock.h" />
     <ClInclude Include="..\Include\Theron\Detail\Threading\Condition.h" />
     <ClInclude Include="..\Include\Theron\Detail\Threading\Lock.h" />
     <ClInclude Include="..\Include\Theron\Detail\Threading\Mutex.h" />

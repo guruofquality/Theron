@@ -303,6 +303,7 @@ THERON_HEADERS = \
 	Include/Theron/Detail/Strings/String.h \
 	Include/Theron/Detail/Strings/StringPool.h \
 	Include/Theron/Detail/Threading/Atomic.h \
+	Include/Theron/Detail/Threading/Clock.h \
 	Include/Theron/Detail/Threading/Condition.h \
 	Include/Theron/Detail/Threading/Lock.h \
 	Include/Theron/Detail/Threading/Mutex.h \
