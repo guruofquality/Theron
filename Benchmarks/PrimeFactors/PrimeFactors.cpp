@@ -276,7 +276,7 @@ int main(int argc, char *argv[])
         // Throttle the queries so as not to swamp the queues.
         while (resultCount < numQueries)
         {
-            while (queryCount < resultCount + numWorkers && queryCount < numQueries)
+            while (queryCount < resultCount + numWorkers * 2 && queryCount < numQueries)
             {
                 framework.Send(query, receiver.GetAddress(), dispatcher.GetAddress());
                 ++queryCount;
