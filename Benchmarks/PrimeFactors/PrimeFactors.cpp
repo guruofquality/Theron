@@ -14,98 +14,183 @@
 
 static const Theron::uint64_t PRIME_FACTOR_1 = 20483ULL;
 static const Theron::uint64_t PRIME_FACTOR_2 = 29303ULL;
-static const Theron::uint64_t PRIME_PRODUCT = PRIME_FACTOR_1 * PRIME_FACTOR_2;
 
 
-struct QueryMessage
+THERON_FORCEINLINE static void Factorize(Theron::uint64_t n, Theron::uint64_t *const factors)
 {
-    inline QueryMessage(const Theron::Address &client, const Theron::uint64_t integer) :
-      m_client(client),
-      m_integer(integer),
-      m_factor(0)
+    Theron::uint64_t count(0);
+
+    if (n <= 3)
     {
+        factors[count++] = n;
     }
-
-    inline void Process()
+    else
     {
-        const Theron::uint64_t n(m_integer);
-
-        if (n <= 3)
-        {
-            m_factor = n;
-            return;
-        }
-
-        Theron::uint64_t d = 2;
+        Theron::uint64_t d(2);
         while (d < n)
         {
             if ((n % d) == 0)
             {
-                m_factor = d;
-                return;
+                factors[count++] = d;
+                n /= d;
             }
-
-            d = (d == 2) ? 3 : (d + 2);
+            else
+            {
+                d = (d == 2) ? 3 : (d + 2);
+            }
         }
-    }
 
-    inline const Theron::Address &Client() const
-    {
-        return m_client;
+        factors[count++] = d;
     }
+}
 
-    inline bool Processed() const
-    {
-        return (m_factor != 0);
-    }
 
-    Theron::Address m_client;
-    Theron::uint64_t m_integer;
-    Theron::uint64_t m_factor;
+struct Buffer
+{
+    static const Theron::uint32_t MAX_ENTRIES = 8;
+
+    Theron::uint64_t mData[MAX_ENTRIES];
 };
 
 
-// Register the message types so that registered names are used instead of dynamic_cast.
-THERON_DECLARE_REGISTERED_MESSAGE(QueryMessage);
-THERON_DEFINE_REGISTERED_MESSAGE(QueryMessage);
+THERON_DECLARE_REGISTERED_MESSAGE(Buffer *);
+THERON_DEFINE_REGISTERED_MESSAGE(Buffer *);
 
 
-// A stateless worker actor that processes work messages.
-// Each worker can only process one work item at a time.
-class Worker : public Theron::Actor
+struct Query
+{
+    inline Query() : mProcessed(false)
+    {
+    }
+
+    THERON_FORCEINLINE void Process(Buffer &buffer)
+    {
+        Factorize(mInteger, buffer.mData);
+
+        mProcessed = true;
+        mFactor0 = buffer.mData[0];
+        mFactor1 = buffer.mData[1];
+    }
+
+    Theron::Address mClient;
+    bool mProcessed;
+    Theron::uint64_t mInteger;
+    Theron::uint64_t mFactor0;
+    Theron::uint64_t mFactor1;
+};
+
+
+THERON_DECLARE_REGISTERED_MESSAGE(Query);
+THERON_DEFINE_REGISTERED_MESSAGE(Query);
+
+
+class Server : public Theron::Actor
 {
 public:
 
-    inline Worker(Theron::Framework &framework) : Theron::Actor(framework)
+    struct Request
     {
-        RegisterHandler(this, &Worker::Handler);
+    };
+
+    inline explicit Server(Theron::Framework &framework, const int numBuffers) : Theron::Actor(framework)
+    {
+        RegisterHandler(this, &Server::RequestHandler);
+        RegisterHandler(this, &Server::BufferHandler);
+
+        mBuffers = new Buffer[numBuffers];
+        for (int index(0); index < numBuffers; ++index)
+        {
+            mBufferQueue.push(mBuffers + index);
+        }
+    }
+
+    inline ~Server()
+    {
+        delete [] mBuffers;
     }
 
 private:
 
-    inline void Handler(const QueryMessage &query, const Theron::Address from)
+    inline void RequestHandler(const Request &/*request*/, const Theron::Address from)
     {
-        // The query parameter is const so we need to copy it to change it.
-        QueryMessage result(query);
-        result.Process();
-        Send(result, from);
+        if (mBufferQueue.empty())
+        {
+            mRequestQueue.push(from);
+        }
+        else
+        {
+            Send(mBufferQueue.front(), from);
+            mBufferQueue.pop();
+        }
     }
+
+    inline void BufferHandler(Buffer *const &buffer, const Theron::Address /*from*/)
+    {
+        if (mRequestQueue.empty())
+        {
+            mBufferQueue.push(buffer);
+        }
+        else
+        {
+            Send(buffer, mRequestQueue.front());
+            mRequestQueue.pop();
+        }
+    }
+
+    Buffer *mBuffers;
+    std::queue<Buffer *> mBufferQueue;
+    std::queue<Theron::Address> mRequestQueue;
 };
 
 
-// A dispatcher actor that processes work items.
-// Internally the dispatcher creates and controls a pool of workers.
-// It coordinates the workers to process the work items in parallel.
+THERON_DECLARE_REGISTERED_MESSAGE(Server::Request);
+THERON_DEFINE_REGISTERED_MESSAGE(Server::Request);
+
+
+class Worker : public Theron::Actor
+{
+public:
+
+    inline Worker(Theron::Framework &framework, const Theron::Address &dispatcher, const Theron::Address &server) :
+      Theron::Actor(framework),
+      mDispatcher(dispatcher),
+      mServer(server)
+    {
+        RegisterHandler(this, &Worker::QueryHandler);
+        RegisterHandler(this, &Worker::BufferHandler);
+    }
+
+private:
+
+    inline void QueryHandler(const Query &query, const Theron::Address /*from*/)
+    {
+        Send(Server::Request(), mServer);
+        mQuery = query;
+    }
+
+    inline void BufferHandler(Buffer *const &buffer, const Theron::Address /*from*/)
+    {
+        mQuery.Process(*buffer);
+        Send(mQuery, mDispatcher);
+        Send(buffer, mServer);
+    }
+
+    const Theron::Address mDispatcher;
+    const Theron::Address mServer;
+    Query mQuery;
+};
+
+
 class Dispatcher : public Theron::Actor
 {
 public:
 
-    inline Dispatcher(Theron::Framework &framework, const int workerCount) : Theron::Actor(framework)
+    inline Dispatcher(Theron::Framework &framework, const Theron::Address &server, const int workerCount) :
+      Theron::Actor(framework)
     {
-        // Create the workers and add them to the free list.
         for (int i = 0; i < workerCount; ++i)
         {
-            mWorkers.push_back(new Worker(framework));
+            mWorkers.push_back(new Worker(framework, GetAddress(), server));
             mFreeQueue.push(mWorkers.back()->GetAddress());
         }
 
@@ -114,7 +199,6 @@ public:
 
     inline ~Dispatcher()
     {
-        // Destroy the workers.
         const int workerCount(static_cast<int>(mWorkers.size()));
         for (int i = 0; i < workerCount; ++i)
         {
@@ -124,24 +208,18 @@ public:
 
 private:
 
-    inline void Handler(const QueryMessage &query, const Theron::Address from)
+    inline void Handler(const Query &query, const Theron::Address from)
     {
-        // Has this work item been processed?
-        if (query.Processed())
+        if (query.mProcessed)
         {
-            // Send the result back to the caller that requested it.
-            Send(query, query.Client());
-
-            // Add the worker that sent the result to the free list.
+            Send(query, query.mClient);
             mFreeQueue.push(from);
         }
         else
         {
-            // Add the unprocessed query to the work list.
             mWorkQueue.push(query);
         }
 
-        // Service the work queue.
         if (!mWorkQueue.empty() && !mFreeQueue.empty())
         {
             Send(mWorkQueue.front(), mFreeQueue.front());
@@ -153,21 +231,27 @@ private:
 
     std::vector<Worker *> mWorkers;             // Pointers to the owned workers.
     std::queue<Theron::Address> mFreeQueue;     // Queue of available workers.
-    std::queue<QueryMessage> mWorkQueue;        // Queue of unprocessed work messages.
+    std::queue<Query> mWorkQueue;               // Queue of unprocessed queries.
 };
 
 
 int main(int argc, char *argv[])
 {
-    int numMessagesProcessed(0), numYields(0), numLocalPushes(0), numSharedPushes(0);
+    Theron::uint32_t messageCounts[32];
+    Theron::uint32_t yieldCounts[32];
+    Theron::uint32_t localPushCounts[32];
+    Theron::uint32_t sharedPushCounts[32];
+    Theron::uint32_t mailboxQueueMaxes[32];
 
     const int numQueries = (argc > 1 && atoi(argv[1]) > 0) ? atoi(argv[1]) : 1000000;
     const int numThreads = (argc > 2 && atoi(argv[2]) > 0) ? atoi(argv[2]) : 16;
     const int numWorkers = (argc > 3 && atoi(argv[3]) > 0) ? atoi(argv[3]) : 16;
+    const int numBuffers = (argc > 4 && atoi(argv[4]) > 0) ? atoi(argv[4]) : 8;
 
     printf("Using numQueries = %d (use first command line argument to change)\n", numQueries);
     printf("Using numThreads = %d (use second command line argument to change)\n", numThreads);
     printf("Using numWorkers = %d (use third command line argument to change)\n", numWorkers);
+    printf("Using numBuffers = %d (use fourth command line argument to change)\n", numBuffers);
 
     // The reported time includes the startup and cleanup cost.
     Timer timer;
@@ -175,35 +259,78 @@ int main(int argc, char *argv[])
 
     {
         Theron::Framework framework(numThreads);
-        Dispatcher dispatcher(framework, numWorkers);
+        Server server(framework, numBuffers);
+        Dispatcher dispatcher(framework, server.GetAddress(), numWorkers);
         Theron::Receiver receiver;
 
-        // Send a bunch of work items to the dispatcher for processing.
-        const QueryMessage query(receiver.GetAddress(), PRIME_PRODUCT);
+        Query query;
+        query.mClient = receiver.GetAddress();
+        query.mProcessed = false;
+        query.mInteger = PRIME_FACTOR_1 * PRIME_FACTOR_2;
+        query.mFactor0 = 0;
+        query.mFactor1 = 0;
 
-        int count(0);
-        while (count < numQueries)
+        int queryCount(0);
+        int resultCount(0);
+
+        // Throttle the queries so as not to swamp the queues.
+        while (resultCount < numQueries)
         {
-            framework.Send(query, receiver.GetAddress(), dispatcher.GetAddress());
-            ++count;
+            while (queryCount < resultCount + numWorkers * 2 && queryCount < numQueries)
+            {
+                framework.Send(query, receiver.GetAddress(), dispatcher.GetAddress());
+                ++queryCount;
+            }
+
+            resultCount += static_cast<int>(receiver.Wait(16));
         }
 
-        // Wait for all the results. We don't bother to check them.
-        while (count > 0)
-        {
-            count -= static_cast<int>(receiver.Wait(count));
-        }
-
-        numMessagesProcessed = framework.GetCounterValue(Theron::COUNTER_MESSAGES_PROCESSED);
-        numYields = framework.GetCounterValue(Theron::COUNTER_YIELDS);
-        numLocalPushes = framework.GetCounterValue(Theron::COUNTER_LOCAL_PUSHES);
-        numSharedPushes = framework.GetCounterValue(Theron::COUNTER_SHARED_PUSHES);
+        framework.GetPerThreadCounterValues(Theron::COUNTER_MESSAGES_PROCESSED, messageCounts, 32);
+        framework.GetPerThreadCounterValues(Theron::COUNTER_YIELDS, yieldCounts, 32);
+        framework.GetPerThreadCounterValues(Theron::COUNTER_LOCAL_PUSHES, localPushCounts, 32);
+        framework.GetPerThreadCounterValues(Theron::COUNTER_SHARED_PUSHES, sharedPushCounts, 32);
+        framework.GetPerThreadCounterValues(Theron::COUNTER_MAILBOX_QUEUE_MAX, mailboxQueueMaxes, 32);
     }
 
     timer.Stop();
 
-    printf("Processed %d messages in %.1f seconds\n", numMessagesProcessed, timer.Seconds());
-    printf("Counted %d thread yields, %d local pushes and %d shared pushes\n", numYields, numLocalPushes, numSharedPushes);
+    printf("Processed in %.1f seconds\n", timer.Seconds());
+
+    printf("Message:");
+    for (int index = 0; index <= numThreads; ++index)
+    {
+        printf("% 10d", messageCounts[index]);
+    }
+
+    printf("\n");
+    printf("Yield:  ");
+    for (int index = 0; index <= numThreads; ++index)
+    {
+        printf("% 10d", yieldCounts[index]);
+    }
+
+    printf("\n");
+    printf("Local:  ");
+    for (int index = 0; index <= numThreads; ++index)
+    {
+        printf("% 10d", localPushCounts[index]);
+    }
+
+    printf("\n");
+    printf("Shared: ");
+    for (int index = 0; index <= numThreads; ++index)
+    {
+        printf("% 10d", sharedPushCounts[index]);
+    }
+
+    printf("\n");
+    printf("QMax:   ");
+    for (int index = 0; index <= numThreads; ++index)
+    {
+        printf("% 10d", mailboxQueueMaxes[index]);
+    }
+
+    printf("\n");
 
 #if THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
     Theron::IAllocator *const allocator(Theron::AllocatorManager::GetAllocator());

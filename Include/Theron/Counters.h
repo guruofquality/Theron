@@ -30,6 +30,7 @@ enum Counter
     COUNTER_YIELDS,                     ///< Number of times a worker thread yielded to other threads.
     COUNTER_LOCAL_PUSHES,               ///< Number of times a mailbox was pushed to a thread's local queue.
     COUNTER_SHARED_PUSHES,              ///< Number of times a mailbox was pushed to the shared queue.
+    COUNTER_MAILBOX_QUEUE_MAX,          ///< Maximum number of messages ever seen in the actor mailboxes.
     MAX_COUNTERS                        ///< Number of counters available for querying.
 };
 

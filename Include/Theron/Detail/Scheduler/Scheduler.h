@@ -362,7 +362,7 @@ template <class QueueType>
 inline uint32_t Scheduler<QueueType>::GetCounterValue(const Counter counter) const
 {
     // Read the counter value in the shared context.
-    uint32_t total(mQueue.GetCounterValue(&mSharedQueueContext, counter));
+    uint32_t accumulator(mQueue.GetCounterValue(&mSharedQueueContext, counter));
 
     mThreadContextLock.Lock();
 
@@ -371,12 +371,24 @@ inline uint32_t Scheduler<QueueType>::GetCounterValue(const Counter counter) con
     while (contexts.Next())
     {
         ThreadContext *const threadContext(contexts.Get());
-        total += mQueue.GetCounterValue(&threadContext->mQueueContext, counter);
+
+        const uint32_t counterValue(mQueue.GetCounterValue(&threadContext->mQueueContext, counter));
+        if (counter == Theron::COUNTER_MAILBOX_QUEUE_MAX)
+        {
+            if (counterValue > accumulator)
+            {
+                accumulator = counterValue;
+            }
+        }
+        else
+        {
+            accumulator += counterValue;
+        }
     }
 
     mThreadContextLock.Unlock();
 
-    return total;
+    return accumulator;
 }
 
 

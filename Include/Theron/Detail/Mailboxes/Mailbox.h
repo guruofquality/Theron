@@ -126,6 +126,16 @@ public:
     */
     inline bool IsPinned() const;
 
+    /**
+    Gets the timestamp value stored in the mailbox.
+    */
+    inline uint64_t GetTimestamp() const;
+
+    /**
+    Sets the timestamp value stored in the mailbox.
+    */
+    inline void SetTimestamp(const uint64_t timestamp);
+
 private:
 
     typedef Queue<IMessage> MessageQueue;
@@ -136,6 +146,7 @@ private:
     uint32_t mMessageCount;                     ///< Size of the message queue.
     Actor *mActor;                              ///< Pointer to the actor registered with this mailbox, if any.
     uint32_t mPinCount;                         ///< Pinning a mailboxes prevents the actor from being deregistered.
+    uint64_t mTimestamp;                        ///< Used for measuring mailbox scheduling latencies.
 
 } THERON_POSTALIGN(THERON_CACHELINE_ALIGNMENT);
 
@@ -146,7 +157,8 @@ inline Mailbox::Mailbox() :
   mQueue(),
   mMessageCount(0),
   mActor(0),
-  mPinCount(0)
+  mPinCount(0),
+  mTimestamp(0)
 {
 }
 
@@ -250,6 +262,18 @@ THERON_FORCEINLINE void Mailbox::Unpin()
 THERON_FORCEINLINE bool Mailbox::IsPinned() const
 {
     return (mPinCount > 0);
+}
+
+
+THERON_FORCEINLINE uint64_t Mailbox::GetTimestamp() const
+{
+    return mTimestamp;
+}
+
+
+THERON_FORCEINLINE void Mailbox::SetTimestamp(const uint64_t timestamp)
+{
+    mTimestamp = timestamp;
 }
 
 

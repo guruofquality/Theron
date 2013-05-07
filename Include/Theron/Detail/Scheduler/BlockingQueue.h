@@ -13,6 +13,7 @@
 #include <Theron/Detail/Containers/Queue.h>
 #include <Theron/Detail/Mailboxes/Mailbox.h>
 #include <Theron/Detail/Threading/Atomic.h>
+#include <Theron/Detail/Threading/Clock.h>
 #include <Theron/Detail/Threading/Condition.h>
 #include <Theron/Detail/Threading/Lock.h>
 #include <Theron/Detail/Threading/Mutex.h>
@@ -224,6 +225,30 @@ THERON_FORCEINLINE void BlockingQueue::WakeAll()
 
 THERON_FORCEINLINE void BlockingQueue::Push(ContextType *const context, Mailbox *mailbox)
 {
+    /*
+    // Timestamp the mailbox so we can measure the latency before it is popped.
+    uint64_t timestamp;
+    Clock::GetTicks(timestamp);
+    mailbox->SetTimestamp(timestamp);
+    */
+
+    // Update the maximum mailbox queue length seen by this thread.
+    const uint32_t messageCount(mailbox->Count());
+    Atomic::UInt32 &counter(context->mCounters[Theron::COUNTER_MAILBOX_QUEUE_MAX].mValue);
+
+    uint32_t currentValue(counter.Load());
+    uint32_t backoff(0);
+
+    while (messageCount > currentValue)
+    {
+        if (counter.CompareExchangeAcquire(currentValue, messageCount))
+        {
+            break;
+        }
+
+        Utils::Backoff(backoff);
+    }
+
     // Try to push the mailbox onto the local queue of the calling worker thread context.
     // The local queue in a per-thread context is only accessed by that thread
     // so we don't need to protect access to it.
@@ -282,21 +307,32 @@ THERON_FORCEINLINE Mailbox *BlockingQueue::Pop(ContextType *const context)
     {
         mailbox = context->mLocalWorkQueue;
         context->mLocalWorkQueue = 0;
-        return mailbox;
+    }
+    else
+    {
+        // Pop a mailbox off the shared work queue.
+        // Because the shared queue is accessed by multiple threads we have to protect it.
+        Lock lock(mSharedWorkQueueCondition.GetMutex());
+        if (!mSharedWorkQueue.Empty())
+        {
+            mailbox = static_cast<Mailbox *>(mSharedWorkQueue.Pop());
+        }
+        else if (context->mRunning == true)
+        {
+            // Wait to be pulsed when work arrives on the shared queue.
+            context->mCounters[Theron::COUNTER_YIELDS].mValue.Increment();
+            mSharedWorkQueueCondition.Wait(lock);
+        }
     }
 
-    // Pop a mailbox off the shared work queue.
-    // Because the shared queue is accessed by multiple threads we have to protect it.
-    Lock lock(mSharedWorkQueueCondition.GetMutex());
-    if (!mSharedWorkQueue.Empty())
+    if (mailbox)
     {
-        mailbox = static_cast<Mailbox *>(mSharedWorkQueue.Pop());
-    }
-    else if (context->mRunning == true)
-    {
-        // Wait to be pulsed when work arrives on the shared queue.
-        context->mCounters[Theron::COUNTER_YIELDS].mValue.Increment();
-        mSharedWorkQueueCondition.Wait(lock);
+        /*
+        // Timestamp the mailbox with the latency delta since it was pushed.
+        uint64_t timestamp;
+        Clock::GetTicks(timestamp);
+        mailbox->SetTimestamp(timestamp - mailbox->GetTimestamp());
+        */
     }
 
     return mailbox;
