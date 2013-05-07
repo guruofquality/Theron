@@ -322,12 +322,6 @@
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\IScheduler.h">
       <Filter>Header Files\Detail\Scheduler</Filter>
     </ClInclude>
-    <ClInclude Include="..\Include\Theron\Detail\Scheduler\BlockingQueue.h">
-      <Filter>Header Files\Detail\Scheduler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Include\Theron\Detail\Scheduler\NonBlockingQueue.h">
-      <Filter>Header Files\Detail\Scheduler</Filter>
-    </ClInclude>
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\WorkerContext.h">
       <Filter>Header Files\Detail\Scheduler</Filter>
     </ClInclude>
@@ -339,6 +333,15 @@
     </ClInclude>
     <ClInclude Include="..\Include\Theron\Detail\Threading\Clock.h">
       <Filter>Header Files\Detail\Threading</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Scheduler\BlockingMonitor.h">
+      <Filter>Header Files\Detail\Scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Scheduler\NonBlockingMonitor.h">
+      <Filter>Header Files\Detail\Scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Scheduler\MailboxQueue.h">
+      <Filter>Header Files\Detail\Scheduler</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

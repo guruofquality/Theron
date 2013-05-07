@@ -1,6 +1,6 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-#ifndef THERON_DETAIL_SCHEDULER_NONBLOCKINGQUEUE_H
-#define THERON_DETAIL_SCHEDULER_NONBLOCKINGQUEUE_H
+#ifndef THERON_DETAIL_SCHEDULER_MAILBOXQUEUE_H
+#define THERON_DETAIL_SCHEDULER_MAILBOXQUEUE_H
 
 
 #include <Theron/Align.h>
@@ -12,10 +12,8 @@
 
 #include <Theron/Detail/Containers/Queue.h>
 #include <Theron/Detail/Mailboxes/Mailbox.h>
-#include <Theron/Detail/Scheduler/YieldImplementation.h>
-#include <Theron/Detail/Scheduler/YieldPolicy.h>
 #include <Theron/Detail/Threading/Atomic.h>
-#include <Theron/Detail/Threading/SpinLock.h>
+#include <Theron/Detail/Threading/Clock.h>
 
 
 #ifdef _MSC_VER
@@ -31,9 +29,10 @@ namespace Detail
 
 
 /**
-\brief Blocking queue implementation based on spinlocks.
+\brief Generic mailbox queue implementation with specialized per-thread local queues.
 */
-class NonBlockingQueue
+template <class MonitorType>
+class MailboxQueue
 {
 public:
 
@@ -49,7 +48,7 @@ public:
     {
     public:
 
-        friend class NonBlockingQueue;
+        friend class MailboxQueue;
 
         inline ContextType() :
           mRunning(false),
@@ -70,14 +69,14 @@ public:
         bool mRunning;                                      ///< Used to signal the thread to terminate.
         bool mShared;                                       ///< Indicates whether this is the 'shared' context.
         Mailbox *mLocalWorkQueue;                           ///< Local thread-specific single-item work queue.
-        YieldImplementation mYield;                         ///< Thread yield strategy implementation.
+        typename MonitorType::Context mMonitorContext;      ///< Per-thread monitor primitive context.
         Aligned<Atomic::UInt32> mCounters[MAX_COUNTERS];    ///< Array of per-context event counters.
     };
 
     /**
     Constructor.
     */
-    inline explicit NonBlockingQueue(const YieldStrategy yieldStrategy);
+    inline explicit MailboxQueue(const YieldStrategy yieldStrategy);
 
     /**
     Initializes a user-allocated context as the 'shared' context common to all threads.
@@ -145,66 +144,68 @@ public:
 
 private:
 
-    NonBlockingQueue(const NonBlockingQueue &other);
-    NonBlockingQueue &operator=(const NonBlockingQueue &other);
+    MailboxQueue(const MailboxQueue &other);
+    MailboxQueue &operator=(const MailboxQueue &other);
 
-    YieldStrategy mYieldStrategy;
-    mutable SpinLock mSharedWorkQueueSpinLock;      ///< Spinlock protecting the shared work queue.
-    Queue<Mailbox> mSharedWorkQueue;                ///< Work queue shared by all the threads in a scheduler.
+    mutable MonitorType mMonitor;           ///< Synchronizes access to the shared queue.
+    Queue<Mailbox> mSharedWorkQueue;        ///< Work queue shared by all the threads in a scheduler.
 };
 
 
-inline NonBlockingQueue::NonBlockingQueue(const YieldStrategy yieldStrategy) : mYieldStrategy(yieldStrategy)
+template <class MonitorType>
+inline MailboxQueue<MonitorType>::MailboxQueue(const YieldStrategy yieldStrategy) : mMonitor(yieldStrategy)
 {
 }
 
 
-inline void NonBlockingQueue::InitializeSharedContext(ContextType *const context)
+template <class MonitorType>
+inline void MailboxQueue<MonitorType>::InitializeSharedContext(ContextType *const context)
 {
     context->mShared = true;
 }
 
 
-inline void NonBlockingQueue::InitializeWorkerContext(ContextType *const context)
+template <class MonitorType>
+inline void MailboxQueue<MonitorType>::InitializeWorkerContext(ContextType *const context)
 {
     // Only worker threads should call this method.
-    context->mRunning = true;
     context->mShared = false;
+    context->mRunning = true;
 
-    switch (mYieldStrategy)
-    {
-        default:                        context->mYield.SetYieldFunction(&Detail::YieldPolicy::YieldPolite);       break;
-        case YIELD_STRATEGY_POLITE:     context->mYield.SetYieldFunction(&Detail::YieldPolicy::YieldPolite);       break;
-        case YIELD_STRATEGY_STRONG:     context->mYield.SetYieldFunction(&Detail::YieldPolicy::YieldStrong);       break;
-        case YIELD_STRATEGY_AGGRESSIVE: context->mYield.SetYieldFunction(&Detail::YieldPolicy::YieldAggressive);   break;
-    }
+    mMonitor.InitializeWorkerContext(&context->mMonitorContext);
 }
 
 
-inline void NonBlockingQueue::ReleaseSharedContext(ContextType *const /*context*/)
+template <class MonitorType>
+inline void MailboxQueue<MonitorType>::ReleaseSharedContext(ContextType *const /*context*/)
 {
 }
 
 
-inline void NonBlockingQueue::ReleaseWorkerContext(ContextType *const context)
+template <class MonitorType>
+inline void MailboxQueue<MonitorType>::ReleaseWorkerContext(ContextType *const context)
 {
+    typename MonitorType::LockType lock(mMonitor);
     context->mRunning = false;
 }
 
 
-inline void NonBlockingQueue::ResetCounter(ContextType *const context, const uint32_t counter) const
+template <class MonitorType>
+inline void MailboxQueue<MonitorType>::ResetCounter(ContextType *const context, const uint32_t counter) const
 {
     context->mCounters[counter].mValue.Store(0);
 }
 
 
-inline uint32_t NonBlockingQueue::GetCounterValue(const ContextType *const context, const uint32_t counter) const
+template <class MonitorType>
+THERON_FORCEINLINE uint32_t MailboxQueue<MonitorType>::GetCounterValue(const ContextType *const context, const uint32_t counter) const
 {
     return context->mCounters[counter].mValue.Load();
 }
 
 
-THERON_FORCEINLINE bool NonBlockingQueue::Empty(const ContextType *const context) const
+template <class MonitorType>
+THERON_FORCEINLINE bool MailboxQueue<MonitorType>::Empty(const ContextType *const context) const
 {
     // Check the context's local queue.
     // If the provided context is the shared context then it doesn't have a local queue.
@@ -214,32 +215,27 @@ THERON_FORCEINLINE bool NonBlockingQueue::Empty(const ContextType *const context
     }
 
     // Check the shared work queue.
-    bool empty(true);
-    mSharedWorkQueueSpinLock.Lock();
-
-    if (!mSharedWorkQueue.Empty())
-    {
-        empty = false;
-    }
-
-    mSharedWorkQueueSpinLock.Unlock();
-    return empty;
+    typename MonitorType::LockType lock(mMonitor);
+    return mSharedWorkQueue.Empty();
 }
 
 
-THERON_FORCEINLINE bool NonBlockingQueue::Running(const ContextType *const context) const
+template <class MonitorType>
+THERON_FORCEINLINE bool MailboxQueue<MonitorType>::Running(const ContextType *const context) const
 {
     return context->mRunning;
 }
 
 
-THERON_FORCEINLINE void NonBlockingQueue::WakeAll()
+template <class MonitorType>
+THERON_FORCEINLINE void MailboxQueue<MonitorType>::WakeAll()
 {
-    // Queue implementation is non-blocking, so threads don't block and don't need waking.
+    mMonitor.PulseAll();
 }
 
 
-THERON_FORCEINLINE void NonBlockingQueue::Push(ContextType *const context, Mailbox *mailbox)
+template <class MonitorType>
+THERON_FORCEINLINE void MailboxQueue<MonitorType>::Push(ContextType *const context, Mailbox *mailbox)
 {
     // Update the maximum mailbox queue length seen by this thread.
     const uint32_t messageCount(mailbox->Count());
@@ -289,15 +285,20 @@ THERON_FORCEINLINE void NonBlockingQueue::Push(ContextType *const context, Mailb
 
     // Push the mailbox onto the shared work queue.
     // Because the shared queue is accessed by multiple threads we have to protect it.
-    mSharedWorkQueueSpinLock.Lock();
-    mSharedWorkQueue.Push(mailbox);
-    mSharedWorkQueueSpinLock.Unlock();
+    {
+        typename MonitorType::LockType lock(mMonitor);
+        mSharedWorkQueue.Push(mailbox);
+    }
 
+    // Pulse the condition associated with the shared queue to wake a worker thread.
+    // It's okay to release the lock before calling Pulse.
+    mMonitor.Pulse();
     context->mCounters[Theron::COUNTER_SHARED_PUSHES].mValue.Increment();
 }
 
 
-THERON_FORCEINLINE Mailbox *NonBlockingQueue::Pop(ContextType *const context)
+template <class MonitorType>
+THERON_FORCEINLINE Mailbox *MailboxQueue<MonitorType>::Pop(ContextType *const context)
 {
     Mailbox *mailbox(0);
 
@@ -312,37 +313,31 @@ THERON_FORCEINLINE Mailbox *NonBlockingQueue::Pop(ContextType *const context)
     {
         mailbox = context->mLocalWorkQueue;
         context->mLocalWorkQueue = 0;
-
-        context->mYield.Reset();
         return mailbox;
     }
 
-    // Pop a mailbox off the shared work queue.
+    // Wait on the shared queue until we pop a mailbox from it.
     // Because the shared queue is accessed by multiple threads we have to protect it.
-    // In this implementation the shared queue is protected by a spinlock.
-    mSharedWorkQueueSpinLock.Lock();
+    typename MonitorType::LockType lock(mMonitor);
+    while (mSharedWorkQueue.Empty() && context->mRunning == true)
+    {
+        context->mCounters[Theron::COUNTER_YIELDS].mValue.Increment();
+        mMonitor.Wait(&context->mMonitorContext, lock);
+    }
+
     if (!mSharedWorkQueue.Empty())
     {
         mailbox = static_cast<Mailbox *>(mSharedWorkQueue.Pop());
-    }
-    mSharedWorkQueueSpinLock.Unlock();
-
-    if (mailbox)
-    {
-        context->mYield.Reset();
-        return mailbox;
+        mMonitor.ResetYield(&context->mMonitorContext);
     }
 
-    // Progressive backoff.
-    context->mCounters[Theron::COUNTER_YIELDS].mValue.Increment();
-    context->mYield.Execute();
-
-    return 0;
+    return mailbox;
 }
 
 
+template <class MonitorType>
 template <class UserContextType, class ProcessorType>
-THERON_FORCEINLINE void NonBlockingQueue::Process(
+THERON_FORCEINLINE void MailboxQueue<MonitorType>::Process(
     ContextType *const context,
     UserContextType *const userContext,
     Mailbox *const mailbox)
@@ -365,4 +360,4 @@ THERON_FORCEINLINE void NonBlockingQueue::Process(
 #endif //_MSC_VER
 
 
-#endif // THERON_DETAIL_SCHEDULER_NONBLOCKINGQUEUE_H
+#endif // THERON_DETAIL_SCHEDULER_MAILBOXQUEUE_H
