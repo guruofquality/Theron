@@ -85,6 +85,7 @@
     <ClInclude Include="..\Include\Theron\Detail\Network\NameMap.h" />
     <ClInclude Include="..\Include\Theron\Detail\Network\NetworkMessage.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\BlockingMonitor.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Scheduler\Counting.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\IScheduler.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\MailboxContext.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\MailboxProcessor.h" />

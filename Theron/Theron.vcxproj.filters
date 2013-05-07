@@ -343,6 +343,9 @@
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\MailboxQueue.h">
       <Filter>Header Files\Detail\Scheduler</Filter>
     </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Scheduler\Counting.h">
+      <Filter>Header Files\Detail\Scheduler</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Include\Theron\Detail\Threading\README.txt">

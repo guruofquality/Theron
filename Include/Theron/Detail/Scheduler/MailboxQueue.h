@@ -12,8 +12,10 @@
 
 #include <Theron/Detail/Containers/Queue.h>
 #include <Theron/Detail/Mailboxes/Mailbox.h>
+#include <Theron/Detail/Scheduler/Counting.h>
 #include <Theron/Detail/Threading/Atomic.h>
 #include <Theron/Detail/Threading/Clock.h>
+#include <Theron/Detail/Threading/Utils.h>
 
 
 #ifdef _MSC_VER
@@ -133,15 +135,6 @@ public:
     */
     inline Mailbox *Pop(ContextType *const context);
 
-    /**
-    Processes a previously popped mailbox using the provided processor and user context.
-    */
-    template <class UserContextType, class ProcessorType>
-    inline void Process(
-        ContextType *const context,
-        UserContextType *const userContext,
-        Mailbox *const mailbox);
-
 private:
 
     MailboxQueue(const MailboxQueue &other);
@@ -193,14 +186,14 @@ inline void MailboxQueue<MonitorType>::ReleaseWorkerContext(ContextType *const c
 template <class MonitorType>
 inline void MailboxQueue<MonitorType>::ResetCounter(ContextType *const context, const uint32_t counter) const
 {
-    context->mCounters[counter].mValue.Store(0);
+    THERON_COUNTER_RESET(context->mCounters[counter].mValue);
 }
 
 
 template <class MonitorType>
 THERON_FORCEINLINE uint32_t MailboxQueue<MonitorType>::GetCounterValue(const ContextType *const context, const uint32_t counter) const
 {
-    return context->mCounters[counter].mValue.Load();
+    return THERON_COUNTER_QUERY(context->mCounters[counter].mValue);
 }
 
 
@@ -238,21 +231,7 @@ template <class MonitorType>
 THERON_FORCEINLINE void MailboxQueue<MonitorType>::Push(ContextType *const context, Mailbox *mailbox)
 {
     // Update the maximum mailbox queue length seen by this thread.
-    const uint32_t messageCount(mailbox->Count());
-    Atomic::UInt32 &counter(context->mCounters[Theron::COUNTER_MAILBOX_QUEUE_MAX].mValue);
-
-    uint32_t currentValue(counter.Load());
-    uint32_t backoff(0);
-
-    while (messageCount > currentValue)
-    {
-        if (counter.CompareExchangeAcquire(currentValue, messageCount))
-        {
-            break;
-        }
-
-        Utils::Backoff(backoff);
-    }
+    THERON_COUNTER_RAISE(context->mCounters[Theron::COUNTER_MAILBOX_QUEUE_MAX].mValue, mailbox->Count());
 
     // Try to push the mailbox onto the local queue of the calling worker thread context.
     // The local queue in a per-thread context is only accessed by that thread
@@ -273,7 +252,7 @@ THERON_FORCEINLINE void MailboxQueue<MonitorType>::Push(ContextType *const conte
         Mailbox *const previous(context->mLocalWorkQueue);
         context->mLocalWorkQueue = mailbox;
 
-        context->mCounters[Theron::COUNTER_LOCAL_PUSHES].mValue.Increment();
+        THERON_COUNTER_INCREMENT(context->mCounters[Theron::COUNTER_LOCAL_PUSHES].mValue);
 
         if (previous == 0)
         {
@@ -293,7 +272,7 @@ THERON_FORCEINLINE void MailboxQueue<MonitorType>::Push(ContextType *const conte
     // Pulse the condition associated with the shared queue to wake a worker thread.
     // It's okay to release the lock before calling Pulse.
     mMonitor.Pulse();
-    context->mCounters[Theron::COUNTER_SHARED_PUSHES].mValue.Increment();
+    THERON_COUNTER_INCREMENT(context->mCounters[Theron::COUNTER_SHARED_PUSHES].mValue);
 }
 
 
@@ -313,41 +292,31 @@ THERON_FORCEINLINE Mailbox *MailboxQueue<MonitorType>::Pop(ContextType *const co
     {
         mailbox = context->mLocalWorkQueue;
         context->mLocalWorkQueue = 0;
-        return mailbox;
+    }
+    else
+    {
+        // Wait on the shared queue until we pop a mailbox from it.
+        // Because the shared queue is accessed by multiple threads we have to protect it.
+        typename MonitorType::LockType lock(mMonitor);
+        while (mSharedWorkQueue.Empty() && context->mRunning == true)
+        {
+            THERON_COUNTER_INCREMENT(context->mCounters[Theron::COUNTER_YIELDS].mValue);
+            mMonitor.Wait(&context->mMonitorContext, lock);
+        }
+
+        if (!mSharedWorkQueue.Empty())
+        {
+            mailbox = static_cast<Mailbox *>(mSharedWorkQueue.Pop());
+            mMonitor.ResetYield(&context->mMonitorContext);
+        }
     }
 
-    // Wait on the shared queue until we pop a mailbox from it.
-    // Because the shared queue is accessed by multiple threads we have to protect it.
-    typename MonitorType::LockType lock(mMonitor);
-    while (mSharedWorkQueue.Empty() && context->mRunning == true)
+    if (mailbox)
     {
-        context->mCounters[Theron::COUNTER_YIELDS].mValue.Increment();
-        mMonitor.Wait(&context->mMonitorContext, lock);
-    }
-
-    if (!mSharedWorkQueue.Empty())
-    {
-        mailbox = static_cast<Mailbox *>(mSharedWorkQueue.Pop());
-        mMonitor.ResetYield(&context->mMonitorContext);
+        THERON_COUNTER_INCREMENT(context->mCounters[Theron::COUNTER_MESSAGES_PROCESSED].mValue);
     }
 
     return mailbox;
-}
-
-
-template <class MonitorType>
-template <class UserContextType, class ProcessorType>
-THERON_FORCEINLINE void MailboxQueue<MonitorType>::Process(
-    ContextType *const context,
-    UserContextType *const userContext,
-    Mailbox *const mailbox)
-{
-    // The shared context is never used to call Process.
-    THERON_ASSERT(context->mShared == false);
-
-    // Increment the context's message processing event counter.
-    context->mCounters[Theron::COUNTER_MESSAGES_PROCESSED].mValue.Increment();
-    ProcessorType::Process(userContext, mailbox);
 }
 
 

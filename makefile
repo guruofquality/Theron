@@ -279,6 +279,7 @@ THERON_HEADERS = \
     Include/Theron/Detail/Handlers/ReceiverHandlerCast.h \
 	Include/Theron/Detail/Mailboxes/Mailbox.h \
 	Include/Theron/Detail/Scheduler/BlockingMonitor.h \
+	Include/Theron/Detail/Scheduler/Counting.h \
 	Include/Theron/Detail/Scheduler/IScheduler.h \
 	Include/Theron/Detail/Scheduler/MailboxContext.h \
 	Include/Theron/Detail/Scheduler/MailboxProcessor.h \
