@@ -254,12 +254,12 @@ inline void ThreadPool<QueueType, ContextType, ProcessorType>::ThreadEntryPoint(
     // Mark the thread as started so the caller knows they can start issuing work.
     threadContext->mStarted = true;
 
-    // Process until told to stop.
+    // Process items until told to stop.
     while (queue->Running(queueContext))
     {
         if (ItemType *const item = queue->Pop(queueContext))
         {
-            queue-> template Process<ContextType, ProcessorType>(queueContext, userContext, item);
+            ProcessorType::Process(userContext, item);
         }
     }
 }

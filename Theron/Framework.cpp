@@ -13,8 +13,9 @@
 #include <Theron/Receiver.h>
 
 #include <Theron/Detail/Directory/StaticDirectory.h>
-#include <Theron/Detail/Scheduler/BlockingQueue.h>
-#include <Theron/Detail/Scheduler/NonBlockingQueue.h>
+#include <Theron/Detail/Scheduler/BlockingMonitor.h>
+#include <Theron/Detail/Scheduler/MailboxQueue.h>
+#include <Theron/Detail/Scheduler/NonBlockingMonitor.h>
 #include <Theron/Detail/Scheduler/Scheduler.h>
 #include <Theron/Detail/Network/Index.h>
 #include <Theron/Detail/Network/NameGenerator.h>
@@ -69,8 +70,11 @@ void Framework::Release()
 
 Detail::IScheduler *Framework::CreateScheduler()
 {
-    typedef Detail::Scheduler<Detail::BlockingQueue> BlockingScheduler;
-    typedef Detail::Scheduler<Detail::NonBlockingQueue> NonBlockingScheduler;
+    typedef Detail::MailboxQueue<Detail::BlockingMonitor> BlockingQueue;
+    typedef Detail::MailboxQueue<Detail::NonBlockingMonitor> NonBlockingQueue;
+
+    typedef Detail::Scheduler<BlockingQueue> BlockingScheduler;
+    typedef Detail::Scheduler<NonBlockingQueue> NonBlockingScheduler;
 
     IAllocator *const allocator(AllocatorManager::GetCache());
     void *schedulerMemory(0);

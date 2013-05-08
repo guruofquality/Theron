@@ -542,6 +542,30 @@ preprocessor settings in Visual Studio.
 
 
 /**
+\def THERON_ENABLE_COUNTERS
+
+\brief Enables incrementing of counters that record the count the occurrence of scheduling events.
+
+This define controls the availability of the set of event counters enumerated by \ref Counter.
+If the value of the define is non-zero then the counters are incremented when the counted
+events occur. If the value of the define is zero then the counters are not incremented, so
+always have zero value. The incrementing of the counters incurs some small overhead that makes
+a measurable difference in synthetic benchmarks, but is probably not significant in real code.
+
+Defaults to 1 (enabled). Define this as 0 to disable the incrementing of counters for efficiency.
+
+The default definition can be overridden by defining it globally in the build - either
+via the makefile command line options, on the GCC command line using -D, or in the project
+preprocessor settings in Visual Studio.
+*/
+
+
+#if !defined(THERON_ENABLE_COUNTERS)
+#define THERON_ENABLE_COUNTERS 1
+#endif
+
+
+/**
 \def THERON_CACHELINE_ALIGNMENT
 
 \brief Describes the size of a cache line on the target platform.

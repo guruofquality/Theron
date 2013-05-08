@@ -19,8 +19,12 @@ namespace Theron
 The counters measure threadpool activity levels, so are useful for
 managing the size of the internal thread-pools within \ref Framework "frameworks".
     
-\note All counters are local to each Framework instance, and count events in
+All counters are local to each Framework instance, and count events in
 the queried Framework only.
+
+\note The counters are only incremented if the value of the \ref THERON_ENABLE_COUNTERS
+define is non-zero. If THERON_ENABLE_COUNTERS is zero then the values of the counters
+will always be zero.
 
 \see Framework::GetCounterValue
 */

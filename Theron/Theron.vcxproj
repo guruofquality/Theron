@@ -84,11 +84,13 @@
     <ClInclude Include="..\Include\Theron\Detail\Network\NameGenerator.h" />
     <ClInclude Include="..\Include\Theron\Detail\Network\NameMap.h" />
     <ClInclude Include="..\Include\Theron\Detail\Network\NetworkMessage.h" />
-    <ClInclude Include="..\Include\Theron\Detail\Scheduler\BlockingQueue.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Scheduler\BlockingMonitor.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Scheduler\Counting.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\IScheduler.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\MailboxContext.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\MailboxProcessor.h" />
-    <ClInclude Include="..\Include\Theron\Detail\Scheduler\NonBlockingQueue.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Scheduler\MailboxQueue.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Scheduler\NonBlockingMonitor.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\Scheduler.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\ThreadPool.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\WorkerContext.h" />
