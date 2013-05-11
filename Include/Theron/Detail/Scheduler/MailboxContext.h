@@ -8,6 +8,7 @@
 #include <Theron/IAllocator.h>
 
 #include <Theron/Detail/Handlers/FallbackHandlerCollection.h>
+#include <Theron/Detail/Mailboxes/Mailbox.h>
 #include <Theron/Detail/Scheduler/IScheduler.h>
 
 
@@ -34,7 +35,10 @@ public:
       mScheduler(0),
       mQueueContext(0),
       mFallbackHandlers(0),
-      mMessageAllocator(0)
+      mMessageAllocator(0),
+      mMailbox(0),
+      mPredictedSendCount(0),
+      mSendCount(0)
     {
     }
 
@@ -42,6 +46,9 @@ public:
     void *mQueueContext;                                ///< Pointer to the associated queue context.
     FallbackHandlerCollection *mFallbackHandlers;       ///< Pointer to fallback handlers for undelivered messages.
     IAllocator *mMessageAllocator;                      ///< Pointer to message memory block allocator.
+    Mailbox *mMailbox;                                  ///< Pointer to the mailbox that is being processed.
+    uint32_t mPredictedSendCount;                       ///< Number of messages predicted to be sent by the handler.
+    uint32_t mSendCount;                                ///< Messages sent so far by the handler being executed.
 
 private:
 

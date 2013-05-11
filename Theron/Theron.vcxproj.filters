@@ -80,9 +80,6 @@
     <ClCompile Include="BuildDescriptor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MailboxProcessor.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="YieldPolicy.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -344,6 +341,9 @@
       <Filter>Header Files\Detail\Scheduler</Filter>
     </ClInclude>
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\Counting.h">
+      <Filter>Header Files\Detail\Scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Scheduler\SchedulerHints.h">
       <Filter>Header Files\Detail\Scheduler</Filter>
     </ClInclude>
   </ItemGroup>

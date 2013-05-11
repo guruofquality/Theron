@@ -96,10 +96,11 @@ inline bool FallbackHandlerCollection::Set(
     mHandlersDirty = true;
 
     // Destroy any previously set new handler.
+    // Note that all handler objects are the same size.
     if (mNewHandler)
     {
         mNewHandler->~IFallbackHandler();
-        allocator->Free(mNewHandler);
+        allocator->Free(mNewHandler, sizeof(MessageHandlerType));
         mNewHandler = 0;
     }
 
@@ -132,10 +133,11 @@ inline bool FallbackHandlerCollection::Set(
     mHandlersDirty = true;
 
     // Destroy any previously set new handler.
+    // Note that all handler objects are the same size.
     if (mNewHandler)
     {
         mNewHandler->~IFallbackHandler();
-        allocator->Free(mNewHandler);
+        allocator->Free(mNewHandler, sizeof(MessageHandlerType));
         mNewHandler = 0;
     }
 

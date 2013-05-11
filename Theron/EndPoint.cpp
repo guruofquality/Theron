@@ -13,6 +13,7 @@
 #include <Theron/Address.h>
 #include <Theron/AllocatorManager.h>
 #include <Theron/Assert.h>
+#include <Theron/Defines.h>
 #include <Theron/EndPoint.h>
 #include <Theron/Framework.h>
 #include <Theron/IAllocator.h>
@@ -45,7 +46,7 @@ Detail::Context *EndPoint::InitializeContext()
     if (smContext == 0)
     {
         // Allocate and construct a context structure.
-        void *const contextMemory(allocator->Allocate(sizeof(Detail::Context)));
+        void *const contextMemory(allocator->AllocateAligned(sizeof(Detail::Context), THERON_CACHELINE_ALIGNMENT));
 
         THERON_ASSERT_MSG(contextMemory, "Failed to allocate endPoint context object");
         smContext = new (contextMemory) Detail::Context();
@@ -177,7 +178,7 @@ bool EndPoint::RequestSend(Detail::IMessage *const message, const Detail::String
     }
 
     // Allocate and construct a request structure.
-    void *const requestMemory(allocator->Allocate(sizeof(SendRequest)));
+    void *const requestMemory(allocator->AllocateAligned(sizeof(SendRequest), THERON_CACHELINE_ALIGNMENT));
     if (requestMemory == 0)
     {
         return false;
@@ -213,7 +214,7 @@ void EndPoint::NetworkThreadProc()
     // This is the socket we use to publish messages sent by local actors.
     // EndPoint objects in other processors or on other hosts create SUB sockets
     // and connect them to the same endpoint.
-    void *const outputSocketMemory(allocator->Allocate(sizeof(Detail::OutputSocket)));
+    void *const outputSocketMemory(allocator->AllocateAligned(sizeof(Detail::OutputSocket), THERON_CACHELINE_ALIGNMENT));
     if (outputSocketMemory == 0)
     {
         THERON_FAIL_MSG("Failed to allocate output socket");
@@ -224,7 +225,7 @@ void EndPoint::NetworkThreadProc()
     // Create the input socket.
     // This is the socket we use to subscribe to messages published by other actors.
     // We connect to the endpoints of the publish sockets of the remote processes.
-    void *const inputSocketMemory(allocator->Allocate(sizeof(Detail::InputSocket)));
+    void *const inputSocketMemory(allocator->AllocateAligned(sizeof(Detail::InputSocket), THERON_CACHELINE_ALIGNMENT));
     if (inputSocketMemory == 0)
     {
         THERON_FAIL_MSG("Failed to allocate input socket");
@@ -239,7 +240,7 @@ void EndPoint::NetworkThreadProc()
     }
 
     // Create a network output message, which we reuse to send network messages within the loop.
-    void *const outputMessageMemory(allocator->Allocate(sizeof(Detail::OutputMessage)));
+    void *const outputMessageMemory(allocator->AllocateAligned(sizeof(Detail::OutputMessage), THERON_CACHELINE_ALIGNMENT));
     if (outputMessageMemory == 0)
     {
         THERON_FAIL_MSG("Failed to allocate output message");
@@ -248,7 +249,7 @@ void EndPoint::NetworkThreadProc()
     Detail::OutputMessage *const outputMessage = new (outputMessageMemory) Detail::OutputMessage(mContext);
 
     // Create a network input message, which we reuse to receive network messages within the loop.
-    void *const inputMessageMemory(allocator->Allocate(sizeof(Detail::InputMessage)));
+    void *const inputMessageMemory(allocator->AllocateAligned(sizeof(Detail::InputMessage), THERON_CACHELINE_ALIGNMENT));
     if (inputMessageMemory == 0)
     {
         THERON_FAIL_MSG("Failed to allocate input message");

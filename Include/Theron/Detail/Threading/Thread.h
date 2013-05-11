@@ -219,7 +219,7 @@ public:
         THERON_ASSERT(mThread == 0);
 
         // Allocate memory for a boost::thread object. They're not copyable.
-        void *const memory = AllocatorManager::GetCache()->Allocate(sizeof(boost::thread));
+        void *const memory = AllocatorManager::GetCache()->AllocateAligned(sizeof(boost::thread, THERON_CACHELINE_ALIGNMENT));
         if (memory == 0)
         {
             return false;
@@ -344,7 +344,7 @@ public:
         THERON_ASSERT(mThread == 0);
 
         // Allocate memory for a std::thread object. They're not copyable.
-        void *const memory = AllocatorManager::GetCache()->Allocate(sizeof(std::thread));
+        void *const memory = AllocatorManager::GetCache()->AllocateAligned(sizeof(std::thread), THERON_CACHELINE_ALIGNMENT);
         if (memory == 0)
         {
             return false;

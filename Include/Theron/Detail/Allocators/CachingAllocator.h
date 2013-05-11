@@ -137,9 +137,6 @@ private:
     CachingAllocator(const CachingAllocator &other);
     CachingAllocator &operator=(const CachingAllocator &other);
 
-    inline void *AllocateInline(const uint32_t size, const uint32_t alignment);
-    inline void FreeInline(void *const block, const uint32_t size);
-
     IAllocator *mAllocator;                     ///< Pointer to a wrapped low-level allocator.
     typename CacheTraits::LockType mLock;       ///< Protects access to the pools.
     Entry mEntries[CacheTraits::MAX_POOLS];     ///< Pools of memory blocks of different sizes.
@@ -182,36 +179,21 @@ inline IAllocator *CachingAllocator<CacheTraits>::GetAllocator() const
 template <class CacheTraits>
 inline void *CachingAllocator<CacheTraits>::Allocate(const uint32_t size)
 {
-    // Promote small allocations to cache-line size and alignment to improve cache hit rate.
-    const uint32_t effectiveSize(size > THERON_CACHELINE_ALIGNMENT ? size : THERON_CACHELINE_ALIGNMENT);
-    const uint32_t effectiveAlignment(THERON_CACHELINE_ALIGNMENT);
-
-    // Force-inlined call.
-    return AllocateInline(effectiveSize, effectiveAlignment);
+    // Assume word-size alignment by default.
+    // We pay the hit of an extra call in this uncommon case.
+    return AllocateAligned(size, sizeof(void *));
 }
 
 
 template <class CacheTraits>
 inline void *CachingAllocator<CacheTraits>::AllocateAligned(const uint32_t size, const uint32_t alignment)
 {
-    // Promote small alignments to cache-line size and alignment to improve cache hit rate.
-    const uint32_t effectiveSize(size > THERON_CACHELINE_ALIGNMENT ? size : THERON_CACHELINE_ALIGNMENT);
-    const uint32_t effectiveAlignment(alignment > THERON_CACHELINE_ALIGNMENT ? alignment : THERON_CACHELINE_ALIGNMENT);
-
-    // Force-inlined call.
-    return AllocateInline(effectiveSize, effectiveAlignment);
-}
-
-
-template <class CacheTraits>
-THERON_FORCEINLINE void *CachingAllocator<CacheTraits>::AllocateInline(const uint32_t size, const uint32_t alignment)
-{
     void *block(0);
 
-    // Sizes are expected to be at least a cache-line.
-    // Alignment values are expected to be powers of two and at least cache-line boundaries.
-    THERON_ASSERT(size >= THERON_CACHELINE_ALIGNMENT);
-    THERON_ASSERT(alignment >= THERON_CACHELINE_ALIGNMENT);
+    // Sizes are expected to be at least a word in size.
+    // Alignment values are expected to be powers of two and at least word boundaries.
+    THERON_ASSERT(size >= sizeof(void *));
+    THERON_ASSERT(alignment >= sizeof(void *));
     THERON_ASSERT((alignment & (alignment - 1)) == 0);
 
     mLock.Lock();
@@ -286,35 +268,18 @@ THERON_FORCEINLINE void *CachingAllocator<CacheTraits>::AllocateInline(const uin
 template <class CacheTraits>
 inline void CachingAllocator<CacheTraits>::Free(void *const block)
 {
-    // This caching allocator relies on knowing the sizes of freed blocks.
-    // We know the allocated size is at least a cache-line because we promote smaller alignments.
-    // This does assume the memory was allocated using this cache, or another instance of it.
-    // In the case where the actual memory block was larger than a cache line we waste the extra.
-    const uint32_t effectiveSize(THERON_CACHELINE_ALIGNMENT);
-
-    FreeInline(block, effectiveSize);
+    // We don't try to cache blocks of unknown size.
+    mAllocator->Free(block);
 }
 
 
 template <class CacheTraits>
 inline void CachingAllocator<CacheTraits>::Free(void *const block, const uint32_t size)
 {
-    // We know the allocated size is at least a cache-line because we promote smaller alignments.
-    // This does assume the memory was allocated using this cache, or another instance of it.
-    const uint32_t effectiveSize(size > THERON_CACHELINE_ALIGNMENT ? size : THERON_CACHELINE_ALIGNMENT);
-
-    FreeInline(block, effectiveSize);
-}
-
-
-template <class CacheTraits>
-THERON_FORCEINLINE void CachingAllocator<CacheTraits>::FreeInline(void *const block, const uint32_t size)
-{
     bool added(false);
 
-    // Sizes are expected to be at least a cache-line.
-    // Alignment values are expected to be powers of two and at least cache-line boundaries.
-    THERON_ASSERT(size >= THERON_CACHELINE_ALIGNMENT);
+    // Sizes are expected to be at least a word in size.
+    THERON_ASSERT(size >= sizeof(void *));
     THERON_ASSERT(block);
 
     mLock.Lock();

@@ -458,7 +458,7 @@ inline bool Receiver::DeregisterHandler(
                 mMessageHandlers.Remove(messageHandler);
 
                 // Free the handler object, which was allocated on registration.
-                AllocatorManager::GetCache()->Free(messageHandler);
+                AllocatorManager::GetCache()->Free(messageHandler, sizeof(MessageHandlerType));
 
                 break;
             }

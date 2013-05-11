@@ -13,6 +13,7 @@
 #include <Theron/Detail/Containers/Queue.h>
 #include <Theron/Detail/Mailboxes/Mailbox.h>
 #include <Theron/Detail/Scheduler/Counting.h>
+#include <Theron/Detail/Scheduler/SchedulerHints.h>
 #include <Theron/Detail/Threading/Atomic.h>
 #include <Theron/Detail/Threading/Clock.h>
 #include <Theron/Detail/Threading/Utils.h>
@@ -128,7 +129,7 @@ public:
     /**
     Pushes a mailbox into the queue, scheduling it for processing.
     */
-    inline void Push(ContextType *const context, Mailbox *mailbox);
+    inline void Push(ContextType *const context, Mailbox *mailbox, const SchedulerHints &hints);
 
     /**
     Pops a previously pushed mailbox from the queue for processing.
@@ -228,16 +229,20 @@ THERON_FORCEINLINE void MailboxQueue<MonitorType>::WakeAll()
 
 
 template <class MonitorType>
-THERON_FORCEINLINE void MailboxQueue<MonitorType>::Push(ContextType *const context, Mailbox *mailbox)
+THERON_FORCEINLINE void MailboxQueue<MonitorType>::Push(
+    ContextType *const context,
+    Mailbox *mailbox,
+    const SchedulerHints &hints)
 {
     // Update the maximum mailbox queue length seen by this thread.
     THERON_COUNTER_RAISE(context->mCounters[Theron::COUNTER_MAILBOX_QUEUE_MAX].mValue, mailbox->Count());
 
-    // Try to push the mailbox onto the local queue of the calling worker thread context.
-    // The local queue in a per-thread context is only accessed by that thread
-    // so we don't need to protect access to it.
-    // The shared context doesn't have a local queue.
-    if (!context->mShared)
+    // If this is predicted to be the last send, push the mailbox to the thread's local queue.
+    // Note that the shared context doesn't have a local queue (or rather, it isn't used).
+    // Don't push a receiving mailbox to the local queue if the sending mailbox will be rescheduled.
+    if (!context->mShared &&
+        hints.mSendIndex + 1 >= hints.mPredictedSendCount &&
+        (!hints.mSend || hints.mMessageCount == 1))
     {
         // If there's already a mailbox in the local queue then
         // swap it with the new mailbox. Effectively we promote the

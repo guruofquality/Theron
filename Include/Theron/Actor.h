@@ -32,7 +32,6 @@ Actor baseclass.
 #include <Theron/Detail/Messages/MessageCreator.h>
 #include <Theron/Detail/Mailboxes/Mailbox.h>
 #include <Theron/Detail/Scheduler/MailboxContext.h>
-#include <Theron/Detail/Scheduler/MailboxProcessor.h>
 #include <Theron/Detail/Threading/Atomic.h>
 #include <Theron/Detail/Threading/Utils.h>
 
@@ -51,6 +50,11 @@ namespace Theron
 
 
 class Framework;
+
+namespace Detail
+{
+    class MailboxProcessor;
+}
 
 
 /**
@@ -781,6 +785,7 @@ private:
     Processes the given message, passing it to handlers registered for its type.
     */
     inline void ProcessMessage(
+        Detail::MailboxContext *const mailboxContext,
         Detail::FallbackHandlerCollection *const fallbackHandlers,
         Detail::IMessage *const message);
 
@@ -891,7 +896,7 @@ THERON_FORCEINLINE bool Actor::Send(const ValueType &value, const Address &addre
     // The advantage of using a thread-specific context is that it is only accessed by that
     // single thread so doesn't need to be thread-safe and isn't written by other threads
     // so doesn't cause expensive cache coherency updates between cores.
-    const Detail::MailboxContext *mailboxContext(mMailboxContext);
+    Detail::MailboxContext *mailboxContext(mMailboxContext);
     if (mMailboxContext == 0)
     {
         mailboxContext = mFramework->GetMailboxContext();
@@ -907,7 +912,7 @@ THERON_FORCEINLINE bool Actor::Send(const ValueType &value, const Address &addre
     {
         // Call the message sending implementation using the acquired processor context.
         return mFramework->SendInternal(
-            mailboxContext->mQueueContext,
+            mailboxContext,
             message,
             address);
     }
@@ -925,17 +930,27 @@ THERON_FORCEINLINE bool Actor::TailSend(const ValueType &value, const Address &a
 
 
 THERON_FORCEINLINE void Actor::ProcessMessage(
+    Detail::MailboxContext *const mailboxContext,
     Detail::FallbackHandlerCollection *const fallbackHandlers,
     Detail::IMessage *const message)
 {
-    if (mMessageHandlers.Handle(this, message))
+    // Store a pointer to the context data for this thread in the actor.
+    // We'll need it to send messages if any of the registered handlers
+    // call Actor::Send, but we can't pass it through from here because
+    // the handlers are user code.
+    THERON_ASSERT(mMailboxContext == 0);
+    mMailboxContext = mailboxContext;
+
+    if (!mMessageHandlers.Handle(mailboxContext, this, message))
     {
-        return;
+        // If no registered handler handled the message, execute the default handlers instead.
+        // This call is intentionally not inlined to avoid polluting the generated code with the uncommon case.
+        Fallback(fallbackHandlers, message);
     }
 
-    // If no registered handler handled the message, execute the default handlers instead.
-    // This call is intentionally not inlined to avoid polluting the generated code with the uncommon case.
-    Fallback(fallbackHandlers, message);
+    // Zero the context pointer, in case it's next accessed by a non-worker thread.
+    THERON_ASSERT(mMailboxContext == mailboxContext);
+    mMailboxContext = 0;
 }
 
 

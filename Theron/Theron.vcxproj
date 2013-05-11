@@ -28,7 +28,6 @@
     <ClCompile Include="FallbackHandlerCollection.cpp" />
     <ClCompile Include="Framework.cpp" />
     <ClCompile Include="HandlerCollection.cpp" />
-    <ClCompile Include="MailboxProcessor.cpp" />
     <ClCompile Include="Receiver.cpp" />
     <ClCompile Include="StringPool.cpp" />
     <ClCompile Include="YieldPolicy.cpp" />
@@ -92,6 +91,7 @@
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\MailboxQueue.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\NonBlockingMonitor.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\Scheduler.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Scheduler\SchedulerHints.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\ThreadPool.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\WorkerContext.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\YieldImplementation.h" />

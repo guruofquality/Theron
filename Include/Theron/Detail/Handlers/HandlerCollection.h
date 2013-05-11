@@ -17,6 +17,8 @@
 #include <Theron/Detail/Handlers/MessageHandlerCast.h>
 #include <Theron/Detail/Messages/IMessage.h>
 #include <Theron/Detail/Messages/MessageTraits.h>
+#include <Theron/Detail/Scheduler/IScheduler.h>
+#include <Theron/Detail/Scheduler/MailboxContext.h>
 
 
 namespace Theron
@@ -51,30 +53,33 @@ public:
     Adds a handler to the collection.
     */
     template <class ActorType, class ValueType>
-    bool Add(void (ActorType::*handler)(const ValueType &message, const Address from));
+    inline bool Add(void (ActorType::*handler)(const ValueType &message, const Address from));
 
     /**
     Removes a handler from the collection, if it is present.
     */
     template <class ActorType, class ValueType>
-    bool Remove(void (ActorType::*handler)(const ValueType &message, const Address from));
+    inline bool Remove(void (ActorType::*handler)(const ValueType &message, const Address from));
 
     /**
     Returns true if the given handler is registered.
     */
     template <class ActorType, class ValueType>
-    bool Contains(void (ActorType::*handler)(const ValueType &message, const Address from)) const;
+    inline bool Contains(void (ActorType::*handler)(const ValueType &message, const Address from)) const;
 
     /**
     Unregisters all registered handlers.
     */
-    bool Clear();
+    inline bool Clear();
 
     /**
     Handles the given message, passing it to each of the handlers in the collection.
     \return True, if one or more of the handlers in the collection handled the message.
     */
-    bool Handle(Actor *const actor, const IMessage *const message);
+    inline bool Handle(
+        MailboxContext *const mailboxContext,
+        Actor *const actor,
+        const IMessage *const message);
 
 private:
 
@@ -252,10 +257,15 @@ THERON_FORCEINLINE bool HandlerCollection::Clear()
 }
 
 
-THERON_FORCEINLINE bool HandlerCollection::Handle(Actor *const actor, const IMessage *const message)
+THERON_FORCEINLINE bool HandlerCollection::Handle(
+    MailboxContext *const mailboxContext,
+    Actor *const actor,
+    const IMessage *const message)
 {
     bool handled(false);
+    IScheduler *const scheduler(mailboxContext->mScheduler);
 
+    THERON_ASSERT(scheduler);
     THERON_ASSERT(actor);
     THERON_ASSERT(message);
 
@@ -270,9 +280,13 @@ THERON_FORCEINLINE bool HandlerCollection::Handle(Actor *const actor, const IMes
     while (handlers.Next())
     {
         IMessageHandler *const messageHandler(handlers.Get());
+
+        // We notify the scheduler, which acts as an observer.
+        scheduler->BeginHandler(mailboxContext, messageHandler);
         handled |= messageHandler->Handle(actor, message);
+        scheduler->EndHandler(mailboxContext, messageHandler);
     }
-    
+
     return handled;
 }
 
