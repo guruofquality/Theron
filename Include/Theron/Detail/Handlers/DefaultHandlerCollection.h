@@ -96,10 +96,11 @@ inline bool DefaultHandlerCollection::Set(void (ActorType::*handler)(const Addre
     mHandlersDirty = true;
 
     // Destroy any previously set new handler.
+    // Note that all handler objects are the same size.
     if (mNewHandler)
     {
         mNewHandler->~IDefaultHandler();
-        allocator->Free(mNewHandler);
+        allocator->Free(mNewHandler, sizeof(MessageHandlerType));
         mNewHandler = 0;
     }
 
@@ -130,10 +131,11 @@ inline bool DefaultHandlerCollection::Set(void (ActorType::*handler)(const void 
     mHandlersDirty = true;
 
     // Destroy any previously set new handler.
+    // Note that all handler objects are the same size.
     if (mNewHandler)
     {
         mNewHandler->~IDefaultHandler();
-        allocator->Free(mNewHandler);
+        allocator->Free(mNewHandler, sizeof(MessageHandlerType));
         mNewHandler = 0;
     }
 

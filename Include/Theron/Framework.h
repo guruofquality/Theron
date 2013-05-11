@@ -721,7 +721,7 @@ private:
     Helper method that sends messages.
     */
     inline bool SendInternal(
-        void *const queueContext,
+        Detail::MailboxContext *const mailboxContext,
         Detail::IMessage *const message,
         Address address);
 
@@ -742,7 +742,7 @@ private:
     /**
     Returns a pointer to the shared mailbox context not associated with a specific worker thread.
     */
-    inline const Detail::MailboxContext *GetMailboxContext() const;
+    inline Detail::MailboxContext *GetMailboxContext();
 
     Detail::StringPool::Ref mStringPoolRef;                 ///< Ensures that the StringPool is created.
     EndPoint *const mEndPoint;                              ///< Pointer to the network endpoint, if any, to which this framework is tied.
@@ -837,7 +837,7 @@ THERON_FORCEINLINE bool Framework::Send(const ValueType &value, const Address &f
     // Call the message sending implementation using the processor context of the framework.
     // When messages are sent using Framework::Send there's no obvious worker thread.
     return SendInternal(
-        mSharedMailboxContext.mQueueContext,
+        &mSharedMailboxContext,
         message,
         address);
 }
@@ -901,7 +901,7 @@ THERON_FORCEINLINE uint32_t Framework::GetPerThreadCounterValues(
 
 
 THERON_FORCEINLINE bool Framework::SendInternal(
-    void *const queueContext,
+    Detail::MailboxContext *const mailboxContext,
     Detail::IMessage *const message,
     Address address)
 {
@@ -944,7 +944,7 @@ THERON_FORCEINLINE bool Framework::SendInternal(
 
         if (schedule)
         {
-            mScheduler->Schedule(queueContext, &mailbox);
+            mScheduler->Schedule(mailboxContext, &mailbox);
         }
 
         mailbox.Unlock();
@@ -974,13 +974,13 @@ THERON_FORCEINLINE bool Framework::FrameworkReceive(
     // Call the generic message sending function.
     // We use our own local context here because we're receiving the message.
     return SendInternal(
-        mSharedMailboxContext.mQueueContext,
+        &mSharedMailboxContext,
         message,
         address);
 }
 
 
-THERON_FORCEINLINE const Detail::MailboxContext *Framework::GetMailboxContext() const
+THERON_FORCEINLINE Detail::MailboxContext *Framework::GetMailboxContext()
 {
     return &mSharedMailboxContext;
 }

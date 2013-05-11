@@ -87,7 +87,7 @@ public:
     \note The message is not consumed by the handler; just acted on or ignored.
     The message will be automatically destroyed when all handlers have seen it.
     */
-    inline virtual bool Handle(Actor *const actor, const IMessage *const message) const
+    inline virtual bool Handle(Actor *const actor, const IMessage *const message)
     {
         typedef MessageCast<MessageTraits<ValueType>::HAS_TYPE_NAME> MessageCaster;
     
@@ -102,6 +102,7 @@ public:
             // Call the handler, passing it the message value and from address.
             ActorType *const typedActor = static_cast<ActorType *>(actor);
             (typedActor->*mHandlerFunction)(typedMessage->Value(), typedMessage->From());
+
             return true;
         }
 

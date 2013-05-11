@@ -52,6 +52,7 @@ public:
     virtual void *Allocate(const SizeType size);
     virtual void *AllocateAligned(const SizeType size, const SizeType alignment);
     virtual void Free(void *const memory);
+    virtual void Free(void *const memory, const SizeType size);
 };
 
 MyAllocator allocator;

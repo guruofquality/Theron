@@ -13,6 +13,7 @@
 #include <Theron/Detail/Containers/Queue.h>
 #include <Theron/Detail/Mailboxes/Mailbox.h>
 #include <Theron/Detail/Scheduler/Counting.h>
+#include <Theron/Detail/Scheduler/SchedulerHints.h>
 #include <Theron/Detail/Threading/Atomic.h>
 #include <Theron/Detail/Threading/Clock.h>
 #include <Theron/Detail/Threading/Utils.h>
@@ -128,7 +129,7 @@ public:
     /**
     Pushes a mailbox into the queue, scheduling it for processing.
     */
-    inline void Push(ContextType *const context, Mailbox *mailbox);
+    inline void Push(ContextType *const context, Mailbox *mailbox, const SchedulerHints &hints);
 
     /**
     Pops a previously pushed mailbox from the queue for processing.
@@ -139,6 +140,10 @@ private:
 
     MailboxQueue(const MailboxQueue &other);
     MailboxQueue &operator=(const MailboxQueue &other);
+
+    inline static bool PreferLocalQueue(
+        const ContextType *const context,
+        const SchedulerHints &hints);
 
     mutable MonitorType mMonitor;           ///< Synchronizes access to the shared queue.
     Queue<Mailbox> mSharedWorkQueue;        ///< Work queue shared by all the threads in a scheduler.
@@ -228,16 +233,18 @@ THERON_FORCEINLINE void MailboxQueue<MonitorType>::WakeAll()
 
 
 template <class MonitorType>
-THERON_FORCEINLINE void MailboxQueue<MonitorType>::Push(ContextType *const context, Mailbox *mailbox)
+THERON_FORCEINLINE void MailboxQueue<MonitorType>::Push(
+    ContextType *const context,
+    Mailbox *mailbox,
+    const SchedulerHints &hints)
 {
     // Update the maximum mailbox queue length seen by this thread.
     THERON_COUNTER_RAISE(context->mCounters[Theron::COUNTER_MAILBOX_QUEUE_MAX].mValue, mailbox->Count());
 
-    // Try to push the mailbox onto the local queue of the calling worker thread context.
-    // The local queue in a per-thread context is only accessed by that thread
-    // so we don't need to protect access to it.
-    // The shared context doesn't have a local queue.
-    if (!context->mShared)
+    // Choose whether to push the scheduled mailbox to the calling thread's
+    // local queue (if the calling thread is a worker thread executing a message
+    // handler) or the shared queue contended by all worker threads in the framework.
+    if (PreferLocalQueue(context, hints))
     {
         // If there's already a mailbox in the local queue then
         // swap it with the new mailbox. Effectively we promote the
@@ -317,6 +324,37 @@ THERON_FORCEINLINE Mailbox *MailboxQueue<MonitorType>::Pop(ContextType *const co
     }
 
     return mailbox;
+}
+
+
+template <class MonitorType>
+THERON_FORCEINLINE bool MailboxQueue<MonitorType>::PreferLocalQueue(
+    const ContextType *const context,
+    const SchedulerHints &hints)
+{
+    // The shared context doesn't have (or doesn't use) a local queue.
+    if (context->mShared)
+    {
+        return false;
+    }
+
+    if (hints.mSend)
+    {
+        // If this send isn't predicted to be the last then push it to the shared queue.
+        if (hints.mSendIndex + 1 < hints.mPredictedSendCount)
+        {
+            return false;
+        }
+
+        // If the sending mailbox still has unprocessed messages then it will
+        // be pushed to the local queue, so push this mailbox to the shared queue.
+        if (hints.mMessageCount > 1)
+        {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 

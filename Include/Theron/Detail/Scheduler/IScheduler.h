@@ -10,6 +10,7 @@
 #include <Theron/YieldStrategy.h>
 
 #include <Theron/Detail/Directory/Directory.h>
+#include <Theron/Detail/Handlers/IMessageHandler.h>
 #include <Theron/Detail/Mailboxes/Mailbox.h>
 
 
@@ -59,9 +60,19 @@ public:
     virtual void Release() = 0;
 
     /**
+    Notifies the scheduler that a worker thread is about to start executing a message handler.
+    */
+    virtual void BeginHandler(MailboxContext *const mailboxContext, IMessageHandler *const messageHandler) = 0;
+
+    /**
+    Notifies the scheduler that a worker thread has finished executing a message handler.
+    */
+    virtual void EndHandler(MailboxContext *const mailboxContext, IMessageHandler *const messageHandler) = 0;
+
+    /**
     Schedules for processing a mailbox that has received a message.
     */
-    virtual void Schedule(void *const queueContext, Mailbox *const mailbox) = 0;
+    virtual void Schedule(MailboxContext *const mailboxContext, Mailbox *const mailbox) = 0;
 
     /**
     Sets a maximum limit on the number of worker threads enabled in the scheduler.

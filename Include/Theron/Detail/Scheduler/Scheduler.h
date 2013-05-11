@@ -21,6 +21,7 @@
 #include <Theron/Detail/Scheduler/IScheduler.h>
 #include <Theron/Detail/Scheduler/MailboxContext.h>
 #include <Theron/Detail/Scheduler/MailboxProcessor.h>
+#include <Theron/Detail/Scheduler/SchedulerHints.h>
 #include <Theron/Detail/Scheduler/ThreadPool.h>
 #include <Theron/Detail/Scheduler/WorkerContext.h>
 #include <Theron/Detail/Threading/Atomic.h>
@@ -79,9 +80,19 @@ public:
     inline virtual void Release();
 
     /**
+    Notifies the scheduler that a worker thread is about to start executing a message handler.
+    */
+    inline virtual void BeginHandler(MailboxContext *const mailboxContext, IMessageHandler *const messageHandler);
+
+    /**
+    Notifies the scheduler that a worker thread has finished executing a message handler.
+    */
+    inline virtual void EndHandler(MailboxContext *const mailboxContext, IMessageHandler *const messageHandler);
+
+    /**
     Schedules for processing a mailbox that has received a message.
     */
-    inline virtual void Schedule(void *const queueContext, Mailbox *const mailbox);
+    inline virtual void Schedule(MailboxContext *const mailboxContext, Mailbox *const mailbox);
 
     inline virtual void SetMaxThreads(const uint32_t count);
     inline virtual void SetMinThreads(const uint32_t count);
@@ -246,10 +257,56 @@ inline void Scheduler<QueueType>::Release()
 
 
 template <class QueueType>
-inline void Scheduler<QueueType>::Schedule(void *const queueContext, Mailbox *const mailbox)
+inline void Scheduler<QueueType>::BeginHandler(MailboxContext *const mailboxContext, IMessageHandler *const messageHandler)
 {
-    QueueContext *const typedContext(reinterpret_cast<QueueContext *>(queueContext));
-    mQueue.Push(typedContext, mailbox);
+    // Store the last send count for this handler in the context so it's available to the scheduler.
+    // Reset the message send count in the context and start counting sends for this handler.
+    mailboxContext->mPredictedSendCount = messageHandler->GetPredictedSendCount();
+    mailboxContext->mSendCount = 0;
+}
+
+
+template <class QueueType>
+inline void Scheduler<QueueType>::EndHandler(MailboxContext *const mailboxContext, IMessageHandler *const messageHandler)
+{
+    // Update the cached message send count for this handler.
+    // These counts are used to predict which of a handler's message sends will be its last.
+    messageHandler->ReportSendCount(mailboxContext->mSendCount);
+}
+
+
+template <class QueueType>
+inline void Scheduler<QueueType>::Schedule(MailboxContext *const mailboxContext, Mailbox *const mailbox)
+{
+    QueueContext *const queueContext(reinterpret_cast<QueueContext *>(mailboxContext->mQueueContext));
+    Mailbox *const sendingMailbox(mailboxContext->mMailbox);
+
+    // Build a hint structure to pass to the queuing policy.
+    SchedulerHints hints;
+
+    // Whether the mailbox is being scheduled because it received a message.
+    // The other possibility is that it's the sending mailbox being rescheduled.
+    hints.mSend = (sendingMailbox != mailbox);
+
+    // The predicted number of messages sent by the message handler currently being invoked (if any).
+    hints.mPredictedSendCount = mailboxContext->mPredictedSendCount;
+
+    // The actual number of messages sent so far by the handler being invoked (if any).
+    hints.mSendIndex = mailboxContext->mSendCount;
+
+    // The number of messages queued in the sending mailbox, for sends.
+    // The count includes the message that is currently being processed.
+    hints.mMessageCount = 0;
+    if (sendingMailbox)
+    {
+        hints.mMessageCount = sendingMailbox->Count();
+    }
+
+    mQueue.Push(queueContext, mailbox, hints);
+
+    // We remember the number of messages each message handler sends, so we can
+    // guess whether a given send will be the last next time it's executed.
+    ++mailboxContext->mSendCount;
 }
 
 

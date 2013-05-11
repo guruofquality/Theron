@@ -286,6 +286,7 @@ THERON_HEADERS = \
 	Include/Theron/Detail/Scheduler/MailboxQueue.h \
 	Include/Theron/Detail/Scheduler/NonBlockingMonitor.h \
 	Include/Theron/Detail/Scheduler/Scheduler.h \
+	Include/Theron/Detail/Scheduler/SchedulerHints.h \
 	Include/Theron/Detail/Scheduler/ThreadPool.h \
 	Include/Theron/Detail/Scheduler/WorkerContext.h \
 	Include/Theron/Detail/Scheduler/YieldImplementation.h \
@@ -345,7 +346,6 @@ THERON_SOURCES = \
 	Theron/FallbackHandlerCollection.cpp \
 	Theron/Framework.cpp \
 	Theron/HandlerCollection.cpp \
-	Theron/MailboxProcessor.cpp \
 	Theron/Receiver.cpp \
 	Theron/StringPool.cpp \
 	Theron/YieldPolicy.cpp
@@ -360,7 +360,6 @@ THERON_OBJECTS = \
 	${BUILD}/FallbackHandlerCollection.o \
 	${BUILD}/Framework.o \
 	${BUILD}/HandlerCollection.o \
-	${BUILD}/MailboxProcessor.o \
 	${BUILD}/Receiver.o \
 	${BUILD}/StringPool.o \
 	${BUILD}/YieldPolicy.o
@@ -394,9 +393,6 @@ ${BUILD}/Framework.o: Theron/Framework.cpp ${THERON_HEADERS}
 
 ${BUILD}/HandlerCollection.o: Theron/HandlerCollection.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/HandlerCollection.cpp -o ${BUILD}/HandlerCollection.o ${INCLUDE_FLAGS}
-
-${BUILD}/MailboxProcessor.o: Theron/MailboxProcessor.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Theron/MailboxProcessor.cpp -o ${BUILD}/MailboxProcessor.o ${INCLUDE_FLAGS}
 
 ${BUILD}/Receiver.o: Theron/Receiver.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/Receiver.cpp -o ${BUILD}/Receiver.o ${INCLUDE_FLAGS}
