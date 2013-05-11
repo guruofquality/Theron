@@ -24,10 +24,10 @@ public:
     {
     }
 
-    bool mSend;                     ///< Indicates whether the mailbox is being scheduled due receiving a message.
-    uint32_t mPredictedSendCount;   ///< Number of messages sent by the current handler on its last invocation.
+    bool mSend;                     ///< Indicates whether the mailbox is being scheduled due to being sent a message.
+    uint32_t mPredictedSendCount;   ///< Predicts the number of messages that will be sent by the current handler.
     uint32_t mSendIndex;            ///< Index of this message send within the current handler.
-    uint32_t mMessageCount;         ///< Number of messages queued in the mailbox currently being processed.
+    uint32_t mMessageCount;         ///< Number of messages queued in the mailbox that is currently being processed.
 
 private:
 

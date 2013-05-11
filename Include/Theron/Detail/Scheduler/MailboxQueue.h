@@ -141,6 +141,10 @@ private:
     MailboxQueue(const MailboxQueue &other);
     MailboxQueue &operator=(const MailboxQueue &other);
 
+    inline static bool PreferLocalQueue(
+        const ContextType *const context,
+        const SchedulerHints &hints);
+
     mutable MonitorType mMonitor;           ///< Synchronizes access to the shared queue.
     Queue<Mailbox> mSharedWorkQueue;        ///< Work queue shared by all the threads in a scheduler.
 };
@@ -237,12 +241,10 @@ THERON_FORCEINLINE void MailboxQueue<MonitorType>::Push(
     // Update the maximum mailbox queue length seen by this thread.
     THERON_COUNTER_RAISE(context->mCounters[Theron::COUNTER_MAILBOX_QUEUE_MAX].mValue, mailbox->Count());
 
-    // If this is predicted to be the last send, push the mailbox to the thread's local queue.
-    // Note that the shared context doesn't have a local queue (or rather, it isn't used).
-    // Don't push a receiving mailbox to the local queue if the sending mailbox will be rescheduled.
-    if (!context->mShared &&
-        hints.mSendIndex + 1 >= hints.mPredictedSendCount &&
-        (!hints.mSend || hints.mMessageCount == 1))
+    // Choose whether to push the scheduled mailbox to the calling thread's
+    // local queue (if the calling thread is a worker thread executing a message
+    // handler) or the shared queue contended by all worker threads in the framework.
+    if (PreferLocalQueue(context, hints))
     {
         // If there's already a mailbox in the local queue then
         // swap it with the new mailbox. Effectively we promote the
@@ -322,6 +324,37 @@ THERON_FORCEINLINE Mailbox *MailboxQueue<MonitorType>::Pop(ContextType *const co
     }
 
     return mailbox;
+}
+
+
+template <class MonitorType>
+THERON_FORCEINLINE bool MailboxQueue<MonitorType>::PreferLocalQueue(
+    const ContextType *const context,
+    const SchedulerHints &hints)
+{
+    // The shared context doesn't have (or doesn't use) a local queue.
+    if (context->mShared)
+    {
+        return false;
+    }
+
+    if (hints.mSend)
+    {
+        // If this send isn't predicted to be the last then push it to the shared queue.
+        if (hints.mSendIndex + 1 < hints.mPredictedSendCount)
+        {
+            return false;
+        }
+
+        // If the sending mailbox still has unprocessed messages then it will
+        // be pushed to the local queue, so push this mailbox to the shared queue.
+        if (hints.mMessageCount > 1)
+        {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 
