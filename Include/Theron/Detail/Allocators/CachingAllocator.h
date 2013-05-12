@@ -190,10 +190,10 @@ inline void *CachingAllocator<CacheTraits>::AllocateAligned(const uint32_t size,
 {
     void *block(0);
 
-    // Sizes are expected to be at least a word in size.
-    // Alignment values are expected to be powers of two and at least word boundaries.
-    THERON_ASSERT(size >= sizeof(void *));
-    THERON_ASSERT(alignment >= sizeof(void *));
+    // Sizes are expected to be at least 4 bytes.
+    // Alignment values are expected to be powers of two and at least 4 bytes.
+    THERON_ASSERT(size >= 4);
+    THERON_ASSERT(alignment >= 4);
     THERON_ASSERT((alignment & (alignment - 1)) == 0);
 
     mLock.Lock();
@@ -278,8 +278,8 @@ inline void CachingAllocator<CacheTraits>::Free(void *const block, const uint32_
 {
     bool added(false);
 
-    // Sizes are expected to be at least a word in size.
-    THERON_ASSERT(size >= sizeof(void *));
+    // Sizes are expected to be at least four bytes.
+    THERON_ASSERT(size >= 4);
     THERON_ASSERT(block);
 
     mLock.Lock();
