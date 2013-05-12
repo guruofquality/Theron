@@ -15,7 +15,6 @@
 #include <windows.h>
 #elif THERON_POSIX
 #include <time.h>
-#elif THERON_GCC
 #include <sys/time.h>
 #endif
 
@@ -41,83 +40,58 @@ public:
     Queries the clock for a timestamp in ticks.
     The time-length of a tick is implementation-dependent.
     */
-    THERON_FORCEINLINE static bool GetTicks(uint64_t &ticks)
+    THERON_FORCEINLINE static uint64_t GetTicks()
     {
 #if THERON_WINDOWS
 
         // The 'ticks' are cycles in the Windows implementation.
         LARGE_INTEGER counter;
-        if (QueryPerformanceCounter(&counter))
-        {
-            ticks = (uint64_t) counter.QuadPart;
-            return true;
-        }
+        QueryPerformanceCounter(&counter);
+        return (uint64_t) counter.QuadPart;
 
 #elif THERON_POSIX
+
+        /*
+        // The 'ticks' are nanoseconds in the GCC implementation.
+        timeval td;
+        gettimeofday(&td, NULL);
+        return td.tv_sec * NANOSECONDS_PER_SECOND + td.tv_usec * NANOSECONDS_PER_MICROSECOND;
+        */
 
         // The 'ticks' are nanoseconds in the POSIX implementation.
         // TODO: Use CLOCK_PROCESS_CPUTIME_ID?
         struct timespec ts;
-        if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
-        {
-            ticks = ts.tv_sec * NANOSECONDS_PER_SECOND + ts.tv_nsec;
-            return true;
-        }
+        clock_gettime(CLOCK_REALTIME, &ts);
+        return ts.tv_sec * NANOSECONDS_PER_SECOND + ts.tv_nsec;
 
-#elif THERON_GCC
+#else
 
-        // The 'ticks' are nanoseconds in the GCC implementation.
-        timeval td;
-        if (gettimeofday(&td, NULL))
-        {
-            ticks = td.tv_sec * NANOSECONDS_PER_SECOND + t1.tv_usec * NANOSECONDS_PER_MICROSECOND;
-            return true;
-        }
+        return 0;
 
 #endif
-
-        return false;
     }
 
     /**
     Queries the clock for its resolution in ticks-per-second.
     */
-    THERON_FORCEINLINE static bool GetFrequency(uint64_t &ticksPerSecond)
+    THERON_FORCEINLINE static uint64_t GetFrequency()
     {
-#if THERON_WINDOWS
-
-        // The 'ticks' are cycles in the Windows implementation.
-        LARGE_INTEGER counter;
-        if (QueryPerformanceFrequency(&counter))
-        {
-            ticksPerSecond = (uint64_t) counter.QuadPart;
-            return true;
-        }
-
-        return false;
-
-#elif THERON_POSIX
-
-        // The 'ticks' are nanoseconds in the POSIX implementation.
-        ticksPerSecond = NANOSECONDS_PER_SECOND;
-        return true;
-
-#elif THERON_GCC
-
-        // The 'ticks' are nanoseconds in the GCC implementation.
-        ticksPerSecond = NANOSECONDS_PER_SECOND;
-        return true;
-
-#else
-
-        return false;
-
-#endif
-
+        return mStatic.mTicksPerSecond;
     }
+
+private:
+
+    struct Static
+    {
+        Static();
+
+        uint64_t mTicksPerSecond;
+    };
 
     static const uint64_t NANOSECONDS_PER_SECOND = 1000000000;
     static const uint64_t NANOSECONDS_PER_MICROSECOND = 1000;
+
+    static Static mStatic;
 };
 
 

@@ -238,6 +238,13 @@ THERON_FORCEINLINE void MailboxQueue<MonitorType>::Push(
     Mailbox *mailbox,
     const SchedulerHints &hints)
 {
+#if THERON_ENABLE_COUNTERS
+    
+    // Timestamp the mailbox on entry.
+    mailbox->Timestamp() = Clock::GetTicks();
+
+#endif // THERON_ENABLE_COUNTERS
+
     // Update the maximum mailbox queue length seen by this thread.
     THERON_COUNTER_RAISE(context->mCounters[Theron::COUNTER_MAILBOX_QUEUE_MAX].mValue, mailbox->Count());
 
@@ -321,6 +328,18 @@ THERON_FORCEINLINE Mailbox *MailboxQueue<MonitorType>::Pop(ContextType *const co
     if (mailbox)
     {
         THERON_COUNTER_INCREMENT(context->mCounters[Theron::COUNTER_MESSAGES_PROCESSED].mValue);
+
+#if THERON_ENABLE_COUNTERS
+
+        // Compute the latency and update the maximum queue latency seen by this thread.
+        const uint64_t timestamp(Clock::GetTicks());
+        const uint64_t ticks(timestamp - mailbox->Timestamp());
+        const uint64_t ticksPerSecond(Clock::GetFrequency());
+        const uint64_t usec(ticks * 1000000 / ticksPerSecond);
+        THERON_COUNTER_RAISE(context->mCounters[Theron::COUNTER_QUEUE_LATENCY_MAX].mValue, static_cast<uint32_t>(usec));
+
+#endif // THERON_ENABLE_COUNTERS
+
     }
 
     return mailbox;

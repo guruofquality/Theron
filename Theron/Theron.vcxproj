@@ -23,6 +23,7 @@
     <ClCompile Include="Address.cpp" />
     <ClCompile Include="AllocatorManager.cpp" />
     <ClCompile Include="BuildDescriptor.cpp" />
+    <ClCompile Include="Clock.cpp" />
     <ClCompile Include="DefaultHandlerCollection.cpp" />
     <ClCompile Include="EndPoint.cpp" />
     <ClCompile Include="FallbackHandlerCollection.cpp" />

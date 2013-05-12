@@ -184,7 +184,6 @@ TESTS = ${BIN}/Tests
 THREADRING = ${BIN}/ThreadRing
 PARALLELTHREADRING = ${BIN}/ParallelThreadRing
 PINGPONG = ${BIN}/PingPong
-MULTIPLEWRITERS = ${BIN}/MultipleWriters
 PRIMEFACTORS = ${BIN}/PrimeFactors
 
 ALIGNMENT = ${BIN}/Alignment
@@ -220,7 +219,6 @@ benchmarks: library \
 	${THREADRING} \
 	${PARALLELTHREADRING} \
 	${PINGPONG} \
-	${MULTIPLEWRITERS} \
 	${PRIMEFACTORS}
 
 tutorial: library \
@@ -341,6 +339,7 @@ THERON_SOURCES = \
 	Theron/Address.cpp \
 	Theron/AllocatorManager.cpp \
 	Theron/BuildDescriptor.cpp \
+	Theron/Clock.cpp \
 	Theron/DefaultHandlerCollection.cpp \
 	Theron/EndPoint.cpp \
 	Theron/FallbackHandlerCollection.cpp \
@@ -355,6 +354,7 @@ THERON_OBJECTS = \
 	${BUILD}/Address.o \
 	${BUILD}/AllocatorManager.o \
 	${BUILD}/BuildDescriptor.o \
+	${BUILD}/Clock.o \
 	${BUILD}/DefaultHandlerCollection.o \
 	${BUILD}/EndPoint.o \
 	${BUILD}/FallbackHandlerCollection.o \
@@ -378,6 +378,9 @@ ${BUILD}/AllocatorManager.o: Theron/AllocatorManager.cpp ${THERON_HEADERS}
 
 ${BUILD}/BuildDescriptor.o: Theron/BuildDescriptor.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/BuildDescriptor.cpp -o ${BUILD}/BuildDescriptor.o ${INCLUDE_FLAGS}
+
+${BUILD}/Clock.o: Theron/Clock.cpp ${THERON_HEADERS}
+	$(CC) $(CFLAGS) Theron/Clock.cpp -o ${BUILD}/Clock.o ${INCLUDE_FLAGS}
 
 ${BUILD}/DefaultHandlerCollection.o: Theron/DefaultHandlerCollection.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Theron/DefaultHandlerCollection.cpp -o ${BUILD}/DefaultHandlerCollection.o ${INCLUDE_FLAGS}
@@ -471,17 +474,6 @@ ${PINGPONG}: $(THERON_LIB) ${PINGPONG_OBJECTS}
 
 ${BUILD}/PingPong.o: Benchmarks/PingPong/PingPong.cpp ${THERON_HEADERS}
 	$(CC) $(CFLAGS) Benchmarks/PingPong/PingPong.cpp -o ${BUILD}/PingPong.o ${INCLUDE_FLAGS}
-
-
-# MultipleWriters benchmark
-MULTIPLEWRITERS_SOURCES = Benchmarks/MultipleWriters/MultipleWriters.cpp
-MULTIPLEWRITERS_OBJECTS = ${BUILD}/MultipleWriters.o
-
-${MULTIPLEWRITERS}: $(THERON_LIB) ${MULTIPLEWRITERS_OBJECTS}
-	$(CC) $(LDFLAGS) ${MULTIPLEWRITERS_OBJECTS} $(THERON_LIB) -o ${MULTIPLEWRITERS} ${LIB_FLAGS}
-
-${BUILD}/MultipleWriters.o: Benchmarks/MultipleWriters/MultipleWriters.cpp ${THERON_HEADERS}
-	$(CC) $(CFLAGS) Benchmarks/MultipleWriters/MultipleWriters.cpp -o ${BUILD}/MultipleWriters.o ${INCLUDE_FLAGS}
 
 
 # PrimeFactors benchmark
