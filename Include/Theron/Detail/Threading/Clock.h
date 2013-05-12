@@ -51,18 +51,10 @@ public:
 
 #elif THERON_POSIX
 
-        /*
-        // The 'ticks' are nanoseconds in the GCC implementation.
-        timeval td;
-        gettimeofday(&td, NULL);
-        return td.tv_sec * NANOSECONDS_PER_SECOND + td.tv_usec * NANOSECONDS_PER_MICROSECOND;
-        */
-
         // The 'ticks' are nanoseconds in the POSIX implementation.
-        // TODO: Use CLOCK_PROCESS_CPUTIME_ID?
         struct timespec ts;
-        clock_gettime(CLOCK_REALTIME, &ts);
-        return ts.tv_sec * NANOSECONDS_PER_SECOND + ts.tv_nsec;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        return (uint64_t) ts.tv_sec * NANOSECONDS_PER_SECOND + (uint64_t) ts.tv_nsec;
 
 #else
 
@@ -88,9 +80,7 @@ private:
         uint64_t mTicksPerSecond;
     };
 
-    static const uint64_t NANOSECONDS_PER_SECOND = 1000000000;
-    static const uint64_t NANOSECONDS_PER_MICROSECOND = 1000;
-
+    static const uint64_t NANOSECONDS_PER_SECOND = 1000000000ULL;
     static Static mStatic;
 };
 
