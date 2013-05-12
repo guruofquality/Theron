@@ -25,10 +25,10 @@ public:
     THERON_FORCEINLINE static uint32_t GetSize()
     {
         uint32_t valueSize(sizeof(ValueType));
-        const uint32_t minimumAllocationSize(sizeof(void *));
+        const uint32_t minimumAllocationSize(4);
 
         // Empty structs passed as message values have a size of one byte, which we don't like.
-        // To be on the safe side we round every allocation up to at least a word in size.
+        // To be on the safe side we round every allocation up to at least four bytes.
         // If we don't then the data that follows won't be word-aligned.
         if (valueSize < minimumAllocationSize)
         {

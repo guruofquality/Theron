@@ -127,14 +127,14 @@ public:
     inline bool IsPinned() const;
 
     /**
-    Gets the timestamp value stored in the mailbox.
+    Gets a reference to the timestamp value stored in the mailbox.
     */
-    inline uint64_t GetTimestamp() const;
+    inline uint64_t &Timestamp();
 
     /**
-    Sets the timestamp value stored in the mailbox.
+    Gets a const-reference to the timestamp value stored in the mailbox.
     */
-    inline void SetTimestamp(const uint64_t timestamp);
+    inline const uint64_t &Timestamp() const;
 
 private:
 
@@ -265,15 +265,15 @@ THERON_FORCEINLINE bool Mailbox::IsPinned() const
 }
 
 
-THERON_FORCEINLINE uint64_t Mailbox::GetTimestamp() const
+THERON_FORCEINLINE uint64_t &Mailbox::Timestamp()
 {
     return mTimestamp;
 }
 
 
-THERON_FORCEINLINE void Mailbox::SetTimestamp(const uint64_t timestamp)
+THERON_FORCEINLINE const uint64_t &Mailbox::Timestamp() const
 {
-    mTimestamp = timestamp;
+    return mTimestamp;
 }
 
 

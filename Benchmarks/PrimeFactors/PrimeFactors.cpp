@@ -242,6 +242,7 @@ int main(int argc, char *argv[])
     Theron::uint32_t localPushCounts[32];
     Theron::uint32_t sharedPushCounts[32];
     Theron::uint32_t mailboxQueueMaxes[32];
+    Theron::uint32_t queueLatencyMaxes[32];
 
     const int numQueries = (argc > 1 && atoi(argv[1]) > 0) ? atoi(argv[1]) : 1000000;
     const int numThreads = (argc > 2 && atoi(argv[2]) > 0) ? atoi(argv[2]) : 16;
@@ -290,6 +291,7 @@ int main(int argc, char *argv[])
         framework.GetPerThreadCounterValues(Theron::COUNTER_LOCAL_PUSHES, localPushCounts, 32);
         framework.GetPerThreadCounterValues(Theron::COUNTER_SHARED_PUSHES, sharedPushCounts, 32);
         framework.GetPerThreadCounterValues(Theron::COUNTER_MAILBOX_QUEUE_MAX, mailboxQueueMaxes, 32);
+        framework.GetPerThreadCounterValues(Theron::COUNTER_QUEUE_LATENCY_MAX, queueLatencyMaxes, 32);
     }
 
     timer.Stop();
@@ -328,6 +330,13 @@ int main(int argc, char *argv[])
     for (int index = 0; index <= numThreads; ++index)
     {
         printf("% 10d", mailboxQueueMaxes[index]);
+    }
+
+    printf("\n");
+    printf("Latency:");
+    for (int index = 0; index <= numThreads; ++index)
+    {
+        printf("% 10d", queueLatencyMaxes[index]);
     }
 
     printf("\n");

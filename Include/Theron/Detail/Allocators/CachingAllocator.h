@@ -188,12 +188,13 @@ inline void *CachingAllocator<CacheTraits>::Allocate(const uint32_t size)
 template <class CacheTraits>
 inline void *CachingAllocator<CacheTraits>::AllocateAligned(const uint32_t size, const uint32_t alignment)
 {
+    // Clamp small allocations to at least the size of a pointer.
+    const uint32_t blockSize(size >= sizeof(void *) ? size : sizeof(void *));
     void *block(0);
 
-    // Sizes are expected to be at least a word in size.
-    // Alignment values are expected to be powers of two and at least word boundaries.
-    THERON_ASSERT(size >= sizeof(void *));
-    THERON_ASSERT(alignment >= sizeof(void *));
+    // Alignment values are expected to be powers of two and at least 4 bytes.
+    THERON_ASSERT(blockSize >= 4);
+    THERON_ASSERT(alignment >= 4);
     THERON_ASSERT((alignment & (alignment - 1)) == 0);
 
     mLock.Lock();
@@ -208,7 +209,7 @@ inline void *CachingAllocator<CacheTraits>::AllocateAligned(const uint32_t size,
     while (index < CacheTraits::MAX_POOLS)
     {
         Entry &entry(mEntries[index]);
-        if (entry.mBlockSize == size)
+        if (entry.mBlockSize == blockSize)
         {
             // Try to allocate a block from the pool.
             block = entry.mPool.FetchAligned(alignment);
@@ -220,7 +221,7 @@ inline void *CachingAllocator<CacheTraits>::AllocateAligned(const uint32_t size,
         {
             // Reserve it for blocks of the current size.
             THERON_ASSERT(entry.mPool.Empty());
-            entry.mBlockSize = size;
+            entry.mBlockSize = blockSize;
             break;
         }
 
@@ -258,7 +259,7 @@ inline void *CachingAllocator<CacheTraits>::AllocateAligned(const uint32_t size,
     if (block == 0)
     {
         // Allocate a new block.
-        block = mAllocator->AllocateAligned(size, alignment);
+        block = mAllocator->AllocateAligned(blockSize, alignment);
     }
 
     return block;
@@ -276,10 +277,11 @@ inline void CachingAllocator<CacheTraits>::Free(void *const block)
 template <class CacheTraits>
 inline void CachingAllocator<CacheTraits>::Free(void *const block, const uint32_t size)
 {
+    // Small allocations are clamped to at least the size of a pointer.
+    const uint32_t blockSize(size >= sizeof(void *) ? size : sizeof(void *));
     bool added(false);
 
-    // Sizes are expected to be at least a word in size.
-    THERON_ASSERT(size >= sizeof(void *));
+    THERON_ASSERT(blockSize >= 4);
     THERON_ASSERT(block);
 
     mLock.Lock();
@@ -291,7 +293,7 @@ inline void CachingAllocator<CacheTraits>::Free(void *const block, const uint32_
     while (index < CacheTraits::MAX_POOLS && mEntries[index].mBlockSize)
     {
         Entry &entry(mEntries[index]);
-        if (entry.mBlockSize == size)
+        if (entry.mBlockSize == blockSize)
         {
             // Try to add the block to the pool, if it's not already full.
             added = entry.mPool.Add(block);
@@ -306,7 +308,7 @@ inline void CachingAllocator<CacheTraits>::Free(void *const block, const uint32_
     if (!added)
     {
         // No pools are assigned to blocks of this size; free it.
-        mAllocator->Free(block, size);
+        mAllocator->Free(block, blockSize);
     }
 }
 
