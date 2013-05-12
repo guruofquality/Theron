@@ -69,7 +69,7 @@ INCLUDE_FLAGS = -IInclude -IInclude/External
 BUILD = Build
 BIN = Bin
 LIB = Lib
-LIB_FLAGS =
+LIB_FLAGS = -lrt
 ARFLAGS = r
 
 #
