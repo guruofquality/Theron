@@ -35,7 +35,10 @@ enum Counter
     COUNTER_LOCAL_PUSHES,               ///< Number of times a mailbox was pushed to a thread's local queue.
     COUNTER_SHARED_PUSHES,              ///< Number of times a mailbox was pushed to the shared queue.
     COUNTER_MAILBOX_QUEUE_MAX,          ///< Maximum number of messages ever seen in the actor mailboxes.
-    COUNTER_QUEUE_LATENCY_MAX,          ///< Maximum recorded mailbox queuing latency in microseconds.
+    COUNTER_QUEUE_LATENCY_LOCAL_MIN,    ///< Minimum recorded local queue latency in microseconds.
+    COUNTER_QUEUE_LATENCY_LOCAL_MAX,    ///< Maximum recorded local queue latency in microseconds.
+    COUNTER_QUEUE_LATENCY_SHARED_MIN,   ///< Minimum recorded shared queue latency in microseconds.
+    COUNTER_QUEUE_LATENCY_SHARED_MAX,   ///< Maximum recorded shared queue latency in microseconds.
     MAX_COUNTERS                        ///< Number of counters available for querying.
 };
 

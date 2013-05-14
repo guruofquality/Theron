@@ -112,6 +112,14 @@ public:
     inline uint32_t GetCounterValue(const ContextType *const context, const uint32_t counter) const;
 
     /**
+    Accumulates the value of the given counter for the given thread context.
+    */
+    inline void AccumulateCounterValue(
+        const ContextType *const context,
+        const uint32_t counter,
+        uint32_t &accumulator) const;
+
+    /**
     Returns true if a call to Pop would return no mailbox, for the given context.
     */
     inline bool Empty(const ContextType *const context) const;
@@ -171,6 +179,10 @@ inline void MailboxQueue<MonitorType>::InitializeWorkerContext(ContextType *cons
     context->mRunning = true;
 
     mMonitor.InitializeWorkerContext(&context->mMonitorContext);
+
+    // The minimum counters need to be initialized to maxint.
+    Counting::Reset(context->mCounters[COUNTER_QUEUE_LATENCY_LOCAL_MIN].mValue, COUNTER_QUEUE_LATENCY_LOCAL_MIN);
+    Counting::Reset(context->mCounters[COUNTER_QUEUE_LATENCY_SHARED_MIN].mValue, COUNTER_QUEUE_LATENCY_SHARED_MIN);
 }
 
 
@@ -191,14 +203,24 @@ inline void MailboxQueue<MonitorType>::ReleaseWorkerContext(ContextType *const c
 template <class MonitorType>
 inline void MailboxQueue<MonitorType>::ResetCounter(ContextType *const context, const uint32_t counter) const
 {
-    THERON_COUNTER_RESET(context->mCounters[counter].mValue);
+    Counting::Reset(context->mCounters[counter].mValue, counter);
 }
 
 
 template <class MonitorType>
 THERON_FORCEINLINE uint32_t MailboxQueue<MonitorType>::GetCounterValue(const ContextType *const context, const uint32_t counter) const
 {
-    return THERON_COUNTER_QUERY(context->mCounters[counter].mValue);
+    return Counting::Get(context->mCounters[counter].mValue);
+}
+
+
+template <class MonitorType>
+THERON_FORCEINLINE void MailboxQueue<MonitorType>::AccumulateCounterValue(
+    const ContextType *const context,
+    const uint32_t counter,
+    uint32_t &accumulator) const
+{
+    Counting::Accumulate(context->mCounters[counter].mValue, counter, accumulator);
 }
 
 
@@ -246,7 +268,7 @@ THERON_FORCEINLINE void MailboxQueue<MonitorType>::Push(
 #endif // THERON_ENABLE_COUNTERS
 
     // Update the maximum mailbox queue length seen by this thread.
-    THERON_COUNTER_RAISE(context->mCounters[Theron::COUNTER_MAILBOX_QUEUE_MAX].mValue, mailbox->Count());
+    Counting::Raise(context->mCounters[Theron::COUNTER_MAILBOX_QUEUE_MAX].mValue, mailbox->Count());
 
     // Choose whether to push the scheduled mailbox to the calling thread's
     // local queue (if the calling thread is a worker thread executing a message
@@ -266,7 +288,7 @@ THERON_FORCEINLINE void MailboxQueue<MonitorType>::Push(
         Mailbox *const previous(context->mLocalWorkQueue);
         context->mLocalWorkQueue = mailbox;
 
-        THERON_COUNTER_INCREMENT(context->mCounters[Theron::COUNTER_LOCAL_PUSHES].mValue);
+        Counting::Increment(context->mCounters[Theron::COUNTER_LOCAL_PUSHES].mValue);
 
         if (previous == 0)
         {
@@ -286,7 +308,7 @@ THERON_FORCEINLINE void MailboxQueue<MonitorType>::Push(
     // Pulse the condition associated with the shared queue to wake a worker thread.
     // It's okay to release the lock before calling Pulse.
     mMonitor.Pulse();
-    THERON_COUNTER_INCREMENT(context->mCounters[Theron::COUNTER_SHARED_PUSHES].mValue);
+    Counting::Increment(context->mCounters[Theron::COUNTER_SHARED_PUSHES].mValue);
 }
 
 
@@ -294,6 +316,7 @@ template <class MonitorType>
 THERON_FORCEINLINE Mailbox *MailboxQueue<MonitorType>::Pop(ContextType *const context)
 {
     Mailbox *mailbox(0);
+    uint32_t counterOffset(0);
 
     // The shared context is never used to call Pop, only to Push
     // messages sent outside the context of a worker thread.
@@ -314,7 +337,7 @@ THERON_FORCEINLINE Mailbox *MailboxQueue<MonitorType>::Pop(ContextType *const co
         typename MonitorType::LockType lock(mMonitor);
         while (mSharedWorkQueue.Empty() && context->mRunning == true)
         {
-            THERON_COUNTER_INCREMENT(context->mCounters[Theron::COUNTER_YIELDS].mValue);
+            Counting::Increment(context->mCounters[Theron::COUNTER_YIELDS].mValue);
             mMonitor.Wait(&context->mMonitorContext, lock);
         }
 
@@ -323,11 +346,13 @@ THERON_FORCEINLINE Mailbox *MailboxQueue<MonitorType>::Pop(ContextType *const co
             mailbox = static_cast<Mailbox *>(mSharedWorkQueue.Pop());
             mMonitor.ResetYield(&context->mMonitorContext);
         }
+
+        counterOffset = 2;
     }
 
     if (mailbox)
     {
-        THERON_COUNTER_INCREMENT(context->mCounters[Theron::COUNTER_MESSAGES_PROCESSED].mValue);
+        Counting::Increment(context->mCounters[Theron::COUNTER_MESSAGES_PROCESSED].mValue);
 
 #if THERON_ENABLE_COUNTERS
 
@@ -336,7 +361,12 @@ THERON_FORCEINLINE Mailbox *MailboxQueue<MonitorType>::Pop(ContextType *const co
         const uint64_t ticks(timestamp - mailbox->Timestamp());
         const uint64_t ticksPerSecond(Clock::GetFrequency());
         const uint64_t usec(ticks * 1000000 / ticksPerSecond);
-        THERON_COUNTER_RAISE(context->mCounters[Theron::COUNTER_QUEUE_LATENCY_MAX].mValue, static_cast<uint32_t>(usec));
+
+        Atomic::UInt32 &maxCounter(context->mCounters[Theron::COUNTER_QUEUE_LATENCY_LOCAL_MAX + counterOffset].mValue);
+        Atomic::UInt32 &minCounter(context->mCounters[Theron::COUNTER_QUEUE_LATENCY_LOCAL_MIN + counterOffset].mValue);
+
+        Counting::Raise(maxCounter, static_cast<uint32_t>(usec));
+        Counting::Lower(minCounter, static_cast<uint32_t>(usec));
 
 #endif // THERON_ENABLE_COUNTERS
 

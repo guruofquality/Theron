@@ -429,22 +429,10 @@ inline uint32_t Scheduler<QueueType>::GetCounterValue(const Counter counter) con
     {
         ThreadContext *const threadContext(contexts.Get());
 
-        const uint32_t counterValue(mQueue.GetCounterValue(&threadContext->mQueueContext, counter));
-        switch (counter)
-        {
-            case Theron::COUNTER_MAILBOX_QUEUE_MAX:
-            case Theron::COUNTER_QUEUE_LATENCY_MAX:
-            {
-                if (counterValue > accumulator)
-                {
-                    accumulator = counterValue;
-                }
-
-                break;
-            }
-
-            default: accumulator += counterValue; break;
-        }
+        mQueue.AccumulateCounterValue(
+            &threadContext->mQueueContext,
+            counter,
+            accumulator);
     }
 
     mThreadContextLock.Unlock();
