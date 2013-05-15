@@ -237,12 +237,15 @@ private:
 
 int main(int argc, char *argv[])
 {
-    Theron::uint32_t messageCounts[32];
-    Theron::uint32_t yieldCounts[32];
-    Theron::uint32_t localPushCounts[32];
-    Theron::uint32_t sharedPushCounts[32];
-    Theron::uint32_t mailboxQueueMaxes[32];
-    Theron::uint32_t queueLatencyMaxes[32];
+    Theron::uint32_t messages[32];
+    Theron::uint32_t yields[32];
+    Theron::uint32_t localPushes[32];
+    Theron::uint32_t sharedPushes[32];
+    Theron::uint32_t mailboxMaxes[32];
+    Theron::uint32_t localLatencyMins[32];
+    Theron::uint32_t localLatencyMaxes[32];
+    Theron::uint32_t sharedLatencyMins[32];
+    Theron::uint32_t sharedLatencyMaxes[32];
 
     const int numQueries = (argc > 1 && atoi(argv[1]) > 0) ? atoi(argv[1]) : 1000000;
     const int numThreads = (argc > 2 && atoi(argv[2]) > 0) ? atoi(argv[2]) : 16;
@@ -286,60 +289,35 @@ int main(int argc, char *argv[])
             resultCount += static_cast<int>(receiver.Wait(16));
         }
 
-        framework.GetPerThreadCounterValues(Theron::COUNTER_MESSAGES_PROCESSED, messageCounts, 32);
-        framework.GetPerThreadCounterValues(Theron::COUNTER_YIELDS, yieldCounts, 32);
-        framework.GetPerThreadCounterValues(Theron::COUNTER_LOCAL_PUSHES, localPushCounts, 32);
-        framework.GetPerThreadCounterValues(Theron::COUNTER_SHARED_PUSHES, sharedPushCounts, 32);
-        framework.GetPerThreadCounterValues(Theron::COUNTER_MAILBOX_QUEUE_MAX, mailboxQueueMaxes, 32);
-        framework.GetPerThreadCounterValues(Theron::COUNTER_QUEUE_LATENCY_MAX, queueLatencyMaxes, 32);
+        framework.GetPerThreadCounterValues(Theron::COUNTER_MESSAGES_PROCESSED, messages, 32);
+        framework.GetPerThreadCounterValues(Theron::COUNTER_YIELDS, yields, 32);
+        framework.GetPerThreadCounterValues(Theron::COUNTER_LOCAL_PUSHES, localPushes, 32);
+        framework.GetPerThreadCounterValues(Theron::COUNTER_SHARED_PUSHES, sharedPushes, 32);
+        framework.GetPerThreadCounterValues(Theron::COUNTER_MAILBOX_QUEUE_MAX, mailboxMaxes, 32);
+        framework.GetPerThreadCounterValues(Theron::COUNTER_QUEUE_LATENCY_LOCAL_MIN, localLatencyMins, 32);
+        framework.GetPerThreadCounterValues(Theron::COUNTER_QUEUE_LATENCY_LOCAL_MAX, localLatencyMaxes, 32);
+        framework.GetPerThreadCounterValues(Theron::COUNTER_QUEUE_LATENCY_SHARED_MIN, sharedLatencyMins, 32);
+        framework.GetPerThreadCounterValues(Theron::COUNTER_QUEUE_LATENCY_SHARED_MAX, sharedLatencyMaxes, 32);
     }
 
     timer.Stop();
 
     printf("Processed in %.1f seconds\n", timer.Seconds());
 
-    printf("Message:");
+    printf("  Messages    Yields     Local    Shared  QueueMax  LocalMin  LocalMax SharedMin SharedMax\n");
     for (int index = 0; index <= numThreads; ++index)
     {
-        printf("% 10d", messageCounts[index]);
+        printf("% 10u% 10u% 10u% 10u% 10u% 10u% 10u% 10u% 10u\n",
+            messages[index],
+            yields[index],
+            localPushes[index],
+            sharedPushes[index],
+            mailboxMaxes[index],
+            localLatencyMins[index],
+            localLatencyMaxes[index],
+            sharedLatencyMins[index],
+            sharedLatencyMaxes[index]);
     }
-
-    printf("\n");
-    printf("Yield:  ");
-    for (int index = 0; index <= numThreads; ++index)
-    {
-        printf("% 10d", yieldCounts[index]);
-    }
-
-    printf("\n");
-    printf("Local:  ");
-    for (int index = 0; index <= numThreads; ++index)
-    {
-        printf("% 10d", localPushCounts[index]);
-    }
-
-    printf("\n");
-    printf("Shared: ");
-    for (int index = 0; index <= numThreads; ++index)
-    {
-        printf("% 10d", sharedPushCounts[index]);
-    }
-
-    printf("\n");
-    printf("QMax:   ");
-    for (int index = 0; index <= numThreads; ++index)
-    {
-        printf("% 10d", mailboxQueueMaxes[index]);
-    }
-
-    printf("\n");
-    printf("Latency:");
-    for (int index = 0; index <= numThreads; ++index)
-    {
-        printf("% 10d", queueLatencyMaxes[index]);
-    }
-
-    printf("\n");
 
 #if THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
     Theron::IAllocator *const allocator(Theron::AllocatorManager::GetAllocator());

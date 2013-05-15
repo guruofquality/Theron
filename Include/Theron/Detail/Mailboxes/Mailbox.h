@@ -140,11 +140,11 @@ private:
 
     typedef Queue<IMessage> MessageQueue;
 
-    String mName;                               ///< Name of this mailbox.
-    mutable SpinLock mSpinLock;                 ///< Thread synchronization object protecting the mailbox.
     MessageQueue mQueue;                        ///< Queue of messages in this mailbox.
-    uint32_t mMessageCount;                     ///< Size of the message queue.
+    String mName;                               ///< Name of this mailbox.
     Actor *mActor;                              ///< Pointer to the actor registered with this mailbox, if any.
+    mutable SpinLock mSpinLock;                 ///< Thread synchronization object protecting the mailbox.
+    uint32_t mMessageCount;                     ///< Size of the message queue.
     uint32_t mPinCount;                         ///< Pinning a mailboxes prevents the actor from being deregistered.
     uint64_t mTimestamp;                        ///< Used for measuring mailbox scheduling latencies.
 
@@ -152,11 +152,11 @@ private:
 
 
 inline Mailbox::Mailbox() :
-  mName(),
-  mSpinLock(),
   mQueue(),
-  mMessageCount(0),
+  mName(),
   mActor(0),
+  mSpinLock(),
+  mMessageCount(0),
   mPinCount(0),
   mTimestamp(0)
 {
