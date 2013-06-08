@@ -8,7 +8,7 @@
 # Output: THERON_SOURCES
 ########################################################################
 
-list(APPEND CMAKE_MODULE_PATH ${THERON_SOURCE_DIR})
+list(APPEND CMAKE_MODULE_PATH ${THERON_SOURCE_DIR}/cmake)
 
 ########################################################################
 # Setup the list of sources

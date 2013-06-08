@@ -4,6 +4,7 @@
 cmake_minimum_required(VERSION 2.6)
 project(Theron CXX)
 enable_testing()
+set(THERON_VERSION "6.00.00")
 
 #select the release build type by default to get optimization flags
 if(NOT CMAKE_BUILD_TYPE)
@@ -16,7 +17,7 @@ set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "")
 # Setup Theron Deps
 ########################################################################
 set(THERON_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-include(${THERON_SOURCE_DIR}/TheronSetup.cmake)
+include(${THERON_SOURCE_DIR}/cmake/TheronSetup.cmake)
 include_directories(${THERON_INCLUDE_DIRS})
 link_directories(${THERON_LIBRARY_DIRS})
 add_definitions(${THERON_DEFINES})
@@ -26,7 +27,7 @@ add_definitions(${THERON_DEFINES})
 ########################################################################
 add_library(theron STATIC ${THERON_SOURCES})
 target_link_libraries(theron ${THERON_LIBRARIES})
-set_target_properties(theron PROPERTIES VERSION "6.00.00")
+set_target_properties(theron PROPERTIES VERSION THERON_VERSION)
 
 ########################################################################
 # Build unittests
@@ -52,3 +53,31 @@ foreach(sample_dir ${sample_dirs})
         target_link_libraries(${sample} theron ${THERON_LIBRARIES})
     endif()
 endforeach(sample_dir)
+
+########################################################################
+# Install includes
+########################################################################
+install(DIRECTORY Include/Theron DESTINATION include)
+install(DIRECTORY Include/External DESTINATION include)
+
+########################################################################
+# Install libraries
+########################################################################
+install(TARGETS theron
+    LIBRARY DESTINATION lib${LIB_SUFFIX} # .so file
+    ARCHIVE DESTINATION lib${LIB_SUFFIX} # .lib file
+    RUNTIME DESTINATION bin              # .dll file
+)
+
+########################################################################
+# Build pkg config file
+########################################################################
+configure_file(
+    ${THERON_SOURCE_DIR}/cmake/theron.pc.in
+    ${CMAKE_CURRENT_BINARY_DIR}/theron.pc
+@ONLY)
+
+install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/theron.pc
+    DESTINATION lib${LIB_SUFFIX}/pkgconfig
+)
