@@ -127,6 +127,23 @@ public:
     */
     inline static bool SetThreadRelativePriority(const float relativePriority);
 
+    /**
+    Allocate memory affinitized to a specified NUMA node.
+
+    \param node a integer index for a particular NUMA node
+    \param size the memory allocation size in bytes
+    \return the pointer to memory or NULL if operation not available
+    */
+    inline static void *AllocOnNode(const long node, const size_t size);
+
+    /**
+    Free memory allocated by AllocOnNode().
+
+    \param mem a pointer to the allocated memory
+    \param size the memory allocation size in bytes
+    */
+    inline static void FreeOnNode(void *mem, const size_t size);
+
 private:
 
     Utils(const Utils &other);
@@ -516,6 +533,60 @@ inline bool Utils::SetThreadRelativePriority(const float priority)
     return false;
 }
 
+
+inline void *Utils::AllocOnNode(const long node, const size_t size)
+{
+
+#if THERON_NUMA
+
+#if THERON_WINDOWS
+
+    #if _WIN32_WINNT >= 0x0600
+    return VirtualAllocExNuma(
+        GetCurrentProcess(),
+        NULL,
+        size,
+        MEM_RESERVE | MEM_COMMIT,
+        PAGE_READWRITE,
+        node
+    );
+    #else
+    return NULL;
+    #endif
+
+#elif THERON_GCC
+
+    if ((numa_available() < 0))
+    {
+        return NULL;
+    }
+
+    return numa_alloc_onnode(size, node);
+
+#endif
+
+#endif // THERON_NUMA
+
+    return NULL;
+}
+
+
+inline void Utils::FreeOnNode(void *mem, const size_t size)
+{
+#if THERON_NUMA
+
+#if THERON_WINDOWS
+
+    VirtualFree(mem, size, MEM_RELEASE);
+
+#elif THERON_GCC
+
+    numa_free(mem, size);
+
+#endif
+
+#endif // THERON_NUMA
+}
 
 } // namespace Detail
 } // namespace Theron
