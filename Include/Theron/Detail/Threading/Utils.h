@@ -186,7 +186,11 @@ THERON_FORCEINLINE void Utils::YieldToHyperthread()
 
 #elif THERON_GCC
 
+    #if defined(__arm__)
+    __asm__ __volatile__ ("nop");
+    #elif defined(__i386__) || defined(__x86_64__)
     __asm__ __volatile__ ("pause");
+    #endif
 
 #endif
 
