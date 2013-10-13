@@ -75,7 +75,7 @@ enum YieldStrategy
     // Legacy section
     YIELD_STRATEGY_BLOCKING = 0,        ///< Deprecated - use YIELD_STRATEGY_CONDITION.
     YIELD_STRATEGY_POLITE = 0,          ///< Deprecated - use YIELD_STRATEGY_CONDITION.
-    YIELD_STRATEGY_STRONG = 2,          ///< Deprecated - use YIELD_STRATEGY_HYBRID.
+    YIELD_STRATEGY_STRONG = 1,          ///< Deprecated - use YIELD_STRATEGY_HYBRID.
     YIELD_STRATEGY_AGGRESSIVE = 2       ///< Deprecated - use YIELD_STRATEGY_SPIN.
 };
 
