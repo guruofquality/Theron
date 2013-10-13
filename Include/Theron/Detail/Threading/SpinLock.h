@@ -13,7 +13,7 @@
 #include <Theron/Detail/Threading/Atomic.h>
 #include <Theron/Detail/Threading/Utils.h>
 
-#elif defined(THERON_POSIX)
+#elif THERON_POSIX
 
 #include <pthread.h>
 
@@ -52,7 +52,7 @@ public:
 
         mValue.Store(0);
 
-#elif defined(THERON_POSIX)
+#elif THERON_POSIX
 
         pthread_spin_init(&mSpinLock, 0);
 
@@ -65,7 +65,7 @@ public:
     THERON_FORCEINLINE ~SpinLock()
     {
 #if THERON_WINDOWS || THERON_BOOST || THERON_CPP11
-#elif defined(THERON_POSIX)
+#elif THERON_POSIX
 
         pthread_spin_destroy(&mSpinLock);
 
@@ -93,7 +93,7 @@ public:
             Utils::Backoff(backoff);
         }
 
-#elif defined(THERON_POSIX)
+#elif THERON_POSIX
 
         pthread_spin_lock(&mSpinLock);
 
@@ -111,7 +111,7 @@ public:
         THERON_ASSERT(mValue.Load() == LOCKED);
         mValue.Store(UNLOCKED);
     
-#elif defined(THERON_POSIX)
+#elif THERON_POSIX
 
         pthread_spin_unlock(&mSpinLock);
 
@@ -130,7 +130,7 @@ private:
 
     Atomic::UInt32 mValue;
 
-#elif defined(THERON_POSIX)
+#elif THERON_POSIX
 
     pthread_spinlock_t mSpinLock;
 

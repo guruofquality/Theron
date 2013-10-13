@@ -30,8 +30,6 @@ Clock::Static::Static() : mTicksPerSecond(NANOSECONDS_PER_SECOND)
 }
 
 
-
-
 } // namespace Detail
 } // namespace Theron
 

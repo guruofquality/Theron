@@ -126,10 +126,9 @@ inline void NonBlockingMonitor::InitializeWorkerContext(Context *const context)
 {
     switch (mYieldStrategy)
     {
-        default:                        context->mYield.SetYieldFunction(&Detail::YieldPolicy::YieldPolite);       break;
-        case YIELD_STRATEGY_POLITE:     context->mYield.SetYieldFunction(&Detail::YieldPolicy::YieldPolite);       break;
-        case YIELD_STRATEGY_STRONG:     context->mYield.SetYieldFunction(&Detail::YieldPolicy::YieldStrong);       break;
-        case YIELD_STRATEGY_AGGRESSIVE: context->mYield.SetYieldFunction(&Detail::YieldPolicy::YieldAggressive);   break;
+        default:                        context->mYield.SetYieldFunction(&Detail::YieldPolicy::Hybrid);     break;
+        case YIELD_STRATEGY_HYBRID:     context->mYield.SetYieldFunction(&Detail::YieldPolicy::Hybrid);     break;
+        case YIELD_STRATEGY_SPIN:       context->mYield.SetYieldFunction(&Detail::YieldPolicy::Spin);       break;
     }
 }
 

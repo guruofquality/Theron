@@ -27,7 +27,7 @@
 
 #include <thread>
 
-#elif defined(THERON_POSIX)
+#elif THERON_POSIX
 
 #include <pthread.h>
 
@@ -173,6 +173,114 @@ private:
 
     HANDLE mThread;             ///< Handle of the internal Win32 thread.
     ThreadData mThreadData;     ///< Wrapper around the data passed to the thread on start.
+};
+
+
+#elif THERON_POSIX
+
+
+/**
+A process thread.
+\note This implementation uses Posix threads.
+*/
+class Thread
+{
+public:
+
+    /**
+    Defines a function that can serve as a thread entry point.
+    Entry point functions must be static -- implying they can't be class member functions.
+    */
+    typedef void (*EntryPoint)(void *const context);
+
+    /**
+    Default constructor
+    */
+    inline Thread() : mRunning(false)
+    {
+    }
+
+    /**
+    Destructor
+    */
+    inline ~Thread()
+    {
+        THERON_ASSERT(!mRunning);
+    }
+
+    /**
+    Starts the thread, executing the given entry point function.
+    \param entryPoint The entry point function that the thread should execute.
+    \param context Pointer to a context object providing the environment in which the thread runs.
+    \return True, if the thread was started successfully.
+    */
+    inline bool Start(EntryPoint entryPoint, void *const context)
+    {
+        THERON_ASSERT(!mRunning);
+
+        // Create a data structure to wrap the data we need to pass to the entry function.
+        mThreadData.mEntryPoint = entryPoint;
+        mThreadData.mContext = context;
+
+        mRunning = (pthread_create(&mThread, NULL, &Thread::ThreadStartProc, reinterpret_cast<void*>(&mThreadData)) == 0);
+
+        return mRunning;
+    }
+
+    /**
+    Waits for the thread to finish and return.
+    The semantics are that Start and Join can be called repeatedly in pairs.
+    */
+    inline void Join()
+    {
+        THERON_ASSERT(mRunning);
+
+        pthread_join(mThread, NULL);
+        mRunning = false;
+    }
+
+    /**
+    Returns true if the thread is currently running.
+    The thread is running if Start was called more recently than Join.
+    */
+    THERON_FORCEINLINE bool Running() const
+    {
+        return mRunning;
+    }
+
+private:
+
+    /**
+    Struct that holds a pointer to a thread entry point function and some context data.
+    */
+    struct ThreadData
+    {
+        EntryPoint mEntryPoint;
+        void *mContext;
+    };
+
+    /**
+    Thread entry point adapter function.
+    Wraps a call to a standard Theron-style thread entry point in a static thread entry point function signature.
+    \param pData A pointer to a ThreadData structure containing an entry point function and a context pointer.
+    \return Unused dummy return value.
+    */
+    inline static void *ThreadStartProc(void *pData)
+    { 
+        // Call the real entry point function, passing the provided context.
+        ThreadData *const threadData = reinterpret_cast<ThreadData *>(pData);
+
+        threadData->mEntryPoint(threadData->mContext);
+
+        return 0;
+    }
+
+    Thread(const Thread &other);
+    Thread &operator=(const Thread &other);
+
+    pthread_t mThread;          ///< Handle of the internal pthread object.
+    ThreadData mThreadData;     ///< Wrapper around the data passed to the thread on start.
+    bool mRunning;              ///< Flag indicating whether the thread was most recently started or stopped.
 };
 
 
@@ -422,114 +530,6 @@ private:
     Thread &operator=(const Thread &other);
 
     std::thread *mThread;     ///< Pointer to the owned std::thread.
-};
-
-
-#elif defined(THERON_POSIX)
-
-
-/**
-A process thread.
-\note This implementation uses Posix threads.
-*/
-class Thread
-{
-public:
-
-    /**
-    Defines a function that can serve as a thread entry point.
-    Entry point functions must be static -- implying they can't be class member functions.
-    */
-    typedef void (*EntryPoint)(void *const context);
-
-    /**
-    Default constructor
-    */
-    inline Thread() : mRunning(false)
-    {
-    }
-
-    /**
-    Destructor
-    */
-    inline ~Thread()
-    {
-        THERON_ASSERT(!mRunning);
-    }
-
-    /**
-    Starts the thread, executing the given entry point function.
-    \param entryPoint The entry point function that the thread should execute.
-    \param context Pointer to a context object providing the environment in which the thread runs.
-    \return True, if the thread was started successfully.
-    */
-    inline bool Start(EntryPoint entryPoint, void *const context)
-    {
-        THERON_ASSERT(!mRunning);
-
-        // Create a data structure to wrap the data we need to pass to the entry function.
-        mThreadData.mEntryPoint = entryPoint;
-        mThreadData.mContext = context;
-
-        mRunning = (pthread_create(&mThread, NULL, &Thread::ThreadStartProc, reinterpret_cast<void*>(&mThreadData)) == 0);
-
-        return mRunning;
-    }
-
-    /**
-    Waits for the thread to finish and return.
-    The semantics are that Start and Join can be called repeatedly in pairs.
-    */
-    inline void Join()
-    {
-        THERON_ASSERT(mRunning);
-
-        pthread_join(mThread, NULL);
-        mRunning = false;
-    }
-
-    /**
-    Returns true if the thread is currently running.
-    The thread is running if Start was called more recently than Join.
-    */
-    THERON_FORCEINLINE bool Running() const
-    {
-        return mRunning;
-    }
-
-private:
-
-    /**
-    Struct that holds a pointer to a thread entry point function and some context data.
-    */
-    struct ThreadData
-    {
-        EntryPoint mEntryPoint;
-        void *mContext;
-    };
-
-    /**
-    Thread entry point adapter function.
-    Wraps a call to a standard Theron-style thread entry point in a static thread entry point function signature.
-    \param pData A pointer to a ThreadData structure containing an entry point function and a context pointer.
-    \return Unused dummy return value.
-    */
-    inline static void *ThreadStartProc(void *pData)
-    { 
-        // Call the real entry point function, passing the provided context.
-        ThreadData *const threadData = reinterpret_cast<ThreadData *>(pData);
-
-        threadData->mEntryPoint(threadData->mContext);
-
-        return 0;
-    }
-
-    Thread(const Thread &other);
-    Thread &operator=(const Thread &other);
-
-    pthread_t mThread;          ///< Handle of the internal pthread object.
-    ThreadData mThreadData;     ///< Wrapper around the data passed to the thread on start.
-    bool mRunning;              ///< Flag indicating whether the thread was most recently started or stopped.
 };
 
 

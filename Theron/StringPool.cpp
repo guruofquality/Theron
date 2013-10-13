@@ -20,83 +20,59 @@ namespace Detail
 {
 
 
-StringPool::Container *StringPool::smContainer = 0;
-Mutex StringPool::smMutex;
+StringPool *StringPool::smInstance = 0;
+Mutex StringPool::smReferenceMutex;
 uint32_t StringPool::smReferenceCount = 0;
 
 
 void StringPool::Reference()
 {
-    Lock lock(smMutex);
+    Lock lock(smReferenceMutex);
 
     // Create the singleton instance if this is the first reference.
     if (smReferenceCount++ == 0)
     {
         IAllocator *const allocator(AllocatorManager::GetCache());
-        void *const memory(allocator->AllocateAligned(sizeof(Container), THERON_CACHELINE_ALIGNMENT));
-        smContainer = new (memory) Container();
+        void *const memory(allocator->AllocateAligned(sizeof(StringPool), THERON_CACHELINE_ALIGNMENT));
+        smInstance = new (memory) StringPool();
     }
 }
 
 
 void StringPool::Dereference()
 {
-    Lock lock(smMutex);
+    Lock lock(smReferenceMutex);
 
     // Destroy the singleton instance if this was the last reference.
     if (--smReferenceCount == 0)
     {
         IAllocator *const allocator(AllocatorManager::GetCache());
-        smContainer->~Container();
-        allocator->Free(smContainer, sizeof(Container));
+        smInstance->~StringPool();
+        allocator->Free(smInstance, sizeof(StringPool));
     }
 }
 
 
-StringPool::Container::Container()
+StringPool::StringPool()
 {
 }
 
 
-StringPool::Container::~Container()
+StringPool::~StringPool()
 {
-    IAllocator *const allocator(AllocatorManager::GetCache());
-
-    // Free all entries.
-    while (!mEntries.Empty())
-    {
-        Entry *const entry(mEntries.Front());
-        mEntries.Remove(entry);
-
-        entry->~Entry();
-        allocator->Free(entry, sizeof(Entry));
-    }
 }
 
 
-const char *StringPool::Container::Get(const char *const str)
+const char *StringPool::Lookup(const char *const str)
 {
+    // Hash the string value to a bucket index.
+    const uint32_t index(Hash(str));
+    THERON_ASSERT(index < BUCKET_COUNT);
+    Bucket &bucket(mBuckets[index]);
+
+    // Lock the mutex after computing the hash.
     Lock lock(mMutex);
-
-    // TODO: For now we linear search and strcmp every entry!
-    // Search for an existing entry for this string.
-    List<Entry>::Iterator entries(mEntries.GetIterator());
-    while (entries.Next())
-    {
-        Entry *const entry(entries.Get());
-        if (strcmp(entry->Value(), str) == 0)
-        {
-            return entry->Value();
-        }
-    }
-
-    // Create a new entry.
-    IAllocator *const allocator(AllocatorManager::GetCache());
-    void *const memory(allocator->Allocate(sizeof(Entry)));
-    Entry *const entry = new (memory) Entry(str);
-
-    mEntries.Insert(entry);
-    return entry->Value();
+    return bucket.Lookup(str);
 }
 
 

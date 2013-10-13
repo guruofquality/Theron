@@ -19,8 +19,8 @@
 #include <Theron/Detail/Messages/IMessage.h>
 #include <Theron/Detail/Messages/MessageCreator.h>
 #include <Theron/Detail/Messages/MessageSize.h>
-#include <Theron/Detail/Network/Hash.h>
 #include <Theron/Detail/Strings/String.h>
+#include <Theron/Detail/Strings/StringHash.h>
 #include <Theron/Detail/Threading/SpinLock.h>
 
 
@@ -134,7 +134,7 @@ private:
         }
     };
 
-    typedef Map<String, IMessageBuilder *, Hash> MessageBuilderMap;
+    typedef Map<const char *, IMessageBuilder *, StringHash> MessageBuilderMap;
 
     MessageFactory(const MessageFactory &other);
     MessageFactory &operator=(const MessageFactory &other);
@@ -210,12 +210,12 @@ inline bool MessageFactory::RegisterBuilder(const String &name, IMessageBuilder 
         return false;
     }
 
-    MessageBuilderMap::Node *node = new (nodeMemory) MessageBuilderMap::Node(name, builder);
+    MessageBuilderMap::Node *node = new (nodeMemory) MessageBuilderMap::Node(name.GetValue(), builder);
 
     mSpinLock.Lock();
 
     // Check for existing pairs with the same key. At most one is allowed.
-    if (!mMap.Contains(name) && mMap.Insert(node))
+    if (!mMap.Contains(name.GetValue()) && mMap.Insert(node))
     {
         node = 0;
     }
@@ -240,7 +240,7 @@ inline bool MessageFactory::Deregister(const String &name)
     IAllocator *const allocator(AllocatorManager::GetCache());
     mSpinLock.Lock();
 
-    MessageBuilderMap::KeyNodeIterator nodes(mMap.GetKeyNodeIterator(name));
+    MessageBuilderMap::KeyNodeIterator nodes(mMap.GetKeyNodeIterator(name.GetValue()));
     while (nodes.Next())
     {
         MessageBuilderMap::Node *const node(nodes.Get());
@@ -259,7 +259,7 @@ inline bool MessageFactory::Deregister(const String &name)
         }
 
         // Restart the iterator since the deletion may have messed it up.
-        nodes = mMap.GetKeyNodeIterator(name);
+        nodes = mMap.GetKeyNodeIterator(name.GetValue());
     }
 
     mSpinLock.Unlock();
@@ -272,7 +272,7 @@ inline bool MessageFactory::Contains(const String &name)
     bool result(false);
     mSpinLock.Lock();
 
-    result = mMap.GetKeyNodeIterator(name).Next();
+    result = mMap.GetKeyNodeIterator(name.GetValue()).Next();
 
     mSpinLock.Unlock();
     return result;
@@ -288,7 +288,7 @@ inline IMessage *MessageFactory::Build(
     IMessage *message(0);
     mSpinLock.Lock();
 
-    MessageBuilderMap::KeyNodeIterator nodes(mMap.GetKeyNodeIterator(name));
+    MessageBuilderMap::KeyNodeIterator nodes(mMap.GetKeyNodeIterator(name.GetValue()));
     if (nodes.Next())
     {
         const MessageBuilderMap::Node *const node(nodes.Get());

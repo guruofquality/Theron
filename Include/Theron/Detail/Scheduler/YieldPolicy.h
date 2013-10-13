@@ -20,9 +20,15 @@ class YieldPolicy
 {
 public:
 
-    static void YieldPolite(const uint32_t counter);
-    static void YieldStrong(const uint32_t counter);
-    static void YieldAggressive(const uint32_t counter);
+    /**
+    Spin, but yield to other threads after a timeout.
+    */
+    static void Hybrid(const uint32_t counter);
+
+    /**
+    Spin indefinitely (or busy-wait), with no yielding to other threads.
+    */
+    static void Spin(const uint32_t counter);
 
 private:
 

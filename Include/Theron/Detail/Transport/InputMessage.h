@@ -98,7 +98,7 @@ public:
 
 #if THERON_XS
 
-        size = xs_msg_size(&mMessage);
+        size = static_cast<uint32_t>(xs_msg_size(&mMessage));
 
 #endif // THERON_XS
 

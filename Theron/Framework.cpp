@@ -79,7 +79,7 @@ Detail::IScheduler *Framework::CreateScheduler()
     IAllocator *const allocator(AllocatorManager::GetCache());
     void *schedulerMemory(0);
 
-    if (mParams.mYieldStrategy == YIELD_STRATEGY_BLOCKING)
+    if (mParams.mYieldStrategy == YIELD_STRATEGY_CONDITION)
     {
         schedulerMemory = allocator->AllocateAligned(
             sizeof(BlockingScheduler),
@@ -94,7 +94,7 @@ Detail::IScheduler *Framework::CreateScheduler()
 
     THERON_ASSERT_MSG(schedulerMemory, "Failed to allocate scheduler");
 
-    if (mParams.mYieldStrategy == YIELD_STRATEGY_BLOCKING)
+    if (mParams.mYieldStrategy == YIELD_STRATEGY_CONDITION)
     {
         return new (schedulerMemory) BlockingScheduler(
             &mMailboxes,

@@ -14,39 +14,8 @@ namespace Detail
 {
 
 
-void YieldPolicy::YieldPolite(const uint32_t counter)
+void YieldPolicy::Hybrid(const uint32_t counter)
 {
-    // This yield strategy scales from a simple 'nop' to putting the calling thread to sleep.
-    // This implementation is based roughly on http://www.1024cores.net/home/lock-free-algorithms/tricks/spinning
-    if (counter < 10)
-    {
-        Utils::YieldToHyperthread();
-    }
-    else if (counter < 20)
-    {
-        for (uint32_t i = 0; i < 50; ++i)
-        {
-            Utils::YieldToHyperthread();
-        }
-    }
-    else if (counter < 22)
-    {
-        Utils::YieldToLocalThread();
-    }
-    else if (counter < 24)
-    {
-        Utils::YieldToAnyThread();
-    }
-    else
-    {
-        Utils::SleepThread(1UL);
-    }
-}
-
-
-void YieldPolicy::YieldStrong(const uint32_t counter)
-{
-    // This 'strong' implementation yields after spinning for a while, but never sleeps.
     if (counter < 10)
     {
         Utils::YieldToHyperthread();
@@ -69,9 +38,9 @@ void YieldPolicy::YieldStrong(const uint32_t counter)
 }
 
 
-void YieldPolicy::YieldAggressive(const uint32_t counter)
+void YieldPolicy::Spin(const uint32_t counter)
 {
-    // This 'aggressive' implementation never yields or sleeps.
+    // This 'busy-wait' implementation never yields or sleeps.
     // It does however pause to allow another thread running on the same hyperthreaded core to proceed.
     if (counter < 10)
     {
@@ -84,7 +53,7 @@ void YieldPolicy::YieldAggressive(const uint32_t counter)
             Utils::YieldToHyperthread();
         }
     }
-    else if (counter < 22)
+    else if (counter < 30)
     {
         for (uint32_t i = 0; i < 100; ++i)
         {

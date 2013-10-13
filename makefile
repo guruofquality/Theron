@@ -295,13 +295,13 @@ THERON_HEADERS = \
 	Include/Theron/Detail/Messages/MessageCreator.h \
 	Include/Theron/Detail/Messages/MessageSize.h \
 	Include/Theron/Detail/Messages/MessageTraits.h \
-	Include/Theron/Detail/Network/Hash.h \
 	Include/Theron/Detail/Network/Index.h \
 	Include/Theron/Detail/Network/MessageFactory.h \
 	Include/Theron/Detail/Network/NameGenerator.h \
 	Include/Theron/Detail/Network/NameMap.h \
 	Include/Theron/Detail/Network/NetworkMessage.h \
 	Include/Theron/Detail/Strings/String.h \
+	Include/Theron/Detail/Strings/StringHash.h \
 	Include/Theron/Detail/Strings/StringPool.h \
 	Include/Theron/Detail/Threading/Atomic.h \
 	Include/Theron/Detail/Threading/Clock.h \

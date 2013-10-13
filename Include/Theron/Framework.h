@@ -135,7 +135,7 @@ public:
     affinity masks to limit execution of the worker threads of the framework to only the selected
     cores (leaving the remaining cores to other frameworks). Finally, since the cores dedicated to
     time-critical processing are never used for any other processing, one might choose to set the yield
-    strategy of the worker threads to \ref YIELD_STRATEGY_AGGRESSIVE, effectively busy-waiting for
+    strategy of the worker threads to \ref YIELD_STRATEGY_SPIN, effectively busy-waiting for
     the arrival of new messages.
 
     As well as setting processor affinities, the members of the Parameters structure allow the
@@ -199,7 +199,7 @@ public:
             const uint32_t threadCount = 16,
             const uint32_t nodeMask = 0x1,
             const uint32_t processorMask = 0xFFFFFFFF,
-            const YieldStrategy yieldStrategy = YIELD_STRATEGY_BLOCKING,
+            const YieldStrategy yieldStrategy = YIELD_STRATEGY_CONDITION,
             const float priority = 0.0f) :
           mThreadCount(threadCount),
           mNodeMask(nodeMask),

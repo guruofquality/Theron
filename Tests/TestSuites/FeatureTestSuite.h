@@ -27,8 +27,6 @@ public:
     {
         TESTFRAMEWORK_REGISTER_TESTSUITE(FeatureTestSuite);
 
-        TESTFRAMEWORK_REGISTER_TEST(SetAllocator);
-        TESTFRAMEWORK_REGISTER_TEST(SetAllocatorLegacy);
         TESTFRAMEWORK_REGISTER_TEST(ConstructFramework);
         TESTFRAMEWORK_REGISTER_TEST(ConstructFrameworkThreadCount);
         TESTFRAMEWORK_REGISTER_TEST(ConstructFrameworkDefaultParams);
@@ -103,22 +101,6 @@ public:
         TESTFRAMEWORK_REGISTER_TEST(SendMessagesBetweenLocalFrameworksByName);
     }
 
-    inline static void SetAllocator()
-    {
-        Theron::DefaultAllocator allocator;
-        Theron::AllocatorManager::SetAllocator(&allocator);
-        Check(Theron::AllocatorManager::GetAllocator() == &allocator, "SetAllocator failed");
-        Theron::AllocatorManager::SetAllocator(0);
-    }
-
-    inline static void SetAllocatorLegacy()
-    {
-        Theron::DefaultAllocator allocator;
-        Theron::AllocatorManager::Instance().SetAllocator(&allocator);
-        Check(Theron::AllocatorManager::Instance().GetAllocator() == &allocator, "SetAllocator failed");
-        Theron::AllocatorManager::SetAllocator(0);
-    }
-
     inline static void ConstructFramework()
     {
         Theron::Framework framework;
@@ -151,21 +133,21 @@ public:
 
     inline static void ConstructFrameworkParamsStrategy()
     {
-        Theron::Framework::Parameters params(16, 0x1, 0xFFFF, Theron::YIELD_STRATEGY_BLOCKING);
-        params.mYieldStrategy = Theron::YIELD_STRATEGY_BLOCKING;
+        Theron::Framework::Parameters params(16, 0x1, 0xFFFF, Theron::YIELD_STRATEGY_CONDITION);
+        params.mYieldStrategy = Theron::YIELD_STRATEGY_CONDITION;
         Theron::Framework framework(params);
     }
 
     inline static void ConstructFrameworkParamsPriorityOne()
     {
-        Theron::Framework::Parameters params(16, 0x1, 0xFFFF, Theron::YIELD_STRATEGY_BLOCKING, 1.0f);
+        Theron::Framework::Parameters params(16, 0x1, 0xFFFF, Theron::YIELD_STRATEGY_CONDITION, 1.0f);
         params.mThreadPriority = 1.0f;
         Theron::Framework framework(params);
     }
 
     inline static void ConstructFrameworkParamsPriorityMinusOne()
     {
-        Theron::Framework::Parameters params(16, 0x1, 0xFFFF, Theron::YIELD_STRATEGY_BLOCKING, -1.0f);
+        Theron::Framework::Parameters params(16, 0x1, 0xFFFF, Theron::YIELD_STRATEGY_CONDITION, -1.0f);
         params.mThreadPriority = -1.0f;
         Theron::Framework framework(params);
     }
@@ -240,7 +222,7 @@ public:
     inline static void SendHandledMessageInBlockingFramework()
     {
         Theron::Framework::Parameters params;
-        params.mYieldStrategy = Theron::YIELD_STRATEGY_BLOCKING;
+        params.mYieldStrategy = Theron::YIELD_STRATEGY_CONDITION;
 
         Theron::Framework framework(params);
         Theron::Receiver receiver;
@@ -258,7 +240,7 @@ public:
     inline static void SendHandledMessageInNonBlockingFramework()
     {
         Theron::Framework::Parameters params;
-        params.mYieldStrategy = Theron::YIELD_STRATEGY_POLITE;
+        params.mYieldStrategy = Theron::YIELD_STRATEGY_HYBRID;
 
         Theron::Framework framework(params);
         Theron::Receiver receiver;

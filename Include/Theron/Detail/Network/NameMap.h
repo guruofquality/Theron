@@ -15,9 +15,9 @@
 #include <Theron/IAllocator.h>
 
 #include <Theron/Detail/Containers/Map.h>
-#include <Theron/Detail/Network/Hash.h>
 #include <Theron/Detail/Network/Index.h>
 #include <Theron/Detail/Strings/String.h>
+#include <Theron/Detail/Strings/StringHash.h>
 #include <Theron/Detail/Threading/SpinLock.h>
 
 
@@ -71,7 +71,7 @@ public:
 
 private:
 
-    typedef Map<String, Index, Hash> NameIndexMap;
+    typedef Map<const char *, Index, StringHash> NameIndexMap;
 
     NameMap(const NameMap &other);
     NameMap &operator=(const NameMap &other);
@@ -113,12 +113,12 @@ inline bool NameMap::Insert(const String &name, const Index &index)
         return false;
     }
 
-    node = new (nodeMemory) NameIndexMap::Node(name, index);
+    node = new (nodeMemory) NameIndexMap::Node(name.GetValue(), index);
 
     mSpinLock.Lock();
 
     // Check for existing pairs with the same key. At most one is allowed.
-    THERON_ASSERT(!mMap.Contains(name));
+    THERON_ASSERT(!mMap.Contains(name.GetValue()));
     if (mMap.Insert(node))
     {
         node = 0;
@@ -144,7 +144,7 @@ inline bool NameMap::Remove(const String &name)
     IAllocator *const allocator(AllocatorManager::GetCache());
     mSpinLock.Lock();
 
-    NameIndexMap::KeyNodeIterator nodes(mMap.GetKeyNodeIterator(name));
+    NameIndexMap::KeyNodeIterator nodes(mMap.GetKeyNodeIterator(name.GetValue()));
     while (nodes.Next())
     {
         NameIndexMap::Node *const node(nodes.Get());
@@ -160,7 +160,7 @@ inline bool NameMap::Remove(const String &name)
         }
 
         // Restart the iterator since the deletion may have messed it up.
-        nodes = mMap.GetKeyNodeIterator(name);
+        nodes = mMap.GetKeyNodeIterator(name.GetValue());
     }
 
     mSpinLock.Unlock();
@@ -173,7 +173,7 @@ inline bool NameMap::Contains(const String &name)
     bool result(false);
     mSpinLock.Lock();
 
-    result = mMap.GetKeyNodeIterator(name).Next();
+    result = mMap.GetKeyNodeIterator(name.GetValue()).Next();
 
     mSpinLock.Unlock();
     return result;
@@ -185,7 +185,7 @@ inline bool NameMap::Get(const String &name, Index &index) const
     bool result(false);
     mSpinLock.Lock();
 
-    NameIndexMap::KeyNodeIterator nodes(mMap.GetKeyNodeIterator(name));
+    NameIndexMap::KeyNodeIterator nodes(mMap.GetKeyNodeIterator(name.GetValue()));
     if (nodes.Next())
     {
         const NameIndexMap::Node *const node(nodes.Get());

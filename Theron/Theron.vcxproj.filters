@@ -253,9 +253,6 @@
     <ClInclude Include="..\Include\Theron\Detail\Network\Index.h">
       <Filter>Header Files\Detail\Network</Filter>
     </ClInclude>
-    <ClInclude Include="..\Include\Theron\Detail\Network\Hash.h">
-      <Filter>Header Files\Detail\Network</Filter>
-    </ClInclude>
     <ClInclude Include="..\Include\Theron\Detail\Network\NameGenerator.h">
       <Filter>Header Files\Detail\Network</Filter>
     </ClInclude>
@@ -348,6 +345,9 @@
     </ClInclude>
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\SchedulerHints.h">
       <Filter>Header Files\Detail\Scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Theron\Detail\Strings\StringHash.h">
+      <Filter>Header Files\Detail\Strings</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

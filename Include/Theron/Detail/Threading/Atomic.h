@@ -32,7 +32,7 @@
 #include <atomic>
 #endif // THERON_GCC
 
-#elif defined(THERON_POSIX)
+#elif THERON_POSIX
 
 #include <pthread.h>
 
@@ -77,7 +77,7 @@ public:
 #if THERON_WINDOWS
 #elif THERON_BOOST
 #elif THERON_CPP11
-#elif defined(THERON_POSIX)
+#elif THERON_POSIX
 
         pthread_spin_init(&mSpinLock, 0);
 
@@ -92,7 +92,7 @@ public:
 #if THERON_WINDOWS
 #elif THERON_BOOST
 #elif THERON_CPP11
-#elif defined(THERON_POSIX)
+#elif THERON_POSIX
 
         pthread_spin_init(&mSpinLock, 0);
 
@@ -107,7 +107,7 @@ public:
 #if THERON_WINDOWS
 #elif THERON_BOOST
 #elif THERON_CPP11
-#elif defined(THERON_POSIX)
+#elif THERON_POSIX
 
         pthread_spin_destroy(&mSpinLock);
 
@@ -143,7 +143,7 @@ public:
             newValue,
             std::memory_order_acquire);
 
-#elif defined(THERON_POSIX)
+#elif THERON_POSIX
 
         bool success(false);
         pthread_spin_lock(&mSpinLock);
@@ -192,7 +192,7 @@ public:
             newValue,
             std::memory_order_release);
 
-#elif defined(THERON_POSIX)
+#elif THERON_POSIX
 
         bool success(false);
         pthread_spin_lock(&mSpinLock);
@@ -229,7 +229,7 @@ public:
 
         ++mValue;
 
-#elif defined(THERON_POSIX)
+#elif THERON_POSIX
 
         pthread_spin_lock(&mSpinLock);
         ++mValue;
@@ -255,7 +255,7 @@ public:
 
         --mValue;
 
-#elif defined(THERON_POSIX)
+#elif THERON_POSIX
 
         pthread_spin_lock(&mSpinLock);
         --mValue;
@@ -281,7 +281,7 @@ public:
 
         return mValue.load();
 
-#elif defined(THERON_POSIX)
+#elif THERON_POSIX
 
         return mValue;
 
@@ -307,7 +307,7 @@ public:
 
         mValue.store(val);
 
-#elif defined(THERON_POSIX)
+#elif THERON_POSIX
 
         pthread_spin_lock(&mSpinLock);
         mValue = val;
@@ -333,7 +333,7 @@ private:
 
     volatile std::atomic_uint_least32_t mValue;
 
-#elif defined(THERON_POSIX)
+#elif THERON_POSIX
 
     // With POSIX threads we emulate atomics using a spinlock (ie. slow but works).
     volatile uint32_t mValue;

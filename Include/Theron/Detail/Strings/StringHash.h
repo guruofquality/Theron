@@ -1,13 +1,11 @@
 // Copyright (C) by Ashton Mason. See LICENSE.txt for licensing information.
-#ifndef THERON_DETAIL_NETWORK_HASH_H
-#define THERON_DETAIL_NETWORK_HASH_H
+#ifndef THERON_DETAIL_STRINGS_STRINGHASH_H
+#define THERON_DETAIL_STRINGS_STRINGHASH_H
 
 
 #include <Theron/Assert.h>
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
-
-#include <Theron/Detail/Strings/String.h>
 
 
 namespace Theron
@@ -17,9 +15,9 @@ namespace Detail
 
 
 /**
-\brief Simple hash utility for strings.
+\brief Simple hash utility for C strings.
 */
-class Hash
+class StringHash
 {
 public:
 
@@ -28,12 +26,11 @@ public:
         RANGE = 256
     };
 
-    THERON_FORCEINLINE static uint32_t Compute(const String &name)
+    THERON_FORCEINLINE static uint32_t Compute(const char *const str)
     {
-        THERON_ASSERT(!name.IsNull());
+        THERON_ASSERT(str);
 
         // XOR the first n characters of the string together.
-        const char *const str(name.GetValue());
         const char *const end(str + 64);
 
         const char *ch(str);
@@ -54,4 +51,4 @@ public:
 } // namespace Theron
 
 
-#endif // THERON_DETAIL_NETWORK_HASH_H
+#endif // THERON_DETAIL_STRINGS_STRINGHASH_H

@@ -12,6 +12,10 @@
 #endif // THERON_MSVC
 
 #if THERON_WINDOWS
+#elif THERON_POSIX
+
+#include <pthread.h>
+
 #elif THERON_BOOST
 
 #include <boost/thread/locks.hpp>
@@ -19,11 +23,7 @@
 
 #elif THERON_CPP11
 
-#error CPP11 support not implemented yet.
-
-#elif defined(THERON_POSIX)
-
-#error POSIX support not implemented yet.
+#include <thread>
 
 #else
 
@@ -58,13 +58,19 @@ public:
     THERON_FORCEINLINE explicit Lock(Mutex &mutex) :
 #if THERON_WINDOWS
       mMutex(mutex)
+#elif THERON_POSIX
+      mMutex(mutex)
 #elif THERON_BOOST
       mLock(mutex.mMutex)
 #elif THERON_CPP11
-#elif defined(THERON_POSIX)
+    mLock(mutex.mMutex)
 #endif
     {
 #if THERON_WINDOWS
+
+        mMutex.Lock();
+
+#elif THERON_POSIX
 
         mMutex.Lock();
 
@@ -73,7 +79,9 @@ public:
         // The wrapped boost::unique_lock locks the mutex itself.
 
 #elif THERON_CPP11
-#elif defined(THERON_POSIX)
+
+        // The wrapped std::unique_lock locks the mutex itself.
+
 #endif
     }
 
@@ -86,12 +94,18 @@ public:
 
         mMutex.Unlock();
 
+#elif THERON_POSIX
+
+        mMutex.Unlock();
+
 #elif THERON_BOOST
 
         // The wrapped boost::unique_lock unlocks the mutex itself.
 
 #elif THERON_CPP11
-#elif defined(THERON_POSIX)
+
+        // The wrapped std::unique_lock unlocks the mutex itself.
+
 #endif
     }
 
@@ -105,13 +119,20 @@ public:
 
         mMutex.Unlock();
 
+#elif THERON_POSIX
+
+        mMutex.Unlock();
+
 #elif THERON_BOOST
 
         THERON_ASSERT(mLock.owns_lock() == true);
         mLock.unlock();
 
 #elif THERON_CPP11
-#elif defined(THERON_POSIX)
+
+        THERON_ASSERT(mLock.owns_lock() == true);
+        mLock.unlock();
+
 #endif
     }
 
@@ -125,13 +146,20 @@ public:
 
         mMutex.Lock();
 
+#elif THERON_POSIX
+
+        mMutex.Lock();
+
 #elif THERON_BOOST
 
         THERON_ASSERT(mLock.owns_lock() == false);
         mLock.lock();
 
 #elif THERON_CPP11
-#elif defined(THERON_POSIX)
+
+        THERON_ASSERT(mLock.owns_lock() == false);
+        mLock.lock();
+
 #endif
     }
 
@@ -144,12 +172,18 @@ private:
 
     Mutex &mMutex;
 
+#elif THERON_POSIX
+
+    Mutex &mMutex;
+
 #elif THERON_BOOST
 
     boost::unique_lock<boost::mutex> mLock;
 
 #elif THERON_CPP11
-#elif defined(THERON_POSIX)
+
+    std::unique_lock<std::mutex> mLock;
+
 #endif
 
 };

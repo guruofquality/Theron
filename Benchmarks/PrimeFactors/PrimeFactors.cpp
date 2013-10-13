@@ -307,7 +307,7 @@ int main(int argc, char *argv[])
     printf("  Messages    Yields     Local    Shared  QueueMax  LocalMin  LocalMax SharedMin SharedMax\n");
     for (int index = 0; index <= numThreads; ++index)
     {
-        printf("% 10u% 10u% 10u% 10u% 10u% 10u% 10u% 10u% 10u\n",
+        printf("%10u%10u%10u%10u%10u%10u%10u%10u%10u\n",
             messages[index],
             yields[index],
             localPushes[index],

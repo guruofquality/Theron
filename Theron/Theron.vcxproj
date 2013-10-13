@@ -78,7 +78,6 @@
     <ClInclude Include="..\Include\Theron\Detail\Messages\MessageCreator.h" />
     <ClInclude Include="..\Include\Theron\Detail\Messages\MessageSize.h" />
     <ClInclude Include="..\Include\Theron\Detail\Messages\MessageTraits.h" />
-    <ClInclude Include="..\Include\Theron\Detail\Network\Hash.h" />
     <ClInclude Include="..\Include\Theron\Detail\Network\Index.h" />
     <ClInclude Include="..\Include\Theron\Detail\Network\MessageFactory.h" />
     <ClInclude Include="..\Include\Theron\Detail\Network\NameGenerator.h" />
@@ -98,6 +97,7 @@
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\YieldImplementation.h" />
     <ClInclude Include="..\Include\Theron\Detail\Scheduler\YieldPolicy.h" />
     <ClInclude Include="..\Include\Theron\Detail\Strings\String.h" />
+    <ClInclude Include="..\Include\Theron\Detail\Strings\StringHash.h" />
     <ClInclude Include="..\Include\Theron\Detail\Strings\StringPool.h" />
     <ClInclude Include="..\Include\Theron\Detail\Threading\Atomic.h" />
     <ClInclude Include="..\Include\Theron\Detail\Threading\Clock.h" />
