@@ -86,8 +86,6 @@ THERON_DEFINE_REGISTERED_MESSAGE(Theron::Address);
 
 int main(int argc, char *argv[])
 {
-    int numMessagesProcessed(0), numYields(0), numLocalPushes(0), numSharedPushes(0);
-
     const int numHops = (argc > 1 && atoi(argv[1]) > 0) ? atoi(argv[1]) : 50000000;
     const int numThreads = (argc > 2 && atoi(argv[2]) > 0) ? atoi(argv[2]) : 16;
     const int numActors = (argc > 3 && atoi(argv[3]) > 0) ? atoi(argv[3]) : 503;
@@ -137,17 +135,11 @@ int main(int argc, char *argv[])
         {
             delete members[index];
         }
-
-        numMessagesProcessed = framework.GetCounterValue(Theron::COUNTER_MESSAGES_PROCESSED);
-        numYields = framework.GetCounterValue(Theron::COUNTER_YIELDS);
-        numLocalPushes = framework.GetCounterValue(Theron::COUNTER_LOCAL_PUSHES);
-        numSharedPushes = framework.GetCounterValue(Theron::COUNTER_SHARED_PUSHES);
     }
 
     timer.Stop();
 
-    printf("Processed %d messages in %.1f seconds\n", numMessagesProcessed, timer.Seconds());
-    printf("Counted %d thread yields, %d local pushes and %d shared pushes\n", numYields, numLocalPushes, numSharedPushes);
+    printf("Processed in %.1f seconds\n", timer.Seconds());
 
 #if THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
     Theron::IAllocator *const allocator(Theron::AllocatorManager::GetAllocator());

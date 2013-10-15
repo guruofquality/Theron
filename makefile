@@ -323,7 +323,6 @@ THERON_HEADERS = \
 	Include/Theron/Assert.h \
 	Include/Theron/BasicTypes.h \
 	Include/Theron/Catcher.h \
-	Include/Theron/Counters.h \
 	Include/Theron/DefaultAllocator.h \
 	Include/Theron/Defines.h \
 	Include/Theron/Framework.h \

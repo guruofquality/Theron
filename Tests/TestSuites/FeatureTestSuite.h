@@ -1177,6 +1177,7 @@ public:
 
     inline static void EventCounterApi()
     {
+#if THERON_ENABLE_COUNTERS
         typedef Replier<int> IntReplier;
 
         Theron::Framework framework;
@@ -1185,10 +1186,10 @@ public:
         Theron::Detail::Utils::SleepThread(10);
 
         // Check initial values.
-        Check(framework.GetCounterValue(Theron::COUNTER_MESSAGES_PROCESSED) == 0, "GetCounterValue failed");
+        Check(framework.GetCounterValue(0) == 0, "GetCounterValue failed");
 
         uint32_t counterValues[32];
-        uint32_t valueCount(framework.GetPerThreadCounterValues(Theron::COUNTER_MESSAGES_PROCESSED, counterValues, 32));
+        uint32_t valueCount(framework.GetPerThreadCounterValues(0, counterValues, 32));
 
         uint32_t messagesProcessed(0);
         for (uint32_t index = 0; index < valueCount; ++index)
@@ -1203,9 +1204,9 @@ public:
         receiver.Wait();
 
         // Check values after some work.
-        Check(framework.GetCounterValue(Theron::COUNTER_MESSAGES_PROCESSED) > 0, "GetCounterValue failed");
+        Check(framework.GetCounterValue(0) > 0, "GetCounterValue failed");
 
-        valueCount = framework.GetPerThreadCounterValues(Theron::COUNTER_MESSAGES_PROCESSED, counterValues, 32);
+        valueCount = framework.GetPerThreadCounterValues(0, counterValues, 32);
 
         messagesProcessed = 0;
         for (uint32_t index = 0; index < valueCount; ++index)
@@ -1218,9 +1219,9 @@ public:
         // Check values after reset.
         framework.ResetCounters();
 
-        Check(framework.GetCounterValue(Theron::COUNTER_MESSAGES_PROCESSED) == 0, "GetCounterValue failed");
+        Check(framework.GetCounterValue(0) == 0, "GetCounterValue failed");
 
-        valueCount = framework.GetPerThreadCounterValues(Theron::COUNTER_MESSAGES_PROCESSED, counterValues, 32);
+        valueCount = framework.GetPerThreadCounterValues(0, counterValues, 32);
 
         messagesProcessed = 0;
         for (uint32_t index = 0; index < valueCount; ++index)
@@ -1229,6 +1230,7 @@ public:
         }
 
         Check(messagesProcessed == 0, "GetPerThreadCounterValues failed");
+#endif
     }
 
     inline static void ConstructEndPoint()

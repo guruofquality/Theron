@@ -3,7 +3,6 @@
 #define THERON_DETAIL_SCHEDULER_COUNTING_H
 
 
-#include <Theron/Counters.h>
 #include <Theron/Defines.h>
 
 #include <Theron/Detail/Threading/Atomic.h>
@@ -21,6 +20,31 @@ namespace Theron
 {
 namespace Detail
 {
+
+
+/**
+\brief Enumerated type that lists event counters.
+
+All counters are local to each Framework instance, and count events in
+the queried Framework only.
+
+\note The counters are only incremented if the value of the \ref THERON_ENABLE_COUNTERS
+define is non-zero. If THERON_ENABLE_COUNTERS is zero then the values of the counters
+will always be zero.
+*/
+enum Counter
+{
+    COUNTER_MESSAGES_PROCESSED = 0,     ///< Number of messages processed by the framework.
+    COUNTER_YIELDS,                     ///< Number of times a worker thread yielded to other threads.
+    COUNTER_LOCAL_PUSHES,               ///< Number of times a mailbox was pushed to a thread's local queue.
+    COUNTER_SHARED_PUSHES,              ///< Number of times a mailbox was pushed to the shared queue.
+    COUNTER_MAILBOX_QUEUE_MAX,          ///< Maximum number of messages ever seen in the actor mailboxes.
+    COUNTER_QUEUE_LATENCY_LOCAL_MIN,    ///< Minimum recorded local queue latency in microseconds.
+    COUNTER_QUEUE_LATENCY_LOCAL_MAX,    ///< Maximum recorded local queue latency in microseconds.
+    COUNTER_QUEUE_LATENCY_SHARED_MIN,   ///< Minimum recorded shared queue latency in microseconds.
+    COUNTER_QUEUE_LATENCY_SHARED_MAX,   ///< Maximum recorded shared queue latency in microseconds.
+    MAX_COUNTERS                        ///< Number of counters available for querying.
+};
 
 
 /**
@@ -71,8 +95,8 @@ THERON_FORCEINLINE void Counting::Reset(Atomic::UInt32 & THERON_COUNTER_ARG(coun
 
     switch (id)
     {
-        case Theron::COUNTER_QUEUE_LATENCY_LOCAL_MIN:
-        case Theron::COUNTER_QUEUE_LATENCY_SHARED_MIN:
+        case COUNTER_QUEUE_LATENCY_LOCAL_MIN:
+        case COUNTER_QUEUE_LATENCY_SHARED_MIN:
         {
             counter.Store(0xFFFFFFFF);
             break;
@@ -152,9 +176,9 @@ THERON_FORCEINLINE void Counting::Accumulate(
 
     switch (id)
     {
-        case Theron::COUNTER_MAILBOX_QUEUE_MAX:
-        case Theron::COUNTER_QUEUE_LATENCY_LOCAL_MAX:
-        case Theron::COUNTER_QUEUE_LATENCY_SHARED_MAX:
+        case COUNTER_MAILBOX_QUEUE_MAX:
+        case COUNTER_QUEUE_LATENCY_LOCAL_MAX:
+        case COUNTER_QUEUE_LATENCY_SHARED_MAX:
         {
             if (val > n)
             {
@@ -164,8 +188,8 @@ THERON_FORCEINLINE void Counting::Accumulate(
             break;
         }
 
-        case Theron::COUNTER_QUEUE_LATENCY_LOCAL_MIN:
-        case Theron::COUNTER_QUEUE_LATENCY_SHARED_MIN:
+        case COUNTER_QUEUE_LATENCY_LOCAL_MIN:
+        case COUNTER_QUEUE_LATENCY_SHARED_MIN:
         {
             if (val < n)
             {

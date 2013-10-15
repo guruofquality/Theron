@@ -544,24 +544,27 @@ preprocessor settings in Visual Studio.
 /**
 \def THERON_ENABLE_COUNTERS
 
-\brief Enables incrementing of counters that record the count the occurrence of scheduling events.
+\brief Controls availability of per-framework counters that record the occurrence of scheduling events.
 
-This define controls the availability of the set of event counters enumerated by \ref Counter.
+This define controls the availability of a set of per-framework event counters.
 If the value of the define is non-zero then the counters are incremented when the counted
-events occur. If the value of the define is zero then the counters are not incremented, so
-always have zero value. The incrementing of the counters incurs some small overhead that makes
+events occur. If the value of the define is zero then the counters are not incremented, and cannot
+be queried. The incrementing of the counters incurs some small overhead that makes
 a measurable difference in synthetic benchmarks, but is probably not significant in real code.
 
-Defaults to 1 (enabled). Define this as 0 to disable the incrementing of counters for efficiency.
+Defaults to 0 (disabled). Define this as 1 to enable counters.
 
 The default definition can be overridden by defining it globally in the build - either
 via the makefile command line options, on the GCC command line using -D, or in the project
 preprocessor settings in Visual Studio.
+
+\see Framework::GetNumCounters
+\see Framework::GetCounterValue
 */
 
 
 #if !defined(THERON_ENABLE_COUNTERS)
-#define THERON_ENABLE_COUNTERS 1
+#define THERON_ENABLE_COUNTERS 0
 #endif
 
 

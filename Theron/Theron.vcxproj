@@ -41,7 +41,6 @@
     <ClInclude Include="..\Include\Theron\Assert.h" />
     <ClInclude Include="..\Include\Theron\BasicTypes.h" />
     <ClInclude Include="..\Include\Theron\Catcher.h" />
-    <ClInclude Include="..\Include\Theron\Counters.h" />
     <ClInclude Include="..\Include\Theron\DefaultAllocator.h" />
     <ClInclude Include="..\Include\Theron\Defines.h" />
     <ClInclude Include="..\Include\Theron\Detail\Alignment\ActorAlignment.h" />

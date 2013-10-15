@@ -4,7 +4,6 @@
 
 
 #include <Theron/BasicTypes.h>
-#include <Theron/Counters.h>
 #include <Theron/Defines.h>
 #include <Theron/IAllocator.h>
 #include <Theron/YieldStrategy.h>
@@ -112,13 +111,13 @@ public:
     /**
     Gets the current value of a specified event counter, accumulated for all worker threads).
     */
-    virtual uint32_t GetCounterValue(const Counter counter) const = 0;
+    virtual uint32_t GetCounterValue(const uint32_t counter) const = 0;
 
     /**
     Gets the current value of a specified event counter, for each worker thread individually.
     */
     virtual uint32_t GetPerThreadCounterValues(
-        const Counter counter,
+        const uint32_t counter,
         uint32_t *const perThreadCounts,
         const uint32_t maxCounts) const = 0;
 

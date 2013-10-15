@@ -9,7 +9,6 @@
 #include <Theron/AllocatorManager.h>
 #include <Theron/Assert.h>
 #include <Theron/BasicTypes.h>
-#include <Theron/Counters.h>
 #include <Theron/Defines.h>
 #include <Theron/IAllocator.h>
 #include <Theron/YieldStrategy.h>
@@ -101,10 +100,10 @@ public:
     inline virtual uint32_t GetNumThreads() const;
     inline virtual uint32_t GetPeakThreads() const;
     inline virtual void ResetCounters();
-    inline virtual uint32_t GetCounterValue(const Counter counter) const;
+    inline virtual uint32_t GetCounterValue(const uint32_t counter) const;
 
     inline virtual uint32_t GetPerThreadCounterValues(
-        const Counter counter,
+        const uint32_t counter,
         uint32_t *const perThreadCounts,
         const uint32_t maxCounts) const;
 
@@ -416,7 +415,7 @@ inline void Scheduler<QueueType>::ResetCounters()
 
 
 template <class QueueType>
-inline uint32_t Scheduler<QueueType>::GetCounterValue(const Counter counter) const
+inline uint32_t Scheduler<QueueType>::GetCounterValue(const uint32_t counter) const
 {
     // Read the counter value in the shared context.
     uint32_t accumulator(mQueue.GetCounterValue(&mSharedQueueContext, counter));
@@ -443,7 +442,7 @@ inline uint32_t Scheduler<QueueType>::GetCounterValue(const Counter counter) con
 
 template <class QueueType>
 inline uint32_t Scheduler<QueueType>::GetPerThreadCounterValues(
-    const Counter counter,
+    const uint32_t counter,
     uint32_t *const perThreadCounts,
     const uint32_t maxCounts) const
 {

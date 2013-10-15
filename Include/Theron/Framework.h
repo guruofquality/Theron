@@ -16,7 +16,6 @@ Framework that hosts and executes actors.
 #include <Theron/AllocatorManager.h>
 #include <Theron/Assert.h>
 #include <Theron/BasicTypes.h>
-#include <Theron/Counters.h>
 #include <Theron/Defines.h>
 #include <Theron/IAllocator.h>
 #include <Theron/YieldStrategy.h>
@@ -30,6 +29,7 @@ Framework that hosts and executes actors.
 #include <Theron/Detail/Handlers/FallbackHandlerCollection.h>
 #include <Theron/Detail/Mailboxes/Mailbox.h>
 #include <Theron/Detail/Messages/MessageCreator.h>
+#include <Theron/Detail/Scheduler/Counting.h>
 #include <Theron/Detail/Scheduler/MailboxContext.h>
 #include <Theron/Detail/Scheduler/IScheduler.h>
 #include <Theron/Detail/Strings/String.h>
@@ -83,8 +83,8 @@ The initial number of worker threads can be specified on construction of the
 framework by means of an explicit parameter to the Framework::Framework constructor.
 Additionally, the number of threads can be increased or decreased at runtime
 by calling \ref SetMinThreads or \ref SetMaxThreads. The utilization of the currently
-enabled threads is measured by performance metrics, queried by \ref GetCounterValue
-and enumerated by \ref Theron::Counter.
+enabled threads is measured by performance metrics which can be queried with
+\ref GetCounterValue.
 
 The worker threads are created and synchronized using underlying threading
 objects. Different implementations of these threading objects are possible,
@@ -511,9 +511,27 @@ public:
     inline uint32_t GetPeakThreads() const;
 
     /**
-    \brief Resets the \ref Counter "internal event counters".
+    \brief Returns the number of counters available for querying via GetCounterValue.
 
-    \see Counter
+    Counters are indexed consecutively from zero, so the counter with highest index
+    has index equal to one less than the returned value. If the returned value is zero
+    then no counters are available.
+
+    \note Counters are only available if \ref THERON_ENABLE_COUNTERS is defined as non-zero.
+
+    \see GetCounterName
+    */
+    inline uint32_t GetNumCounters() const;
+
+    /**
+    \brief Returns the name of the counter with the given index.
+    \see GetNumCounters
+    */
+    inline const char *GetCounterName(const uint32_t counter) const;
+
+    /**
+    \brief Resets all internal event counters for this framework.
+
     \see GetCounterValue
     */
     inline void ResetCounters();
@@ -521,24 +539,29 @@ public:
     /**
     \brief Gets the current value of a specified event counter.
 
-    Each Framework maintains a set of \ref Counter "internal event counters".
+    Each Framework maintains a set of internal event counters.
     This method gets the current value of a specific counter, aggregated over all worker threads.
 
-    \param counter One of several values of an \ref Counter "enumerated type" identifying the available counters.
+    \note Counters are only available if \ref THERON_ENABLE_COUNTERS is defined as non-zero.
+
+    \param counter An integer index identifying the counter to be queried.
     \return Current value of the counter at the time of the call.
 
+    \see GetNumCounters
     \see GetPerThreadCounterValues
     \see ResetCounters
     */
-    inline uint32_t GetCounterValue(const Counter counter) const;
+    inline uint32_t GetCounterValue(const uint32_t counter) const;
 
     /**
     \brief Gets the current per-thread values of a specified event counter.
 
-    Each Framework maintains a set of \ref Counter "internal event counters".
-    This method gets the current value of the counter for each of the currently active worker threads.
+    Each Framework maintains a set of internal event counters.
+    This method gets the current value of a specific counter for each of the currently active worker threads.
 
-    \param counter One of several values of an \ref Counter "enumerated type" identifying the available counters.
+    \note Counters are only incremented if \ref THERON_ENABLE_COUNTERS is defined as non-zero.
+
+    \param counter An integer index identifying the counter to be queried.
     \param perThreadCounts Pointer to an array of uint32_t to be filled with per-thread counter values.
     \param maxCounts The size of the perThreadCounts array and hence the maximum number of values to fetch.
     \return The actual number of per-thread values fetched, matching the number of currently active worker threads.
@@ -546,7 +569,10 @@ public:
     \see GetCounterValue
     \see ResetCounters
     */
-    inline uint32_t GetPerThreadCounterValues(const Counter counter, uint32_t *const perThreadCounts, const uint32_t maxCounts) const;
+    inline uint32_t GetPerThreadCounterValues(
+        const uint32_t counter,
+        uint32_t *const perThreadCounts,
+        const uint32_t maxCounts) const;
 
     /**
     \brief Sets the fallback message handler executed for unhandled messages.
@@ -879,24 +905,75 @@ THERON_FORCEINLINE uint32_t Framework::GetPeakThreads() const
 }
 
 
-THERON_FORCEINLINE void Framework::ResetCounters()
+THERON_FORCEINLINE uint32_t Framework::GetNumCounters() const
 {
-    mScheduler->ResetCounters();
+#if THERON_ENABLE_COUNTERS
+    return Detail::MAX_COUNTERS;
+#else
+    return 0;
+#endif
 }
 
 
-THERON_FORCEINLINE uint32_t Framework::GetCounterValue(const Counter counter) const
+THERON_FORCEINLINE const char *Framework::GetCounterName(const uint32_t counter) const
 {
-    return mScheduler->GetCounterValue(counter);
+    if (counter < Detail::MAX_COUNTERS)
+    {
+#if THERON_ENABLE_COUNTERS
+        switch (counter)
+        {
+            case Detail::COUNTER_MESSAGES_PROCESSED:        return "messages processed";
+            case Detail::COUNTER_YIELDS:                    return "thread yields";
+            case Detail::COUNTER_LOCAL_PUSHES:              return "mailboxes pushed to thread-local message queue";
+            case Detail::COUNTER_SHARED_PUSHES:             return "mailboxes pushed to per-framework message queue";
+            case Detail::COUNTER_MAILBOX_QUEUE_MAX:         return "maximum size of mailbox queue";
+            case Detail::COUNTER_QUEUE_LATENCY_LOCAL_MIN:   return "minimum observed latency of thread-local queue";
+            case Detail::COUNTER_QUEUE_LATENCY_LOCAL_MAX:   return "maximum observed latency of thread-local queue";
+            case Detail::COUNTER_QUEUE_LATENCY_SHARED_MIN:  return "minimum observed latency of per-framework queue";
+            case Detail::COUNTER_QUEUE_LATENCY_SHARED_MAX:  return "maximum observed latency of per-framework queue";
+            default: return "unknown";
+        }
+#endif
+    }
+
+    return "unknown";
+}
+
+
+THERON_FORCEINLINE void Framework::ResetCounters()
+{
+#if THERON_ENABLE_COUNTERS
+    mScheduler->ResetCounters();
+#endif
+}
+
+
+THERON_FORCEINLINE uint32_t Framework::GetCounterValue(const uint32_t counter) const
+{
+    if (counter < Detail::MAX_COUNTERS)
+    {
+#if THERON_ENABLE_COUNTERS
+        return mScheduler->GetCounterValue(counter);
+#endif
+    }
+
+    return 0;
 }
 
 
 THERON_FORCEINLINE uint32_t Framework::GetPerThreadCounterValues(
-    const Counter counter,
+    const uint32_t counter,
     uint32_t *const perThreadCounts,
     const uint32_t maxCounts) const
 {
-    return mScheduler->GetPerThreadCounterValues(counter, perThreadCounts, maxCounts);
+    if (counter < Detail::MAX_COUNTERS && perThreadCounts && maxCounts)
+    {
+#if THERON_ENABLE_COUNTERS
+        return mScheduler->GetPerThreadCounterValues(counter, perThreadCounts, maxCounts);
+#endif
+    }
+
+    return 0;
 }
 
 

@@ -90,8 +90,6 @@ THERON_DEFINE_REGISTERED_MESSAGE(PingPong::StartMessage);
 
 int main(int argc, char *argv[])
 {
-    int numMessagesProcessed(0), numYields(0), numLocalPushes(0), numSharedPushes(0);
-
     const int numMessages = (argc > 1 && atoi(argv[1]) > 0) ? atoi(argv[1]) : 50000000;
     const int numThreads = (argc > 2 && atoi(argv[2]) > 0) ? atoi(argv[2]) : 16;
 
@@ -121,16 +119,9 @@ int main(int argc, char *argv[])
     receiver.Wait();
     timer.Stop();
 
-    numMessagesProcessed = framework.GetCounterValue(Theron::COUNTER_MESSAGES_PROCESSED);
-    numYields = framework.GetCounterValue(Theron::COUNTER_YIELDS);
-    numLocalPushes = framework.GetCounterValue(Theron::COUNTER_LOCAL_PUSHES);
-    numSharedPushes = framework.GetCounterValue(Theron::COUNTER_SHARED_PUSHES);
-
     // The number of full cycles is half the number of messages.
-    printf("Completed %d message response cycles\n", numMessages / 2);
-    printf("Sent %d messages in %.1f seconds\n", numMessagesProcessed, timer.Seconds());
+    printf("Completed %d message response cycles in %.1f seconds\n", numMessages / 2, timer.Seconds());
     printf("Average response time is %.10f seconds\n", timer.Seconds() / (numMessages / 2));
-    printf("Counted %d thread yields, %d local pushes and %d shared pushes\n", numYields, numLocalPushes, numSharedPushes);
 
 #if THERON_ENABLE_DEFAULTALLOCATOR_CHECKS
     Theron::IAllocator *const allocator(Theron::AllocatorManager::GetAllocator());
