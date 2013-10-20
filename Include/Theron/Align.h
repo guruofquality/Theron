@@ -7,7 +7,6 @@
 #include <Theron/BasicTypes.h>
 #include <Theron/Defines.h>
 
-#include <Theron/Detail/Alignment/ActorAlignment.h>
 #include <Theron/Detail/Alignment/MessageAlignment.h>
 
 
@@ -20,58 +19,20 @@ Alignment markup and macro's, in particular for message types.
 /**
 \def THERON_ALIGN_ACTOR
 
-\brief Informs Theron of the alignment requirements of an actor type.
+\brief Deprecated.
 
-\note This macro is deprecated and has no effect when actors are constructed
-directly in user code in the actor creation pattern of Theron 4 and later.
-This macro should only be used with legacy code that creates actors using
-the old-style actor creation pattern of versions prior to version 4.0.
-
-Use of this macro is optional. Using it, users can notify Theron of any
-specialized memory alignment requirements of their custom actor classes.
-If the memory alignment of an actor type is specified using this macro,
-Theron will request correctly aligned memory when allocating instances
-of that actor type in \ref Theron::Framework::CreateActor. If not, then a default
-alignment of four bytes will be used.
-
-\code
-namespace MyNamespace
-{
-
-class MyActor : public Theron::Actor
-{
-};
-
-}
-
-THERON_ALIGN_ACTOR(MyNamespace::MyActor, 16);
-\endcode
-
-An important limitation of the actor alignment macro is that it
-can only be used from within the global namespace. Furthermore the full
-name of the actor type must be given, including all namespace scoping.
-Unfortunately this means that it isn't generally possible to align actors
-immediately after their declaration, as we'd often prefer.
-
-\note Specifying the alignment requirements of an actor type is not enough,
-by itself, to guarantee correct alignment of actor allocations. Users must also
-ensure that any custom allocator provided via \ref Theron::AllocatorManager::SetAllocator
-supports aligned allocations. The DefaultAllocator, used by default, supports alignment.
+In versions of Theron prior to Theron 4, it was not possible to create
+actors directly, and instead they could only be created via the \ref Theron::Framework.
+This macro allowed users to specify the memory alignment requirements of their
+actor types, so that Theron could know to align them correctly. Since Theron 6
+the ability to create actors via the Framework has been removed and they can
+only be created directly in user code. For that reason this macro is no longer
+needed and now has no effect. Responsibility for correct memory alignment of
+actor types that need specialized alignment now lies with the user.
 */
 
 #ifndef THERON_ALIGN_ACTOR
-#define THERON_ALIGN_ACTOR(ActorType, alignment)                            \
-namespace Theron                                                            \
-{                                                                           \
-namespace Detail                                                            \
-{                                                                           \
-template <>                                                                 \
-struct ActorAlignment<ActorType>                                            \
-{                                                                           \
-    static const uint32_t ALIGNMENT = (alignment);                          \
-};                                                                          \
-}                                                                           \
-}
+#define THERON_ALIGN_ACTOR(ActorType, alignment)
 #endif // THERON_ALIGN_ACTOR
 
 

@@ -232,9 +232,6 @@
     <ClInclude Include="..\Include\Theron\Theron.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Include\Theron\Detail\Alignment\ActorAlignment.h">
-      <Filter>Header Files\Detail\Alignment</Filter>
-    </ClInclude>
     <ClInclude Include="..\Include\Theron\Detail\Containers\Map.h">
       <Filter>Header Files\Detail\Containers</Filter>
     </ClInclude>

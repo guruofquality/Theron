@@ -20,7 +20,6 @@ Framework that hosts and executes actors.
 #include <Theron/IAllocator.h>
 #include <Theron/YieldStrategy.h>
 
-#include <Theron/Detail/Alignment/ActorAlignment.h>
 #include <Theron/Detail/Allocators/CachingAllocator.h>
 #include <Theron/Detail/Debug/BuildDescriptor.h>
 #include <Theron/Detail/Directory/Directory.h>
@@ -193,7 +192,7 @@ public:
         \param nodeMask Bitfield mask specifying the NUMA node affinity of the created worker threads.
         \param processorMask Bitfield mask specifying the processor affinity of the created worker threads within each enabled NUMA node.
         \param yieldStrategy Enum value specifying how freely worker threads yield to other system threads.
-        \param priority Relative scheduling priority of the worker threads (range -1.0f to 1.0f, 0.0f is "normal").
+        \param priority Relative scheduling priority of the worker threads (range -1.0 to 1.0, 0.0 means "normal").
         */
         inline explicit Parameters(
             const uint32_t threadCount = 16,
@@ -210,10 +209,10 @@ public:
         }
 
         uint32_t mThreadCount;          ///< The initial number of worker threads to create within the framework.
-        uint32_t mNodeMask;             ///< Specifies the NUMA processor nodes upon which the framework may execute.
-        uint32_t mProcessorMask;        ///< Specifies the subset of the processors in each NUMA processor node upon which the framework may execute.
-        YieldStrategy mYieldStrategy;   ///< Strategy that defines how freely worker threads yield to other system threads.
-        float mThreadPriority;          ///< Relative scheduler priority of the worker threads created within the framework.
+        uint32_t mNodeMask;             ///< 32-bit mask specifying the NUMA processor nodes upon which the framework may execute.
+        uint32_t mProcessorMask;        ///< 32-bit mask specifying the subset of the processors in each NUMA processor node upon which the framework may execute.
+        YieldStrategy mYieldStrategy;   ///< Member of \ref YieldStrategy specifying how worker threads yield to other system threads when no work is available.
+        float mThreadPriority;          ///< Number between -1.0 and 1.0 indicating the relative scheduling priority of the worker threads.
     };
 
     /**
@@ -513,6 +512,10 @@ public:
     /**
     \brief Returns the number of counters available for querying via GetCounterValue.
 
+    Each Framework maintains a number of performance counters that count performance
+    events. Many of these counters are really for internal development use and are
+    not intended to be meaningful to users.
+
     Counters are indexed consecutively from zero, so the counter with highest index
     has index equal to one less than the returned value. If the returned value is zero
     then no counters are available.
@@ -524,7 +527,7 @@ public:
     inline uint32_t GetNumCounters() const;
 
     /**
-    \brief Returns the name of the counter with the given index.
+    \brief Returns the string name of the counter with the given index.
     \see GetNumCounters
     */
     inline const char *GetCounterName(const uint32_t counter) const;

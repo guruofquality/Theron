@@ -558,8 +558,8 @@ The default definition can be overridden by defining it globally in the build - 
 via the makefile command line options, on the GCC command line using -D, or in the project
 preprocessor settings in Visual Studio.
 
-\see Framework::GetNumCounters
-\see Framework::GetCounterValue
+\see Theron::Framework::GetNumCounters
+\see Theron::Framework::GetCounterValue
 */
 
 

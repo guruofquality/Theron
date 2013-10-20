@@ -2104,61 +2104,6 @@ private:
 
         const Theron::Address mNext;
     };
-
-    // Derive from a different baseclass first to check we cope with the non-zero offset.
-    class Version3Replier : public SomeOtherBaseclass, public Theron::Actor
-    {
-    public:
-
-        struct Parameters
-        {
-        };
-
-        Version3Replier()
-        {
-            RegisterHandler(this, &Version3Replier::Handler);
-
-            // Allocate memory in the constructor to check the destructor is called.
-            mMemory = Theron::AllocatorManager::GetAllocator()->Allocate(64);
-
-            // Check the alignment of the final actor type.
-            THERON_ASSERT(THERON_ALIGNED(this, 128));
-        }
-
-        Version3Replier(const Parameters &/*params*/)
-        {
-            RegisterHandler(this, &Version3Replier::Handler);
-
-            // Allocate memory in the constructor to check the destructor is called.
-            mMemory = Theron::AllocatorManager::GetAllocator()->Allocate(64);
-
-            // Check the alignment of the final actor type.
-            THERON_ASSERT(THERON_ALIGNED(this, 128));
-        }
-
-        ~Version3Replier()
-        {
-            DeregisterHandler(this, &Version3Replier::Handler);
-
-            // Free the memory in the destructor to check the destructor is called.
-            // The DefaultAllocator memory allocation checking will fail if we leak.
-            Theron::AllocatorManager::GetAllocator()->Free(mMemory);
-        }
-
-    private:
-
-        // Implementation of virtual method in SomeOtherBaseclass.
-        inline virtual void DoNothing()
-        {
-        }
-
-        void Handler(const int &message, const Theron::Address from)
-        {
-            Send(message, from);
-        }
-
-        void *mMemory;
-    };
 };
 
 
@@ -2173,8 +2118,6 @@ const char *FeatureTestSuite::Sequencer<CountType>::BAD = "good";
 
 
 THERON_REGISTER_MESSAGE(Tests::FeatureTestSuite::IntVectorMessage);
-
-THERON_ALIGN_ACTOR(Tests::FeatureTestSuite::Version3Replier, 128);
 
 
 #endif // THERON_TESTS_TESTSUITES_FEATURETESTSUITE_H

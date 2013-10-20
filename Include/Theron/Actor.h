@@ -100,64 +100,6 @@ public:
     friend class Detail::MailboxProcessor;
 
     /**
-    \brief Default constructor.
-
-    \note Direct default-construction of Actor baseclasses is forbidden. This
-    public default constructor is provided for backwards compatibility with the
-    legacy actor creation pattern used by versions of Theron prior to version 4.0.
-    
-    Always use one of the two supported actor creation patterns: the version 4 syntax or
-    (if necessary) the deprecated version 3.x syntax, which is still supported for backwards
-    compatibility. When writing new code, always use the new, simpler, version 4 syntax.
-
-    In versions of Theron prior to 4.0, actors couldn't be constructed directly
-    in user code. Instead you had to ask a Framework to create one for you, using
-    the CreateActor method template. Instead of returning the actor itself,
-    CreateActor returned a <i>reference</i> to the actor in the form of an \ref ActorRef
-    object.
-
-    \code
-    // LEGACY CODE!
-    class MyActor : public Theron::Actor
-    {
-    };
-
-    int main()
-    {
-        Theron::Framework framework;
-        Theron::ActorRef actorRef(framework.CreateActor<MyActor>());
-    }
-    \endcode
-
-    In versions of Theron starting with 4.0, Actors are first-class citizens and
-    behave like vanilla C++ objects. They can be constructed directly with no
-    call to Framework::CreateActor. Once constructed they are referenced directly
-    by user code with no need for ActorRef proxy objects.
-
-    When writing new code, follow the new, simpler construction pattern where actors
-    are constructed directly and not referenced by ActorRefs:
-
-    \code
-    // New code
-    class MyActor : public Theron::Actor
-    {
-    public:
-
-        MyActor(Theron::Framework &framework) : Theron::Actor(framework)
-        {
-        }
-    };
-
-    int main()
-    {
-        Theron::Framework framework;
-        MyActor actor(framework);
-    }
-    \endcode
-    */
-    Actor();
-
-    /**
     \brief Explicit constructor.
 
     Constructs an actor within the given \ref Framework, with the given unique name.
@@ -761,7 +703,7 @@ protected:
     inline bool Send(const ValueType &value, const Address &address) const;
 
     /**
-    \brief Sends a message to the entity at the given address.
+    \brief Deprecated.
 
     \note TailSend is deprecated; use \ref Send instead.
    

@@ -248,7 +248,6 @@ clean:
 
 
 THERON_HEADERS = \
-	Include/Theron/Detail/Alignment/ActorAlignment.h \
 	Include/Theron/Detail/Alignment/MessageAlignment.h \
 	Include/Theron/Detail/Allocators/CachingAllocator.h \
 	Include/Theron/Detail/Allocators/Pool.h \

@@ -29,17 +29,14 @@ namespace Theron
 
 
 /**
-\brief Singleton class that manages allocators for use by Theron.
+\brief Static class that manages allocators for use by Theron.
 
-This class is a singleton, and its single instance can be accessed using the
-static \ref Instance method on the class.
-
-Non-static \ref SetAllocator and \ref GetAllocator methods on the singleton instance
+Static \ref SetAllocator and \ref GetAllocator methods on the class
 allow the allocator used by Theron to be set and retrieved. Setting the allocator
 replaces the \ref DefaultAllocator, which is used if no custom allocator is explicitly
 set. The \ref GetAllocator method returns a pointer to the currently set allocator,
-which is either the allocator set previously using \ref SetAllocator or the \ref
-DefaultAllocator, if none has been set.
+which is either the allocator set previously using \ref SetAllocator or an instance
+of \ref DefaultAllocator, if none has been set.
 
 \code
 class MyAllocator : public Theron::IAllocator
@@ -130,19 +127,15 @@ public:
 
     Theron caches allocations internally using a caching allocator that wraps the low-level general allocator.
     The caching can't be replaced.
+
+    \note Although this method is public, calling it is not recommended since it is really
+    an implementation detail and may change in future releases. It would be made private if
+    that weren't made difficult by the need to forward-declare loads of other classes in
+    order to declare them friends of AllocatorManager.
     */
     THERON_FORCEINLINE static IAllocator *GetCache()
     {
         return &smCache;
-    }
-
-    /**
-    Deprecated.
-    */
-    THERON_FORCEINLINE static AllocatorManager &Instance()
-    {
-        static AllocatorManager sInstance;
-        return sInstance;
     }
 
 private:

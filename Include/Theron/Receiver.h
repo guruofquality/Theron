@@ -74,7 +74,7 @@ callback-style handler functions. The registered handlers are executed on the ar
 of messages of the types for which they are registered. The arrived message is passed
 to the handler function on execution, allowing it to examine, process, or store its value.
 
-The ability to synchronize with the arrival of messages via \ref Wait allows calling
+The ability to synchronize with the arrival of messages via \ref Receiver::Wait allows calling
 threads to ensure they examine the results of executed handler functions only after
 the messages they handle have arrived, and the associated handlers have been executed.
 */
@@ -186,7 +186,7 @@ public:
     \endcode
 
     Having registered the catcher, the calling thread then pops caught messages
-    from the Catcher after synchronizing with their arrival via blocking calls to \ref Wait:
+    from the Catcher after synchronizing with their arrival via blocking calls to \ref Wait
 
     \code
     // Wait for two messages to arrive.
