@@ -25,6 +25,7 @@
 #elif THERON_CPP11
 
 #include <thread>
+#include <mutex>
 
 #else
 

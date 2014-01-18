@@ -31,6 +31,7 @@
 #elif THERON_CPP11
 
 #include <thread>
+#include <condition_variable>
 
 #else
 
