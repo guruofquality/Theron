@@ -29,9 +29,14 @@
 
 #elif THERON_MSVC
 
+// MSVC 2012 and up has cstdint header
+#if _MSC_VER >= 1700
+#include <cstdint>
+#else
 // These are packaged with Theron, and provide stdint functionality for MSVC.
 #include <Standard/stdint.h>
 #include <Standard/inttypes.h>
+#endif
 
 #else
 

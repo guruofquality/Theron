@@ -267,7 +267,7 @@ public:
     /**
     Atomically get the current value.
     */
-    THERON_FORCEINLINE volatile uint32_t Load() const
+    THERON_FORCEINLINE uint32_t Load() const
     {
 #if THERON_WINDOWS
 
